@@ -88,6 +88,18 @@ async function loadHoldings() {
         if (result.success) {
             const holdings = result.data.holdings;
             displayHoldings(holdings);
+            // 감성 정보 업데이트 (5분마다)
+            if (typeof updateAllSentiments === 'function') {
+                const now = Date.now();
+                const isFirst = !window.lastSentimentUpdate ||
+                    Object.keys(sentimentCache || {}).length === 0;
+                const interval = window.SENTIMENT_REFRESH_INTERVAL || (5 * 60 * 1000);
+
+                if (isFirst || now - (window.lastSentimentUpdate || 0) > interval) {
+                    updateAllSentiments(holdings);
+                    window.lastSentimentUpdate = now;
+                }
+            }
         }
     } catch (error) {
         console.error('보유 종목 로드 실패:', error);
@@ -129,7 +141,11 @@ function createHoldingCard(stock) {
     const plClass = profitLoss >= 0 ? 'positive' : 'negative';
     const plSign = profitLoss >= 0 ? '+' : '';
 
+    const sentimentElements = typeof createSentimentElements === 'function' ?
+        createSentimentElements(stockCode) :
+        { ribbonHtml: '', footerHtml: '' };
     card.innerHTML = `
+        ${sentimentElements.ribbonHtml}
         <div class="holding-header">
             <div>
                 <div class="holding-name">${stockName}</div>
@@ -158,8 +174,8 @@ function createHoldingCard(stock) {
                 <div class="holding-info-value">${formatCurrency(currentPrice)}</div>
             </div>
         </div>
+        ${sentimentElements.footerHtml}
     `;
-
     return card;
 }
 
@@ -258,6 +274,10 @@ function updateMarketIndex(type, data) {
 
 // 모달 열기 및 종합 분석 로드
 async function openStockModal(stock) {
+    // 클릭 시 해당 종목 감성 정보 즉시 갱신
+    if (typeof updateSingleSentiment === 'function') {
+        updateSingleSentiment(stock.stk_cd);
+    }
     const modal = document.getElementById('stockModal');
     const title = document.getElementById('modalTitle');
     const spinner = document.getElementById('loadingSpinner');
@@ -267,6 +287,15 @@ async function openStockModal(stock) {
     modal.style.display = 'flex'; // block -> flex로 변경하여 중앙 정렬 유지
     spinner.style.display = 'block';
     tabs.style.display = 'none';
+
+    // 이전 데이터 초기화
+    document.getElementById('overviewContent').innerHTML = '';
+    document.getElementById('supplyContent').innerHTML = '';
+    document.getElementById('newsContent').innerHTML = '';
+    document.getElementById('technicalContent').innerHTML = '';
+
+    // 탭 초기화 (종합 탭으로)
+    switchTab('overview');
 
     // 종합 분석 로드
     await loadFullAnalysis(stock.stk_cd);
@@ -353,7 +382,9 @@ function renderOverview(data) {
             <h3>뉴스 요약</h3>
             <div class="news-summary">
                 <div class="sentiment ${news_analysis.sentiment}">${news_analysis.sentiment}</div>
-                <p>${news_analysis.reason}</p>
+                <div class="news-box">
+                    ${formatNewsText(news_analysis.reason)}
+                </div>
             </div>
         </div>
     `;
@@ -417,9 +448,8 @@ function renderSupplyDemand(data) {
 
 // 뉴스 탭 렌더링
 function renderNews(data) {
-    // *** 등의 마크다운 강조 제거
-    const cleanSummary = (data.summary || '').replace(/\*\*\*/g, '').replace(/\*\*/g, '');
-    const cleanReason = (data.reason || '').replace(/\*\*\*/g, '').replace(/\*\*/g, '');
+    const formattedSummary = formatNewsText(data.summary);
+    const formattedReason = formatNewsText(data.reason);
 
     const html = `
         <div class="analysis-section">
@@ -431,14 +461,14 @@ function renderNews(data) {
         <div class="analysis-section">
             <h3>뉴스 요약</h3>
             <div class="news-box">
-                <p>${cleanSummary}</p>
+                ${formattedSummary}
             </div>
         </div>
 
         <div class="analysis-section">
             <h3>등락 원인 분석</h3>
             <div class="reason-box">
-                <p>${cleanReason}</p>
+                ${formattedReason}
             </div>
         </div>
     `;
@@ -642,6 +672,89 @@ function renderChart(data) {
 }
 
 // 유틸리티 함수들
+
+// 뉴스 텍스트 포맷팅 함수
+function formatNewsText(text) {
+    if (!text) return '';
+
+    // 0. Pre-process: Split embedded titles into new lines
+    // Look for " * **" or " * [" patterns and replace with newline
+    let processedText = text.replace(/\s+[\*•]\s+(?=\*\*|\[)/g, '\n');
+
+    // Split into lines
+    const lines = processedText.split('\n');
+    let html = '';
+
+    lines.forEach(line => {
+        line = line.trim();
+        if (!line) return;
+
+        // 1. Remove leading special chars (*, -, bullets, digits)
+        let cleanLine = line.replace(/^[-*•\d\.]+\s*/, '');
+
+        // 2. Identify Title and Body
+        let title = '';
+        let body = '';
+
+        // Check for **Title**
+        const boldMatch = cleanLine.match(/\*\*(.*?)\*\*/);
+
+        if (boldMatch) {
+            title = boldMatch[1];
+            // Body is everything after the bold part (and optional colon)
+            body = cleanLine.replace(/\*\*.*?\*\*\s*:?\s*/, '');
+        } else {
+            // Check for Colon separator if no bold title found
+            const colonIndex = cleanLine.indexOf(':');
+            if (colonIndex > -1 && colonIndex < 50) {
+                title = cleanLine.substring(0, colonIndex);
+                body = cleanLine.substring(colonIndex + 1);
+            } else {
+                // Fallback: Check for [Keyword] at start
+                if (cleanLine.startsWith('[')) {
+                    const bracketEnd = cleanLine.indexOf(']');
+                    if (bracketEnd > -1) {
+                        title = cleanLine.substring(0, bracketEnd + 1);
+                        body = cleanLine.substring(bracketEnd + 1);
+                    }
+                }
+
+                if (!title) {
+                    body = cleanLine;
+                }
+            }
+        }
+
+        // 3. Clean Title (remove [ ] if present inside, per user request to remove special chars)
+        if (title) {
+            title = title.replace(/[\[\]]/g, '').trim();
+            // Also remove any leading/trailing * just in case
+            title = title.replace(/^\*+|\*+$/g, '').trim();
+        }
+
+        // 4. Clean Body (remove leading * or : if any)
+        if (body) {
+            body = body.replace(/^\s*[:*]\s*/, '').trim();
+        }
+
+        // 5. Construct HTML
+        if (title) {
+            html += `
+                <div class="news-item">
+                    <span class="news-title">${title}</span>
+                    <div class="news-body">${body}</div>
+                </div>`;
+        } else {
+            // Just body
+            html += `
+                <div class="news-item">
+                    <div class="news-body">${body}</div>
+                </div>`;
+        }
+    });
+
+    return html;
+}
 
 // 통화 포맷
 function formatCurrency(value) {

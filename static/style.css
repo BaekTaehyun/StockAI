@@ -318,6 +318,7 @@ body {
     margin-bottom: 1rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border);
+    padding-right: 90px;
 }
 
 .holding-name {
@@ -368,6 +369,88 @@ body {
     font-weight: 600;
     color: var(--text-primary);
 }
+
+
+/* AI Ribbon - 대각선 리본 */
+.holding-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.ai-ribbon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 80px;
+    height: 80px;
+    overflow: hidden;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.ai-ribbon span {
+    position: absolute;
+    top: 15px;
+    right: -25px;
+    transform: rotate(45deg);
+    width: 100px;
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 5px 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+.ai-ribbon.buy span {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.ai-ribbon.sell span {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.ai-ribbon.neutral span {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+/* Sentiment Footer */
+.holding-footer {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+}
+
+.mini-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.mini-badge.positive {
+    color: var(--success);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.mini-badge.negative {
+    color: var(--danger);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.mini-badge.neutral {
+    color: var(--warning);
+    background: rgba(245, 158, 11, 0.1);
+}
+
 
 /* Modal */
 .modal {
@@ -681,6 +764,166 @@ body {
     color: var(--danger);
 }
 
+}
+
+.info-item .value {
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.info-item .value.positive {
+    color: var(--success);
+}
+
+.info-item .value.negative {
+    color: var(--danger);
+}
+
+/* Outlook Card */
+.outlook-card {
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 2px solid;
+}
+
+.outlook-card.buy {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--success);
+}
+
+.outlook-card.sell {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--danger);
+}
+
+.outlook-card.neutral {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: var(--warning);
+}
+
+.outlook-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.recommendation {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.confidence {
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+.reasoning {
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+/* Supply Demand */
+.supply-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.supply-item {
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.supply-item.positive {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.supply-item.negative {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.supply-item .label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.supply-item .value {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.supply-item.positive .value {
+    color: var(--success);
+}
+
+.supply-item.negative .value {
+    color: var(--danger);
+}
+
+.trend {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 1rem;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 8px;
+    color: var(--accent-1);
+    font-weight: 600;
+    margin-top: 1rem;
+}
+
+.supply-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+}
+
+.detail-row.total {
+    background: rgba(99, 102, 241, 0.1);
+    font-weight: 700;
+    border: 1px solid var(--accent-1);
+}
+
+.trend-box {
+    padding: 1rem;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 8px;
+    text-align: center;
+    color: var(--accent-1);
+    font-weight: 600;
+}
+
+/* News */
+.sentiment-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.sentiment-badge.긍정 {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+}
+
+.sentiment-badge.부정 {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+}
+
 .sentiment-badge.중립 {
     background: rgba(245, 158, 11, 0.2);
     color: var(--warning);
@@ -716,6 +959,231 @@ body {
     border-radius: 12px;
     color: var(--text-primary);
     line-height: 1.6;
+}
+
+/* News Item Formatting */
+.news-item {
+    margin-bottom: 1.2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 1rem;
+}
+
+.news-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.news-title {
+    color: #FFD700;
+    /* Gold */
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.news-body {
+    color: #FFFFFF;
+    /* White */
+    font-size: 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--danger);
+}
+
+.outlook-card.neutral {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: var(--warning);
+}
+
+.outlook-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.recommendation {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.confidence {
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+.reasoning {
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+/* Supply Demand */
+.supply-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.supply-item {
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.supply-item.positive {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.supply-item.negative {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.supply-item .label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.supply-item .value {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.supply-item.positive .value {
+    color: var(--success);
+}
+
+.supply-item.negative .value {
+    color: var(--danger);
+}
+
+.trend {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 1rem;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 8px;
+    color: var(--accent-1);
+    font-weight: 600;
+    margin-top: 1rem;
+}
+
+.supply-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+}
+
+.detail-row.total {
+    background: rgba(99, 102, 241, 0.1);
+    font-weight: 700;
+    border: 1px solid var(--accent-1);
+}
+
+.trend-box {
+    padding: 1rem;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 8px;
+    text-align: center;
+    color: var(--accent-1);
+    font-weight: 600;
+}
+
+/* News */
+.sentiment-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.sentiment-badge.긍정 {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+}
+
+.sentiment-badge.부정 {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+}
+
+.sentiment-badge.중립 {
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--warning);
+}
+
+.news-summary .sentiment {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.news-summary .sentiment.긍정 {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+}
+
+.news-summary .sentiment.부정 {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+}
+
+.news-summary .sentiment.중립 {
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--warning);
+}
+
+.news-box,
+.reason-box {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+/* News Item Formatting */
+.news-item {
+    margin-bottom: 1.2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 1rem;
+}
+
+.news-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.news-title {
+    color: #FFD700;
+    /* Gold */
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.news-body {
+    color: #FFFFFF;
+    /* White */
+    font-size: 1rem;
+    line-height: 1.6;
+    opacity: 0.9;
 }
 
 /* Responsive */

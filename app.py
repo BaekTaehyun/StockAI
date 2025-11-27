@@ -246,6 +246,44 @@ def get_supply_demand(code):
             'message': str(e)
         }), 500
 
+@app.route('/api/config')
+def get_config():
+    """프론트엔드 설정 제공"""
+    return jsonify({
+        'success': True,
+        'data': {
+            'sentiment_refresh_minutes': getattr(config, 'SENTIMENT_REFRESH_MINUTES', 5)
+        }
+    })
+
+@app.route('/api/analysis/sentiment/<code>')
+def get_sentiment_analysis(code):
+    """종목의 감성 분석 결과만 반환 (카드 표시용)"""
+    try:
+        from stock_analysis_service import StockAnalysisService
+        stock_analysis = StockAnalysisService()
+        
+        # 종합 분석 호출 (캐싱 활용)
+        result = stock_analysis.get_full_analysis(code)
+        
+        if result['success']:
+            data = result['data']
+            return jsonify({
+                'success': True,
+                'data': {
+                    'code': code,
+                    'news_sentiment': data['news_analysis']['sentiment'],
+                    'supply_trend': data['supply_demand']['trend'],
+                    'ai_recommendation': data['outlook']['recommendation'],
+                    'ai_confidence': data['outlook']['confidence']
+                }
+            })
+        else:
+            return jsonify({'success': False, 'message': result.get('message', '분석 실패')})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
 @app.route('/api/analysis/news/<code>')
 def get_news_analysis(code):
     """뉴스 분석"""
