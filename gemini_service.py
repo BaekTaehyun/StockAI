@@ -4,6 +4,8 @@ import json
 import os
 import datetime
 
+import prompts
+
 class GeminiService:
     """Google Gemini SDK를 사용한 AI 분석 서비스"""
     
@@ -105,42 +107,13 @@ class GeminiService:
             else:
                 news_context = "(최신 뉴스 검색 실패 또는 설정되지 않음. 일반적인 지식에 기반하여 분석하세요.)"
 
-            prompt = f"""
-당신은 주식 시장 애널리스트입니다. 다음 종목에 대한 최신 뉴스를 기반으로 분석해주세요.
-
-종목 정보:
-- 종목명: {stock_name}
-- 종목코드: {stock_code}
-{f"- 현재가: {current_price}원" if current_price else ""}
-{f"- 등락률: {change_rate}%" if change_rate else ""}
-
-{news_context}
-
-분석 요청:
-1. 위 검색된 뉴스를 바탕으로 이 종목의 주가 변동에 영향을 줄 만한 핵심 이슈를 요약하세요.
-2. 전반적인 뉴스/시장 분위기 (긍정/부정/중립)를 판단하세요.
-
-**작성 규칙 (매우 중요):**
-- **모든 항목은 반드시 줄바꿈 후 하이픈(-)으로 시작해야 합니다.**
-- **절대로 긴 문단으로 이어서 쓰지 마세요.**
-- **'제목' 부분만 굵게(**) 처리하고, 설명은 일반 텍스트로 작성하세요.**
-- 형식:
-  - **[키워드] 제목**: 설명
-  - **[키워드] 제목**: 설명
-- 예시:
-  - **[실적] 삼성전자 영업이익 급증**: 반도체 부문 호조로...
-  - **[전망] 하반기 수주 기대**: 해외 플랜트 수주 가능성이...
-- **본문 내용에는 별표(*)를 절대 사용하지 마세요.**
-
-다음 형식으로 답변해주세요:
-1. 주요 뉴스:
-- **[핵심] 제목**: 내용 한줄 요약
-- **[핵심] 제목**: 내용 한줄 요약
-2. 등락 원인:
-- **[원인] 제목**: 내용 3줄 요약
-- **[원인] 제목**: 내용 3줄 요약
-3. 뉴스 분위기: [긍정/부정/중립 중 하나]
-"""
+            prompt = prompts.NEWS_ANALYSIS_PROMPT.format(
+                stock_name=stock_name,
+                stock_code=stock_code,
+                price_info=f"- 현재가: {current_price}원" if current_price else "",
+                change_info=f"- 등락률: {change_rate}%" if change_rate else "",
+                news_context=news_context
+            )
             
             result_text = self._call_gemini_api(prompt)
             
@@ -218,45 +191,23 @@ class GeminiService:
             ma60 = technical_indicators.get('ma60', 0)
             ma_signal = technical_indicators.get('ma_signal', '중립')
             
-            prompt = f"""
-당신은 전문 주식 애널리스트입니다. 다음 정보를 종합하여 투자 의견을 제시하세요.
-
-종목: {stock_name}
-
-1. 주가 정보:
-   - 현재가: {stock_info.get('price', 'N/A')}원
-   - 등락률: {stock_info.get('rate', 'N/A')}%
-
-2. 수급 데이터:
-   - 외국인 순매수: {supply_demand.get('foreign_net', 'N/A')}주
-   - 기관 순매수: {supply_demand.get('institution_net', 'N/A')}주
-
-3. 기술적 지표:
-   
-   [RSI - 상대강도지수]
-   - 현재 RSI: {rsi} (신호: {rsi_signal})
-   - 해석: 70 이상=과매수(매도 고려), 30 이하=과매도(매수 고려), 50 전후=중립
-   
-   [MACD - 이동평균 수렴확산]
-   - 현재 MACD: {macd} (신호: {macd_signal})
-   - 해석: 양수=상승 추세, 음수=하락 추세
-   
-   [이동평균선]
-   - MA5 (5일선): {ma5:,.0f}원
-   - MA20 (20일선): {ma20:,.0f}원
-   - MA60 (60일선): {ma60:,.0f}원
-   - 배열 상태: {ma_signal}
-   - 해석: 정배열(5일>20일>60일)=강세장, 역배열=약세장, 골든크로스=매수신호, 데드크로스=매도신호
-
-4. 뉴스 분석:
-   - 뉴스 분위기: {news_analysis.get('sentiment', 'N/A')}
-   - 주요 내용: {news_analysis.get('reason', 'N/A')}
-
-위 정보를 종합하여 다음 형식으로 답변하세요:
-1. 추천: [매수/매도/중립 중 하나]
-2. 신뢰도: [0-100 사이의 숫자]
-3. 근거: [RSI, MACD, 이동평균선 등 기술적 지표를 적극 참고하여 3-5줄로 추천 이유 설명]
-"""
+            prompt = prompts.OUTLOOK_GENERATION_PROMPT.format(
+                stock_name=stock_name,
+                current_price=stock_info.get('price', 'N/A'),
+                change_rate=stock_info.get('rate', 'N/A'),
+                foreign_net=supply_demand.get('foreign_net', 'N/A'),
+                institution_net=supply_demand.get('institution_net', 'N/A'),
+                rsi=rsi,
+                rsi_signal=rsi_signal,
+                macd=macd,
+                macd_signal=macd_signal,
+                ma5=ma5,
+                ma20=ma20,
+                ma60=ma60,
+                ma_signal=ma_signal,
+                news_sentiment=news_analysis.get('sentiment', 'N/A'),
+                news_reason=news_analysis.get('reason', 'N/A')
+            )
             
             result_text = self._call_gemini_api(prompt)
             
