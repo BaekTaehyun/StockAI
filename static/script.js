@@ -80,6 +80,7 @@ async function loadAccountSummary() {
 }
 
 // 보유 종목 리스트 로드
+// 보유 종목 리스트 로드
 async function loadHoldings() {
     try {
         const response = await fetch(`${API_BASE}/api/account/balance`);
@@ -88,7 +89,13 @@ async function loadHoldings() {
         if (result.success) {
             const holdings = result.data.holdings;
             displayHoldings(holdings);
-            // 감성 정보 업데이트 (5분마다)
+
+            // 1. 캐시된 감성 정보가 있으면 즉시 복구 (화면 깜빡임 방지)
+            if (typeof restoreSentimentsFromCache === 'function') {
+                restoreSentimentsFromCache(holdings);
+            }
+
+            // 2. 감성 정보 업데이트 (5분마다)
             if (typeof updateAllSentiments === 'function') {
                 const now = Date.now();
                 const isFirst = !window.lastSentimentUpdate ||
@@ -778,4 +785,85 @@ function formatPercent(value) {
     if (value === null || value === undefined) return '0.00%';
     const sign = value >= 0 ? '+' : '';
     return `${sign}${value.toFixed(2)}%`;
+}
+// 감성 분석 및 리본 로직
+const sentimentCache = {};
+
+function createSentimentElements(stockCode) {
+    // 리본 HTML 생성 (초기에는 로딩 상태 또는 숨김)
+    const ribbonHtml = `<div id="ribbon-${stockCode}" class="ribbon" style="display: none;"><span>분석중</span></div>`;
+    const footerHtml = `<div id="footer-${stockCode}" class="sentiment-footer" style="display: none;"></div>`;
+
+    return { ribbonHtml, footerHtml };
+}
+
+async function updateAllSentiments(holdings) {
+    for (const stock of holdings) {
+        await updateSingleSentiment(stock.stk_cd);
+    }
+}
+
+async function updateSingleSentiment(code) {
+    try {
+        // 캐시 확인 (5분 유효)
+        const now = Date.now();
+        if (sentimentCache[code] && (now - sentimentCache[code].timestamp < 5 * 60 * 1000)) {
+            renderRibbon(code, sentimentCache[code].data);
+            return;
+        }
+
+        const response = await fetch(`${API_BASE}/api/analysis/sentiment/${code}`);
+        const result = await response.json();
+
+        if (result.success) {
+            const data = result.data;
+            sentimentCache[code] = {
+                timestamp: now,
+                data: data
+            };
+            renderRibbon(code, data);
+        }
+    } catch (error) {
+        console.error(`감성 분석 로드 실패 (${code}):`, error);
+    }
+}
+
+function renderRibbon(code, data) {
+    const ribbon = document.getElementById(`ribbon-${code}`);
+    const footer = document.getElementById(`footer-${code}`);
+
+    if (!ribbon) return;
+
+    // AI 추천에 따른 리본 스타일
+    const recommendation = data.ai_recommendation; // 매수, 매도, 관망
+    let ribbonClass = 'neutral';
+    let ribbonText = recommendation;
+
+    if (recommendation === '매수') {
+        ribbonClass = 'buy';
+    } else if (recommendation === '매도') {
+        ribbonClass = 'sell';
+    }
+
+    ribbon.className = `ribbon ${ribbonClass}`;
+    ribbon.innerHTML = `<span>${ribbonText}</span>`;
+    ribbon.style.display = 'block';
+
+    // 푸터 정보 (뉴스 감성 등)
+    if (footer) {
+        footer.innerHTML = `
+            <span class="sentiment-tag ${data.news_sentiment}">${data.news_sentiment}</span>
+            <span class="confidence-tag">신뢰도 ${data.ai_confidence}%</span>
+        `;
+        footer.style.display = 'flex';
+    }
+}
+
+function restoreSentimentsFromCache(holdings) {
+    holdings.forEach(stock => {
+        const code = stock.stk_cd;
+        if (sentimentCache[code]) {
+            renderRibbon(code, sentimentCache[code].data);
+        }
+    });
 }

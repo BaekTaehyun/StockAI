@@ -1224,4 +1224,276 @@ body {
         font-size: 0.9rem;
         padding: 0.5rem 1rem;
     }
+
+    .supply-item.positive {
+        background: rgba(16, 185, 129, 0.1);
+    }
+
+    .supply-item.negative {
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    .supply-item .label {
+        display: block;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+    }
+
+    .supply-item .value {
+        display: block;
+        font-size: 1.2rem;
+        font-weight: 700;
+    }
+
+    .supply-item.positive .value {
+        color: var(--success);
+    }
+
+    .supply-item.negative .value {
+        color: var(--danger);
+    }
+
+    .trend {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 1rem;
+        background: rgba(99, 102, 241, 0.1);
+        border-radius: 8px;
+        color: var(--accent-1);
+        font-weight: 600;
+        margin-top: 1rem;
+    }
+
+    .supply-detail {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 8px;
+    }
+
+    .detail-row.total {
+        background: rgba(99, 102, 241, 0.1);
+        font-weight: 700;
+        border: 1px solid var(--accent-1);
+    }
+
+    .trend-box {
+        padding: 1rem;
+        background: rgba(99, 102, 241, 0.1);
+        border-radius: 8px;
+        text-align: center;
+        color: var(--accent-1);
+        font-weight: 600;
+    }
+
+    /* News */
+    .sentiment-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .sentiment-badge.긍정 {
+        background: rgba(16, 185, 129, 0.2);
+        color: var(--success);
+    }
+
+    .sentiment-badge.부정 {
+        background: rgba(239, 68, 68, 0.2);
+        color: var(--danger);
+    }
+
+    .sentiment-badge.중립 {
+        background: rgba(245, 158, 11, 0.2);
+        color: var(--warning);
+    }
+
+    .news-summary .sentiment {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .news-summary .sentiment.긍정 {
+        background: rgba(16, 185, 129, 0.2);
+        color: var(--success);
+    }
+
+    .news-summary .sentiment.부정 {
+        background: rgba(239, 68, 68, 0.2);
+        color: var(--danger);
+    }
+
+    .news-summary .sentiment.중립 {
+        background: rgba(245, 158, 11, 0.2);
+        color: var(--warning);
+    }
+
+    .news-box,
+    .reason-box {
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 12px;
+        color: var(--text-primary);
+        line-height: 1.6;
+    }
+
+    /* News Item Formatting */
+    .news-item {
+        margin-bottom: 1.2rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding-bottom: 1rem;
+    }
+
+    .news-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .news-title {
+        color: #FFD700;
+        /* Gold */
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .news-body {
+        color: #FFFFFF;
+        /* White */
+        font-size: 1rem;
+        line-height: 1.6;
+        opacity: 0.9;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        body {
+            padding: 1rem;
+        }
+
+        .header {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+        }
+
+        .account-summary {
+            grid-template-columns: 1fr;
+        }
+
+        .holdings-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .search-box input {
+            min-width: 100%;
+        }
+
+        .modal-content {
+            max-width: 95%;
+            padding: 1.5rem;
+        }
+
+        .analysis-tabs {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .analysis-tabs .tab {
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+        }
+    }
+
+    /* Ribbon Styles */
+    .ribbon {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    .ribbon span {
+        position: absolute;
+        top: 15px;
+        right: -35px;
+        width: 140px;
+        padding: 5px 0;
+        background-color: var(--text-secondary);
+        color: white;
+        text-align: center;
+        font-size: 0.8rem;
+        font-weight: 700;
+        transform: rotate(45deg);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        text-transform: uppercase;
+    }
+
+    .ribbon.buy span {
+        background-color: var(--success);
+    }
+
+    .ribbon.sell span {
+        background-color: var(--danger);
+    }
+
+    .ribbon.neutral span {
+        background-color: var(--warning);
+    }
+
+    /* Sentiment Footer Styles */
+    .sentiment-footer {
+        margin-top: 1rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.85rem;
+    }
+
+    .sentiment-tag {
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
+    .sentiment-tag.긍정 {
+        background: rgba(16, 185, 129, 0.15);
+        color: var(--success);
+    }
+
+    .sentiment-tag.부정 {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--danger);
+    }
+
+    .sentiment-tag.중립 {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--warning);
+    }
+
+    .confidence-tag {
+        color: var(--text-secondary);
+    }
 }

@@ -343,4 +343,6 @@ if __name__ == '__main__':
     print("\n서버 주소: http://localhost:5000")
     print("브라우저에서 위 주소로 접속하세요!\n")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # 보안 주의: 외부 접속(0.0.0.0) 허용 시 반드시 debug=False로 설정해야 합니다.
+    # debug=True 상태에서 외부 접속을 허용하면 원격 코드 실행 취약점이 발생할 수 있습니다.
+    app.run(debug=False, host='0.0.0.0', port=5000)
