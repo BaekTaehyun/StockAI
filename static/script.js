@@ -98,11 +98,12 @@ async function loadHoldings() {
             // 2. 감성 정보 업데이트 (5분마다)
             if (typeof updateAllSentiments === 'function') {
                 const now = Date.now();
-                const isFirst = !window.lastSentimentUpdate ||
-                    Object.keys(sentimentCache || {}).length === 0;
+                // 첫 로드 감지: lastSentimentUpdate가 없으면 첫 로드
+                const isFirst = !window.lastSentimentUpdate;
                 const interval = window.SENTIMENT_REFRESH_INTERVAL || (5 * 60 * 1000);
 
                 if (isFirst || now - (window.lastSentimentUpdate || 0) > interval) {
+                    console.log('🎗️ 리본 정보 업데이트 시작', isFirst ? '(첫 로드)' : '(주기적 갱신)');
                     updateAllSentiments(holdings);
                     window.lastSentimentUpdate = now;
                 }

@@ -1496,4 +1496,81 @@ body {
     .confidence-tag {
         color: var(--text-secondary);
     }
+}/* Ribbon Styles - PC에도 적용 */
+.ribbon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.ribbon span {
+    position: absolute;
+    top: 15px;
+    right: -35px;
+    width: 140px;
+    padding: 5px 0;
+    background-color: var(--text-secondary);
+    color: white;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    transform: rotate(45deg);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    text-transform: uppercase;
+}
+
+.ribbon.buy span {
+    background-color: var(--success);
+}
+
+.ribbon.sell span {
+    background-color: var(--danger);
+}
+
+.ribbon.neutral span {
+    background-color: var(--warning);
+}
+
+/* Sentiment Footer - PC에도 적용 */
+.sentiment-footer {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.sentiment-tag {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.sentiment-tag.긍정 {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+}
+
+.sentiment-tag.부정 {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--danger);
+}
+
+.sentiment-tag.중립 {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+}
+
+.confidence-tag {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
 }
