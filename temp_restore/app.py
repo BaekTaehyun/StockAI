@@ -1,23 +1,12 @@
-"""
-키움 주식 모니터링 시스템 - 메인 애플리케이션
-================================================================
-Flask 기반 웹 서버로 다음 기능을 제공합니다:
-- 실시간 보유 종목 조회
-- 계좌 잔고 및 수익률 표시
-- AI 기반 종목 분석 (Gemini API)
-- 기술적 지표 계산 및 시각화
-- 시장 지수 (KOSPI/KOSDAQ) 모니터링
-================================================================
-"""
 from flask import Flask, jsonify, render_template
 from flask_cors import CORS
 from kis_api import KiwoomApi
 import config
 
 app = Flask(__name__)
-CORS(app)  # CORS 활성화 (프론트엔드 연동)
+CORS(app)
 
-# Kiwoom API 인스턴스 생성
+# Kiwoom API 인스턴스
 kiwoom = KiwoomApi()
 
 @app.route('/')

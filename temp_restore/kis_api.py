@@ -1,19 +1,3 @@
-"""
-키움증권 REST API 클라이언트
-================================================================
-키움증권 개발자 센터의 REST API를 Python으로 래핑한 클라이언트입니다.
-
-주요 기능:
-- OAuth 2.0 인증 토큰 발급 및 관리
-- 현재가 조회 (get_current_price)
-- 계좌 잔고 조회 (get_account_balance)
-- 일봉 차트 데이터 조회 (get_daily_chart_data)
-- 투자자별 매매 동향 조회 (get_investor_trading)
-- 시장 지수 조회 (get_market_index)
-
-API 문서: https://www.kiwoom.com/
-================================================================
-"""
 import requests
 import json
 import datetime
@@ -21,16 +5,13 @@ import time
 import config
 
 class KiwoomApi:
-    """키움 REST API 클라이언트 클래스"""
-    
     def __init__(self):
-        """API 클라이언트 초기화 - config.py에서 설정 값 로드"""
         self.base_url = config.BASE_URL
         self.app_key = config.APP_KEY
         self.app_secret = config.APP_SECRET
         self.account_no = config.ACCOUNT_NO
-        self.access_token = None  # OAuth 토큰 (get_access_token으로 발급)
-        self.token_expired = None  # 토큰 만료 시간
+        self.access_token = None
+        self.token_expired = None
 
     def get_access_token(self):
         """Issues an OAuth 2.0 Access Token (Kiwoom)."""
