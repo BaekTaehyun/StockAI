@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 중요: 개인 정보가 포함된 파일
+config.py
+*.txt
+!requirements.txt
+
+# 로그 파일
+*.log
+
+# 캐시
+cache/
+
+# 백업 파일
+*_backup*.zip
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db

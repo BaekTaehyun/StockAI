@@ -1,0 +1,28 @@
+# Kiwoom KIS Developers API Configuration
+# SECURITY WARNING: Never share this file or commit it to public repositories.
+# ⚠️ 이 파일은 git에 커밋하지 마세요! (.gitignore에 추가 필요)
+
+# [사용자 설정 필요] 아래 키를 본인의 키로 교체하세요
+# 키움 증권 개발자 센터에서 발급받은 키를 입력합니다
+APP_KEY = "여기에_APP_KEY_입력"
+APP_SECRET = "여기에_APP_SECRET_입력"
+
+# [사용자 설정 필요] 계좌번호 (8자리)
+ACCOUNT_NO = "12345678"
+
+# URL 설정
+# 실전 투자: "https://api.kiwoom.com"
+# 모의 투자: "https://mockapi.kiwoom.com"
+BASE_URL = "https://api.kiwoom.com"
+
+# Google Gemini API 키
+# https://makersuite.google.com/app/apikey 에서 발급
+GEMINI_API_KEY = "여기에_GEMINI_API_KEY_입력"
+
+# Google Search 설정 (선택사항 - 현재 비활성화)
+GOOGLE_SEARCH_API_KEY = ""
+GOOGLE_SEARCH_CX = ""
+
+# 분석 설정
+NEWS_SEARCH_DAYS = 3  # 최근 며칠 뉴스 참고
+AI_MODEL = "gemini-2.0-flash"  # 빠르고 저렴한 모델
