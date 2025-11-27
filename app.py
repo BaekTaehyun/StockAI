@@ -9,16 +9,57 @@ Flask 기반 웹 서버로 다음 기능을 제공합니다:
 - 시장 지수 (KOSPI/KOSDAQ) 모니터링
 ================================================================
 """
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request, session, redirect, url_for
 from flask_cors import CORS
 from kis_api import KiwoomApi
+from datetime import timedelta
 import config
 
 app = Flask(__name__)
 CORS(app)  # CORS 활성화 (프론트엔드 연동)
 
+# 세션 설정
+app.secret_key = getattr(config, 'SECRET_KEY', 'default-secret-key')
+app.permanent_session_lifetime = timedelta(days=7) # 로그인 7일 유지
+
 # Kiwoom API 인스턴스 생성
 kiwoom = KiwoomApi()
+
+@app.before_request
+def require_login():
+    """모든 요청에 대해 로그인 여부 확인"""
+    # 정적 파일 및 로그인 페이지는 제외
+    if request.endpoint in ['login', 'static']:
+        return
+    
+    # 로그인되지 않은 경우 로그인 페이지로 리다이렉트
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """로그인 페이지 및 처리"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        users = getattr(config, 'USERS', {})
+        
+        if username in users and users[username] == password:
+            session.permanent = True  # 세션 영구 유지 (설정된 lifetime 만큼)
+            session['logged_in'] = True
+            session['username'] = username
+            return redirect(url_for('index'))
+        else:
+            return render_template('login.html', error="아이디 또는 비밀번호가 올바르지 않습니다.")
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """로그아웃"""
+    session.clear()
+    return redirect(url_for('login'))
 
 @app.route('/')
 def index():

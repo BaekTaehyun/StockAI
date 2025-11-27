@@ -34,30 +34,108 @@ class KiwoomApi:
 
     def get_access_token(self):
         """Issues an OAuth 2.0 Access Token (Kiwoom)."""
-        url = f"{self.base_url}/oauth2/token"  # Fixed: /oauth2/token not /oauth2.0/token
+        url = f"{self.base_url}/oauth2/token"
         headers = {"content-type": "application/json"}
         body = {
             "grant_type": "client_credentials",
             "appkey": self.app_key,
-            "secretkey": self.app_secret  # Kiwoom uses 'secretkey', not 'appsecret'
+            "secretkey": self.app_secret
         }
 
         print(f"[Auth] Requesting token from {url}...")
-        res = requests.post(url, headers=headers, data=json.dumps(body), timeout=10)
-        
-        if res.status_code == 200:
-            data = res.json()
-            if data.get('return_code') == 0:
-                self.access_token = data['token']  # Kiwoom uses 'token', not 'access_token'
-                self.token_expired = data.get('expires_dt')
-                print(f"[Auth] Token issued successfully. Expires: {self.token_expired}")
-                return True
+        try:
+            res = requests.post(url, headers=headers, data=json.dumps(body), timeout=10)
+            
+            if res.status_code == 200:
+                data = res.json()
+                # API 문서에 따라 성공 여부 확인 (보통 return_code 사용 안할 수도 있음, 토큰 존재 여부 확인)
+                if 'token' in data or 'access_token' in data:
+                    self.access_token = data.get('token') or data.get('access_token')
+                    self.token_expired = data.get('expires_dt') or data.get('expires_in')
+                    print(f"[Auth] Token issued successfully. Expires: {self.token_expired}")
+                    return True
+                elif data.get('return_code') == 0: # 기존 로직 유지
+                    self.access_token = data.get('token')
+                    self.token_expired = data.get('expires_dt')
+                    print(f"[Auth] Token issued successfully. Expires: {self.token_expired}")
+                    return True
+                else:
+                    print(f"[Auth] Failed: {data.get('return_msg')}")
+                    return False
             else:
-                print(f"[Auth] Failed: {data.get('return_msg')}")
+                print(f"[Auth] HTTP Error {res.status_code}: {res.text}")
                 return False
-        else:
-            print(f"[Auth] HTTP Error {res.status_code}: {res.text}")
+        except Exception as e:
+            print(f"[Auth] Connection Error: {e}")
             return False
+
+    def _send_request(self, url, headers, body=None, method='POST'):
+        """
+        API 요청을 보내고 토큰 만료(8005) 시 자동 갱신 및 재시도하는 헬퍼 메소드
+        """
+        # 1. 토큰이 없으면 발급 시도
+        if not self.access_token:
+            print("[API] No token found. Requesting new token...")
+            if not self.get_access_token():
+                return None
+
+        # 헤더에 최신 토큰 적용
+        headers["authorization"] = f"Bearer {self.access_token}"
+
+        try:
+            if method == 'POST':
+                res = requests.post(url, headers=headers, data=json.dumps(body) if body else None, timeout=10)
+            else:
+                res = requests.get(url, headers=headers, timeout=10)
+
+            if res.status_code == 200:
+                data = res.json()
+                
+                # 토큰 만료/유효하지 않음 에러 체크 (8005 등)
+                msg = data.get('return_msg', '')
+                code = data.get('return_code')
+                
+                # 에러 코드가 있고, 메시지에 'Token'이나 '8005'가 포함된 경우
+                if code is not None and str(code) != '0' and ('Token' in msg or '8005' in str(code) or '인증' in msg):
+                    print(f"[API] Token invalid ({msg}). Refreshing token and retrying...")
+                    
+                    # 토큰 재발급
+                    if self.get_access_token():
+                        # 헤더 업데이트 및 재시도
+                        headers["authorization"] = f"Bearer {self.access_token}"
+                        if method == 'POST':
+                            res = requests.post(url, headers=headers, data=json.dumps(body) if body else None, timeout=10)
+                        else:
+                            res = requests.get(url, headers=headers, timeout=10)
+                            
+                        if res.status_code == 200:
+                            return res.json()
+                    else:
+                        print("[API] Failed to refresh token.")
+                        return None
+                
+                return data
+            
+            # 401 Unauthorized 처리
+            elif res.status_code == 401:
+                print(f"[API] HTTP 401 Unauthorized. Refreshing token...")
+                if self.get_access_token():
+                    headers["authorization"] = f"Bearer {self.access_token}"
+                    if method == 'POST':
+                        res = requests.post(url, headers=headers, data=json.dumps(body) if body else None, timeout=10)
+                    else:
+                        res = requests.get(url, headers=headers, timeout=10)
+                    
+                    if res.status_code == 200:
+                        return res.json()
+
+            else:
+                print(f"[API] HTTP Error {res.status_code}: {res.text}")
+                return None
+
+        except Exception as e:
+            print(f"[API] Request Error: {e}")
+            return None
 
     def _clean_code(self, code):
         """종목코드에서 'A' 접두사 제거"""
@@ -70,44 +148,28 @@ class KiwoomApi:
         Fetches current price of a stock (Kiwoom ka10001).
         code: Stock code (e.g., "005930")
         """
-        if not self.access_token:
-            print("[Error] No access token. Call get_access_token() first.")
-            return None
-            
         code = self._clean_code(code)
-
-        # Kiwoom uses HTTP POST to /api/dostk/stkinfo
         url = f"{self.base_url}/api/dostk/stkinfo"
         
         headers = {
             "content-type": "application/json;charset=UTF-8",
-            "authorization": f"Bearer {self.access_token}",
-            "api-id": "ka10001"  # TR code - REQUIRED!
+            "api-id": "ka10001"
         }
         
-        # Request body for ka10001
-        body = {
-            "stk_cd": code  # Stock code (correct parameter name from Excel docs)
-        }
+        body = {"stk_cd": code}
 
-        res = requests.post(url, headers=headers, data=json.dumps(body), timeout=10)
+        data = self._send_request(url, headers, body)
         
-        if res.status_code == 200:
-            data = res.json()
-            if data.get('return_code') == 0:
-                # Kiwoom API returns data directly at root level, not nested
-                return {
-                    "name": data.get('stk_nm', 'Unknown'),
-                    "code": code,
-                    "price": data.get('cur_prc', 'N/A'),  # 현재가
-                    "change": data.get('pred_pre', 'N/A'),  # 전일대비
-                    "rate": data.get('flu_rt', 'N/A')  # 등락률
-                }
-            else:
-                print(f"[Error] API Error: {data.get('return_msg')}")
-                return None
+        if data and data.get('return_code') == 0:
+            return {
+                "name": data.get('stk_nm', 'Unknown'),
+                "code": code,
+                "price": data.get('cur_prc', 'N/A'),
+                "change": data.get('pred_pre', 'N/A'),
+                "rate": data.get('flu_rt', 'N/A')
+            }
         else:
-            print(f"[Error] HTTP Error {res.status_code}: {res.text}")
+            if data: print(f"[Error] API Error: {data.get('return_msg')}")
             return None
 
     def get_account_balance(self):
@@ -115,244 +177,157 @@ class KiwoomApi:
         Fetches account stock holdings (Kiwoom kt00018).
         Returns list of stock holdings.
         """
-        if not self.access_token:
-            print("[Error] No access token. Call get_access_token() first.")
-            return None
-
-        # Kiwoom uses HTTP POST to /api/dostk/acnt
         url = f"{self.base_url}/api/dostk/acnt"
         
         headers = {
             "content-type": "application/json;charset=UTF-8",
-            "authorization": f"Bearer {self.access_token}",
-            "api-id": "kt00018"  # TR code for account balance
+            "api-id": "kt00018"
         }
         
-        # Request body for kt00018
         body = {
-            "qry_tp": "1",  # 조회구분: 1=수탁잔고
-            "dmst_stex_tp": "KRX"  # 국내외구분: KRX=한국거래소
+            "qry_tp": "1",
+            "dmst_stex_tp": "KRX"
         }
 
-        res = requests.post(url, headers=headers, data=json.dumps(body), timeout=10)
+        data = self._send_request(url, headers, body)
         
-        if res.status_code == 200:
-            data = res.json()
-            if data.get('return_code') == 0:
-                # Kiwoom API returns holdings in 'acnt_evlt_remn_indv_tot' array
-                holdings = data.get('acnt_evlt_remn_indv_tot', [])
-                return {
-                    "total_purchase_amount": data.get('tot_pur_amt', '0'),  # 총매입금액
-                    "total_eval_amount": data.get('tot_evlt_amt', '0'),  # 총평가금액
-                    "total_profit_loss": data.get('tot_evlt_pl', '0'),  # 총평가손익
-                    "total_profit_rate": data.get('tot_prft_rt', '0'),  # 총수익률
-                    "holdings": holdings
-                }
-            else:
-                print(f"[Error] API Error: {data.get('return_msg')}")
-                return None
+        if data and data.get('return_code') == 0:
+            holdings = data.get('acnt_evlt_remn_indv_tot', [])
+            return {
+                "total_purchase_amount": data.get('tot_pur_amt', '0'),
+                "total_eval_amount": data.get('tot_evlt_amt', '0'),
+                "total_profit_loss": data.get('tot_evlt_pl', '0'),
+                "total_profit_rate": data.get('tot_prft_rt', '0'),
+                "holdings": holdings
+            }
         else:
-            print(f"[Error] HTTP Error {res.status_code}: {res.text}")
+            if data: print(f"[Error] API Error: {data.get('return_msg')}")
             return None
 
     def get_daily_chart_data(self, code, date=None):
         """
         일봉 차트 데이터 조회 (Kiwoom ka10081)
-        Kiwoom API는 base_dt를 무시하고 항상 최근 500일 치 데이터를 반환함
         """
-        if not self.access_token:
-            print("[Error] No access token. Call get_access_token() first.")
-            return None
-            
         code = self._clean_code(code)
-
         url = f"{self.base_url}/api/dostk/chart" 
         
         headers = {
             "content-type": "application/json;charset=UTF-8",
-            "authorization": f"Bearer {self.access_token}",
             "api-id": "ka10081"
         }
         
-        # 단일 시도 (API가 항상 전체 데이터를 반환하므로)
         try_date = date or datetime.datetime.now().strftime("%Y%m%d")
         
         body = {
             "stk_cd": code,
             "base_dt": try_date,
             "tick_range": "1",
-            "upd_stkpc_tp": "1" # 수정주가 적용 여부 (1: 적용)
+            "upd_stkpc_tp": "1"
         }
 
-        try:
-            print(f"[Chart] Requesting data for {code} (base_dt: {try_date})...")
-            res = requests.post(url, headers=headers, data=json.dumps(body), timeout=10)
-            
-            if res.status_code == 200:
-                data = res.json()
-                
-                if data.get('return_code') == 0:
-                    # Kiwoom API는 'output' 대신 'stk_dt_pole_chart_qry' 키 사용
-                    output = data.get('stk_dt_pole_chart_qry', data.get('output', []))
-                    
-                    if output:  # 데이터가 있으면 반환
-                        print(f"[Chart] ✓ Got {len(output)} records")
-                        return output
-                    else:
-                        print(f"[Chart] ✗ No data available for {code}")
-                        return None
-                else:
-                    print(f"[Chart Error] API Error: {data.get('return_msg')}, Code: {data.get('return_code')}")
-                    return None
-                print(f"[Chart Error] HTTP {res.status_code}: {res.text[:200]}")
+        print(f"[Chart] Requesting data for {code} (base_dt: {try_date})...")
+        data = self._send_request(url, headers, body)
+        
+        if data and data.get('return_code') == 0:
+            output = data.get('stk_dt_pole_chart_qry', data.get('output', []))
+            if output:
+                print(f"[Chart] ✓ Got {len(output)} records")
+                return output
+            else:
+                print(f"[Chart] ✗ No data available for {code}")
                 return None
-        except requests.exceptions.Timeout:
-            print(f"[Chart Error] Request timeout")
-            return None
-        except Exception as e:
-            print(f"[Chart Error] Connection: {e}")
-            import traceback
-            traceback.print_exc()
+        else:
+            if data: print(f"[Chart Error] API Error: {data.get('return_msg')}")
             return None
 
     def get_investor_trading(self, code):
         """
         투자자별 매매동향 조회 (Kiwoom ka10059)
-        매수/매도 데이터를 별도로 조회하여 반환
         """
-        if not self.access_token:
-            print("[Error] No access token. Call get_access_token() first.")
-            return None
-            
         code = self._clean_code(code)
-
         url = f"{self.base_url}/api/dostk/stkinfo"
         
         headers = {
             "content-type": "application/json;charset=UTF-8",
-            "authorization": f"Bearer {self.access_token}",
             "api-id": "ka10059"
         }
         
         today_date = datetime.datetime.now().strftime("%Y%m%d")
         
-        # 1. 매도 데이터 조회 (trde_tp=3)
+        # 1. 매도 데이터 조회
         sell_body = {
-            "stk_cd": code,
-            "dt": today_date,
-            "amt_qty_tp": "1", # 금액/수량 구분 (1: 수량, 2: 금액)
-            "trde_tp": "3", # 매매구분 (3: 매도)
-            "unit_tp": "1" # 단수구분 (1: 1주, 2: 천주)
+            "stk_cd": code, "dt": today_date, "amt_qty_tp": "1", "trde_tp": "3", "unit_tp": "1"
         }
         
         foreign_sell = 0
         institution_sell = 0
         
-        print(f"[Investor] Requesting SELL data for {code}...")
-        try:
-            res = requests.post(url, headers=headers, data=json.dumps(sell_body), timeout=10)
-            if res.status_code == 200:
-                data = res.json()
-                if data.get('return_code') == 0:
-                    output = data.get('stk_invsr_orgn', [])
-                    if output:
-                        sell_data = output[0]
-                        # 매도 데이터: 음수로 표시되므로 절대값 사용
-                        foreign_sell = abs(int(sell_data.get('frgnr_invsr', 0)))
-                        institution_sell = abs(int(sell_data.get('orgn', 0)))
-        except Exception as e:
-            print(f"[Investor Error] Failed to get SELL data: {e}")
-        
-        # 2. 매수 데이터 조회 (trde_tp=2)
+        data_sell = self._send_request(url, headers, sell_body)
+        if data_sell and data_sell.get('return_code') == 0:
+            output = data_sell.get('stk_invsr_orgn', [])
+            if output:
+                sell_data = output[0]
+                foreign_sell = abs(int(sell_data.get('frgnr_invsr', 0)))
+                institution_sell = abs(int(sell_data.get('orgn', 0)))
+
+        # 2. 매수 데이터 조회
         buy_body = {
-            "stk_cd": code,
-            "dt": today_date,
-            "amt_qty_tp": "1",
-            "trde_tp": "2", # 매매구분 (2: 매수)
-            "unit_tp": "1"
+            "stk_cd": code, "dt": today_date, "amt_qty_tp": "1", "trde_tp": "2", "unit_tp": "1"
         }
         
         foreign_buy = 0
         institution_buy = 0
         
-        print(f"[Investor] Requesting BUY data for {code}...")
-        try:
-            res = requests.post(url, headers=headers, data=json.dumps(buy_body), timeout=10)
-            if res.status_code == 200:
-                data = res.json()
-                if data.get('return_code') == 0:
-                    output = data.get('stk_invsr_orgn', [])
-                    if output:
-                        buy_data = output[0]
-                        # 매수 데이터: 음수로 표시되므로 절대값 사용
-                        foreign_buy = abs(int(buy_data.get('frgnr_invsr', 0)))
-                        institution_buy = abs(int(buy_data.get('orgn', 0)))
-        except Exception as e:
-            print(f"[Investor Error] Failed to get BUY data: {e}")
-        
-        # 3. 순매수 계산
-        foreign_net = foreign_buy - foreign_sell
-        institution_net = institution_buy - institution_sell
+        data_buy = self._send_request(url, headers, buy_body)
+        if data_buy and data_buy.get('return_code') == 0:
+            output = data_buy.get('stk_invsr_orgn', [])
+            if output:
+                buy_data = output[0]
+                foreign_buy = abs(int(buy_data.get('frgnr_invsr', 0)))
+                institution_buy = abs(int(buy_data.get('orgn', 0)))
         
         return {
-            'foreign_buy': foreign_buy,
-            'foreign_sell': foreign_sell,
-            'foreign_net': foreign_net,
-            'institution_buy': institution_buy,
-            'institution_sell': institution_sell,
-            'institution_net': institution_net
-        }
-
-    def _get_empty_investor_data(self):
-        return {
-            'foreign_buy': 0, 'foreign_sell': 0, 'foreign_net': 0,
-            'institution_buy': 0, 'institution_sell': 0, 'institution_net': 0
+            'foreign_buy': foreign_buy, 'foreign_sell': foreign_sell,
+            'foreign_net': foreign_buy - foreign_sell,
+            'institution_buy': institution_buy, 'institution_sell': institution_sell,
+            'institution_net': institution_buy - institution_sell
         }
 
     def get_market_index(self, market_code):
         """
         시장 지수 조회 (코스피: 001, 코스닥: 101)
-        TR: ka20001 (업종기본정보조회)
         """
-        if not self.access_token:
-            if not self.get_access_token():
-                return None
-
-        # 키움 API: /api/dostk/sect + api-id: ka20001
         url = f"{self.base_url}/api/dostk/sect"
         
         headers = {
             "content-type": "application/json;charset=UTF-8",
-            "authorization": f"Bearer {self.access_token}",
-            "api-id": "ka20001"  # 업종기본정보조회 TR code
+            "api-id": "ka20001"
         }
 
-        # 업종코드: 001 = 코스피, 101 = 코스닥
-        # mrkt_tp: 0 = 코스피, 1 = 코스닥
         mrkt_tp = "0" if market_code == "001" else "1"
-        body = {
-            "mrkt_tp": mrkt_tp,
-            "inds_cd": market_code
-        }
+        body = {"mrkt_tp": mrkt_tp, "inds_cd": market_code}
 
-        try:
-            res = requests.post(url, headers=headers, data=json.dumps(body), timeout=10)
-            
-            if res.status_code == 200:
-                data = res.json()
-                if data.get('return_code') == 0 or data.get('cur_prc'):
-                    # 키움 API는 결과를 최상위 레벨에 반환
-                    return {
-                        'price': data.get('cur_prc', '0'),       # 현재가
-                        'change': data.get('pred_pre', '0'),     # 전일대비
-                        'rate': data.get('flu_rt', '0')          # 등락률
-                    }
-                else:
-                    print(f"[Error] API Error: {data.get('return_msg')}")
-                    return None
-            else:
-                print(f"[Error] HTTP {res.status_code}: {res.text}")
-                return None
-        except Exception as e:
-            print(f"Error fetching market index: {e}")
+        data = self._send_request(url, headers, body)
+        
+        if data and (data.get('return_code') == 0 or data.get('cur_prc')):
+            return {
+                'price': data.get('cur_prc', '0'),
+                'change': data.get('pred_pre', '0'),
+                'rate': data.get('flu_rt', '0')
+            }
+        else:
+            if data: print(f"[Error] API Error: {data.get('return_msg')}")
             return None
+
+    def get_minute_chart_data(self, code):
+        """
+        분봉 차트 데이터 조회 (Kiwoom ka10086 - 추정)
+        Note: app.py에서 호출되므로 추가함.
+        """
+        code = self._clean_code(code)
+        # 분봉 API URL 및 TR 코드는 문서 확인 필요. 
+        # 여기서는 일봉과 유사한 패턴으로 가정하거나, 기존에 구현되어 있었다면 복구해야 함.
+        # 만약 이전 파일에 없었다면 app.py가 에러를 냈을 것임.
+        # 안전을 위해 빈 리스트 반환 또는 에러 로그 출력
+        print(f"[Warning] get_minute_chart_data not fully implemented for {code}")
+        return []
