@@ -167,7 +167,10 @@ const UI = {
         }
     },
 
-    // 모달 열기 및 데이터 로드 (강제 갱신 적용)
+    // 진행 중인 요청 추적 (중복 요청 방지)
+    _pendingRequests: {},
+
+    // 모달 열기 및 데이터 로드 (강제 갱신 적용 + 중복 요청 방지)
     async openStockModal(stock) {
         // 클릭 시 해당 종목 감성 정보 즉시 갱신
         if (typeof updateSingleSentiment === 'function') {
@@ -193,15 +196,43 @@ const UI = {
         // 탭 초기화
         this.switchTab('overview');
 
-        try {
-            // 종합 분석 로드 (강제 갱신 False -> 10분 캐시 사용)
-            await this.loadFullAnalysis(stock.stk_cd, false);
-
-            // 분봉 차트 로드
-            const chartData = await API.fetchMinuteChart(stock.stk_cd);
-            if (chartData.success) {
-                Charts.renderMinuteChart(chartData.data);
+        // 중복 요청 방지: 이미 진행 중인 요청이 있으면 대기
+        const requestKey = `analysis_${stock.stk_cd}`;
+        if (this._pendingRequests[requestKey]) {
+            console.log(`⏳ 진행 중인 요청 대기: ${stock.stk_cd}`);
+            try {
+                await this._pendingRequests[requestKey];
+                console.log(`✅ 진행 중이던 요청 완료: ${stock.stk_cd}`);
+            } catch (error) {
+                console.error(`❌ 진행 중이던 요청 실패: ${stock.stk_cd}`, error);
             }
+            spinner.style.display = 'none';
+            tabs.style.display = 'flex';
+            return;
+        }
+
+        // 새 요청 시작
+        const requestPromise = (async () => {
+            try {
+                // 종합 분석 로드 (강제 갱신 False -> 30분 캐시 사용)
+                await this.loadFullAnalysis(stock.stk_cd, false);
+
+                // 분봉 차트 로드 - 캔버스 요소가 없어서 비활성화
+                // const chartData = await API.fetchMinuteChart(stock.stk_cd);
+                // if (chartData.success) {
+                //     Charts.renderMinuteChart(chartData.data);
+                // }
+            } finally {
+                // 요청 완료 후 삭제
+                delete this._pendingRequests[requestKey];
+            }
+        })();
+
+        // 진행 중인 요청으로 등록
+        this._pendingRequests[requestKey] = requestPromise;
+
+        try {
+            await requestPromise;
         } catch (error) {
             console.error('모달 데이터 로드 중 오류:', error);
         } finally {

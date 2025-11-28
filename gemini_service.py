@@ -20,19 +20,28 @@ class GeminiService:
     
     def _get_cache_path(self, code, analysis_type):
         """캐시 파일 경로 생성 (종목코드_타입_날짜.json)"""
+        # 종목 코드 정규화 (A 접두사 제거)
+        normalized_code = code.lstrip('A') if code and code.startswith('A') else code
         today = datetime.datetime.now().strftime("%Y%m%d")
-        filename = f"{code}_{analysis_type}_{today}.json"
-        return os.path.join(self.cache_dir, filename)
+        filename = f"{normalized_code}_{analysis_type}_{today}.json"
+        path = os.path.join(self.cache_dir, filename)
+        print(f"[DEBUG] Cache path: {code} → {normalized_code} → {filename}")
+        return path
 
     def _load_from_cache(self, code, analysis_type, force_refresh=False):
         """
         캐시에서 데이터 로드
-        - force_refresh=True: 캐시 무시하고 None 반환
-        - 파일 수정 시간이 1시간(3600초) 이상 지났으면 만료 처리
+        - force_refresh=True: 캐시 무시하고 (None, dict) 반환
+        - 파일 수정 시간이 30분(1800초) 이상 지났으면 만료 처리
+        Returns:
+            (data, cache_info) - data는 캐싱된 데이터 또는 None, cache_info는 캐시 상태 정보
         """
+        cache_info = {'cached': False, 'reason': '', 'age_seconds': 0}
+        
         if force_refresh:
             print(f"[Cache] Force refresh requested for {code} ({analysis_type})")
-            return None
+            cache_info['reason'] = 'force_refresh'
+            return None, cache_info
 
         try:
             path = self._get_cache_path(code, analysis_type)
@@ -44,17 +53,24 @@ class GeminiService:
                 
                 if age > 1800:
                     print(f"[Cache] Expired (Age: {age:.1f}s > 1800s) for {code} ({analysis_type})")
-                    return None
+                    cache_info['reason'] = f'expired ({age:.1f}s > 1800s)'
+                    cache_info['age_seconds'] = age
+                    return None, cache_info
                 
                 with open(path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 print(f"[Cache] HIT for {code} ({analysis_type}) - Age: {age:.1f}s")
-                return data
+                cache_info['cached'] = True
+                cache_info['reason'] = 'hit'
+                cache_info['age_seconds'] = age
+                return data, cache_info
             else:
                 print(f"[Cache] MISS (File not found) for {code} ({analysis_type})")
+                cache_info['reason'] = 'not_found'
         except Exception as e:
             print(f"[Cache Error] Load failed: {e}")
-        return None
+            cache_info['reason'] = f'error: {str(e)}'
+        return None, cache_info
 
     def _save_to_cache(self, code, analysis_type, data):
         """데이터를 캐시에 저장"""
@@ -67,9 +83,13 @@ class GeminiService:
             print(f"[Cache Error] Save failed: {e}")
 
     def _call_gemini_api(self, prompt_text):
-        """Gemini SDK를 사용한 API 호출"""
+        """Gemini SDK를 사용한 API 호출 (60초 timeout)"""
         try:
-            response = self.model.generate_content(prompt_text)
+            # timeout 설정: 60초
+            response = self.model.generate_content(
+                prompt_text,
+                request_options={'timeout': 60}
+            )
             return response.text
         except Exception as e:
             print(f"[Gemini API Error] {e}")
@@ -110,8 +130,9 @@ class GeminiService:
         종목 뉴스를 검색하고 AI로 분석 (캐싱 적용)
         """
         # 1. 캐시 확인
-        cached_data = self._load_from_cache(stock_code, 'news', force_refresh)
+        cached_data, cache_info = self._load_from_cache(stock_code, 'news', force_refresh)
         if cached_data:
+            cached_data['_cache_info'] = cache_info
             return cached_data
 
         try:
@@ -175,7 +196,8 @@ class GeminiService:
                 'news_summary': news_summary.strip() if news_summary else result_text[:200],
                 'reason': reason.strip() if reason else "분석 정보 없음",
                 'sentiment': sentiment,
-                'raw_response': result_text
+                'raw_response': result_text,
+                '_cache_info': {'cached': False, 'reason': 'new_data', 'age_seconds': 0}
             }
 
             # 2. 결과 캐싱
@@ -196,7 +218,7 @@ class GeminiService:
         오늘의 주식 시장 주도 테마를 검색하고 AI로 요약 (캐싱 적용)
         """
         # 1. 캐시 확인 (테마는 'market_themes'라는 가상의 코드로 저장)
-        cached_data = self._load_from_cache('MARKET', 'themes', force_refresh)
+        cached_data, _ = self._load_from_cache('MARKET', 'themes', force_refresh)
         if cached_data:
             return cached_data
 
@@ -247,7 +269,7 @@ class GeminiService:
         특정 종목의 섹터/테마 정보를 검색하고 AI로 추출 (캐싱 적용)
         """
         # 1. 캐시 확인
-        cached_data = self._load_from_cache(stock_code, 'sector', force_refresh)
+        cached_data, _ = self._load_from_cache(stock_code, 'sector', force_refresh)
         if cached_data:
             return cached_data
 
@@ -296,8 +318,9 @@ class GeminiService:
         stock_code = stock_info.get('code', 'unknown')
         
         # 1. 캐시 확인
-        cached_data = self._load_from_cache(stock_code, 'outlook', force_refresh)
+        cached_data, cache_info = self._load_from_cache(stock_code, 'outlook', force_refresh)
         if cached_data:
+            cached_data['_cache_info'] = cache_info
             return cached_data
 
         try:
@@ -425,7 +448,8 @@ class GeminiService:
                 'confidence': confidence,
                 'trading_scenario': trading_scenario.strip(),
                 'reasoning': reasoning.strip() if reasoning.strip() else result_text[:300],
-                'raw_response': result_text
+                'raw_response': result_text,
+                '_cache_info': {'cached': False, 'reason': 'new_data', 'age_seconds': 0}
             }
 
             # 2. 결과 캐싱

@@ -38,6 +38,7 @@ const API = {
 
     // 종합 분석 데이터 로드 (강제 갱신 지원)
     async fetchFullAnalysis(code, forceRefresh = false) {
+        const startTime = performance.now();
         try {
             let url = `${API_BASE}/api/analysis/full/${code}`;
             if (forceRefresh) {
@@ -45,7 +46,29 @@ const API = {
                 console.log(`🔄 강제 갱신 요청: ${code}`);
             }
             const response = await fetch(url);
-            return await response.json();
+            const data = await response.json();
+
+            const elapsed = (performance.now() - startTime).toFixed(0);
+
+            // 캐싱 정보 확인 및 출력
+            if (data.success && data.data) {
+                const newsCache = data.data.news_analysis?._cache_info;
+                const outlookCache = data.data.outlook?._cache_info;
+
+                if (newsCache) {
+                    const cacheStatus = newsCache.cached ? `✅ Cache HIT (${newsCache.age_seconds.toFixed(1)}s old)` : `❌ Cache MISS (${newsCache.reason})`;
+                    console.log(`📰 뉴스 분석: ${cacheStatus}`);
+                }
+
+                if (outlookCache) {
+                    const cacheStatus = outlookCache.cached ? `✅ Cache HIT (${outlookCache.age_seconds.toFixed(1)}s old)` : `❌ Cache MISS (${outlookCache.reason})`;
+                    console.log(`🔮 AI 전망: ${cacheStatus}`);
+                }
+            }
+
+            console.log(`📊 분석 로드 완료: ${code} (${elapsed}ms)`);
+
+            return data;
         } catch (error) {
             console.error('분석 로드 중 오류:', error);
             return { success: false, message: error.message };

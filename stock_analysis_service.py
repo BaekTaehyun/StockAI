@@ -34,18 +34,22 @@ class StockAnalysisService:
             종합 분석 데이터
         """
         try:
-            # 1. 현재가 정보 조회
-            price_info = self.kiwoom.get_current_price(code)
+            # 종목 코드 정규화 (A 접두사 제거)
+            normalized_code = code.lstrip('A') if code and code.startswith('A') else code
+            print(f"[Debug] Stock code normalization: {code} → {normalized_code}")
+            
+            # 1. 현재가 정보 조회 (정규화된 코드 사용)
+            price_info = self.kiwoom.get_current_price(normalized_code)
             if not price_info:
                 return {'success': False, 'message': '주가 정보 조회 실패'}
             
             stock_name = stock_name or price_info.get('name', '알 수 없음')
             
-            # 2. 수급 데이터 조회
-            supply_demand = self.get_supply_demand_data(code)
+            # 2. 수급 데이터 조회 (정규화된 코드 사용)
+            supply_demand = self.get_supply_demand_data(normalized_code)
             
-            # 3. 기술적 지표 계산 (일봉 데이터 필요)
-            daily_chart = self.kiwoom.get_daily_chart_data(code)
+            # 3. 기술적 지표 계산 (일봉 데이터 필요, 정규화된 코드 사용)
+            daily_chart = self.kiwoom.get_daily_chart_data(normalized_code)
             
             # 일봉 데이터가 있으면 전처리
             price_data = []
@@ -89,7 +93,7 @@ class StockAnalysisService:
             try:
                 news_analysis = self.gemini.search_and_analyze_news(
                     stock_name=stock_name,
-                    stock_code=code,
+                    stock_code=normalized_code,  # 정규화된 코드 사용
                     current_price=price_info.get('price'),
                     change_rate=price_info.get('rate'),
                     force_refresh=force_refresh
@@ -106,16 +110,16 @@ class StockAnalysisService:
                 # 5-2. 주도 테마 (Gemini Search)
                 market_data['themes'] = self.gemini.fetch_market_themes(force_refresh=force_refresh)
                 
-                # 5-3. 종목 섹터 (Gemini Search)
-                market_data['sector'] = self.gemini.fetch_stock_sector(stock_name, code, force_refresh=force_refresh)
+                # 5-3. 종목 섹터 (Gemini Search, 정규화된 코드 사용)
+                market_data['sector'] = self.gemini.fetch_stock_sector(stock_name, normalized_code, force_refresh=force_refresh)
                 
             except Exception as e:
                 print(f"[StockAnalysisService] 시장 데이터 수집 실패: {e}")
 
-            # 6. 펀더멘털 데이터 수집 (Fundamental)
+            # 6. 펀더멘털 데이터 수집 (Fundamental, 정규화된 코드 사용)
             fundamental_data = {}
             try:
-                fundamental_data = self.kiwoom.get_stock_fundamental_info(code)
+                fundamental_data = self.kiwoom.get_stock_fundamental_info(normalized_code)
                 if not fundamental_data:
                     fundamental_data = {}
             except Exception as e:
@@ -130,9 +134,15 @@ class StockAnalysisService:
             }
             try:
                 print(f"[Debug] AI 전망 생성 요청 - 펀더멘털 데이터: {fundamental_data}")
+                # stock_info에 정규화된 코드 전달
+                stock_info_for_outlook = {
+                    'code': normalized_code,  # 정규화된 코드 사용!
+                    'price': price_info.get('price'),
+                    'rate': price_info.get('rate')
+                }
                 outlook = self.gemini.generate_outlook(
                     stock_name=stock_name,
-                    stock_info=price_info,
+                    stock_info=stock_info_for_outlook,
                     supply_demand=supply_demand,
                     technical_indicators=technical,
                     news_analysis=news_analysis,
@@ -143,12 +153,12 @@ class StockAnalysisService:
             except Exception as e:
                 print(f"[StockAnalysisService] AI 전망 건너뜀: {e}")
             
-            # 종합 결과 반환
+            # 종합 결과 반환 (정규화된 코드 사용)
             return {
                 'success': True,
                 'data': {
                     'stock_info': {
-                        'code': code,
+                        'code': normalized_code,  # 정규화된 코드 사용
                         'name': stock_name,
                         'current_price': price_info.get('price', 'N/A'),
                         'change': price_info.get('change', 'N/A'),
