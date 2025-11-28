@@ -764,7 +764,6 @@ body {
     color: var(--danger);
 }
 
-}
 
 .info-item .value {
     font-size: 1.3rem;
@@ -1600,4 +1599,41 @@ body {
 
 .btn-add:hover {
     background: var(--accent-2, #4338ca);
+}
+
+/* 관심종목 카드 스타일 */
+.watchlist-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.watchlist-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 768px) {
+    .watchlist-card>div {
+        flex-direction: column !important;
+    }
+
+    .watchlist-card>div>div:last-child {
+        text-align: left !important;
+        margin-top: 1rem;
+    }
+}
+
+/* 관심종목 섹션 여백 */
+.watchlist-section {
+    margin-top: 3rem !important;
+    padding-top: 2rem;
+}
+
+.watchlist-section .section-header {
+    margin-bottom: 2rem;
 }
