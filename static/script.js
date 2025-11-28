@@ -8,12 +8,14 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAccountSummary();
     loadHoldings();
     loadMarketIndices(); // 시장 지수 로드
+    loadWatchlist(); // 관심종목 로드
 
     // 5초마다 자동 새로고침
     setInterval(() => {
         loadAccountSummary();
         loadHoldings();
         loadMarketIndices(); // 시장 지수 주기적 업데이트
+        loadWatchlist(); // 관심종목 로드
     }, 5000);
 });
 
@@ -867,4 +869,172 @@ function restoreSentimentsFromCache(holdings) {
             renderRibbon(code, sentimentCache[code].data);
         }
     });
+}
+
+// ================================================================
+// 관심종목 관리 기능
+// ================================================================
+// 관심종목 로드 및 표시
+async function loadWatchlist() {
+    try {
+        // 관심종목 시세 조회
+        const response = await fetch(`${API_BASE}/api/watchlist/prices`);
+        const result = await response.json();
+
+        if (result.success && result.data) {
+            displayWatchlist(result.data);
+        }
+    } catch (error) {
+        console.error('관심종목 로드 실패:', error);
+    }
+}
+// 관심종목 카드 표시
+function displayWatchlist(stocks) {
+    const grid = document.getElementById('watchlistGrid');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+
+    if (stocks.length === 0) {
+        grid.innerHTML = '<p style="text-align: center; padding: 2rem; color: #888;">관심종목이 없습니다. 위에서 종목 코드를 입력하여 추가하세요.</p>';
+        return;
+    }
+
+    stocks.forEach(item => {
+        if (item.data) {
+            const card = createWatchlistCard(item.code, item.data);
+            grid.appendChild(card);
+        }
+    });
+}
+// 관심종목 카드 생성
+function createWatchlistCard(code, stockData) {
+    const card = document.createElement('div');
+    card.className = 'stock-card watchlist-card';
+    card.setAttribute('data-code', code);
+
+    // 상승/하락에 따른 배경색
+    const change = parseFloat(stockData.change || 0);
+    let bgColor = 'rgba(200, 200, 200, 0.1)'; // 보합
+    if (change > 0) {
+        bgColor = 'rgba(255, 100, 100, 0.1)'; // 상승 - 옅은 빨강
+    } else if (change < 0) {
+        bgColor = 'rgba(100, 100, 255, 0.1)'; // 하락 - 옅은 파랑
+    }
+    card.style.background = bgColor;
+
+    const name = stockData.name || code;
+    const price = parseInt(stockData.price || 0);
+    const rate = parseFloat(stockData.rate || 0);
+
+    // 등락 색상
+    const isUp = rate > 0;
+    const isDown = rate < 0;
+    const changeColor = isUp ? '#e53e3e' : isDown ? '#3b82f6' : '#666';
+    const changeSign = isUp ? '+' : '';
+
+    card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <h3 style="margin: 0; font-size: 1.1rem;">${name}</h3>
+                    <span style="font-size: 0.85rem; color: #888;">${code}</span>
+                </div>
+                <div style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.25rem;">
+                    ${formatCurrency(price)}
+                </div>
+                <div style="font-size: 0.9rem; color: ${changeColor}; font-weight: 600;">
+                    ${changeSign}${formatCurrency(change)} (${changeSign}${rate.toFixed(2)}%)
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 0.75rem; color: #666; margin-bottom: 0.5rem;">
+                    수급 정보
+                </div>
+                <div style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">
+                    분석 준비 중
+                </div>
+                <button onclick="removeFromWatchlist('${code}')" 
+                        style="padding: 0.4rem 0.8rem; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                    삭제
+                </button>
+            </div>
+        </div>
+    `;
+
+    // 카드 클릭 시 상세 모달
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'BUTTON') {
+            openStockModal({ code, name, price: stockData.price });
+        }
+    });
+
+    return card;
+}
+// 관심종목 추가
+async function addToWatchlist() {
+    const input = document.getElementById('watchlistInput');
+    const code = input.value.trim();
+
+    if (!code) {
+        alert('종목 코드를 입력하세요');
+        return;
+    }
+
+    // 6자리 숫자 검증
+    if (!/^\d{6}$/.test(code)) {
+        alert('올바른 종목 코드를 입력하세요 (6자리 숫자)');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/api/watchlist/add`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ code })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert(`종목 ${code}가 추가되었습니다`);
+            input.value = '';
+            loadWatchlist(); // 새로고침
+        } else {
+            alert(result.message || '추가 실패');
+        }
+    } catch (error) {
+        console.error('추가 오류:', error);
+        alert('종목 추가 중 오류가 발생했습니다');
+    }
+}
+// 관심종목 삭제
+async function removeFromWatchlist(code) {
+    if (!confirm(`종목 ${code}를 관심종목에서 삭제하시겠습니까?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/api/watchlist/remove`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ code })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            loadWatchlist(); // 새로고침
+        } else {
+            alert(result.message || '삭제 실패');
+        }
+    } catch (error) {
+        console.error('삭제 오류:', error);
+        alert('종목 삭제 중 오류가 발생했습니다');
+    }
 }

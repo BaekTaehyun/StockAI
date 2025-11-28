@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -86,6 +86,20 @@
             </div>
             <div class="holdings-grid" id="holdingsGrid">
                 <!-- 종목 카드들이 여기에 동적으로 추가됩니다 -->
+            </div>
+        </section>
+
+        <!-- 관심 종목 섹션 -->
+        <section class="watchlist-section" style="margin-top: 2rem;">
+            <div class="section-header">
+                <h2>관심 종목</h2>
+                <div class="search-box" style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="watchlistInput" placeholder="종목 코드 입력 (예: 005930)" style="flex: 1;">
+                    <button onclick="addToWatchlist()" class="btn-add">추가</button>
+                </div>
+            </div>
+            <div class="holdings-grid" id="watchlistGrid">
+                <!-- 관심종목 카드들이 여기에 동적으로 추가됩니다 -->
             </div>
         </section>
 

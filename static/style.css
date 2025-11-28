@@ -1496,7 +1496,9 @@ body {
     .confidence-tag {
         color: var(--text-secondary);
     }
-}/* Ribbon Styles - PC에도 적용 */
+}
+
+/* Ribbon Styles - PC에도 적용 */
 .ribbon {
     position: absolute;
     top: 0;
@@ -1573,4 +1575,29 @@ body {
 .confidence-tag {
     font-size: 0.75rem;
     color: var(--text-secondary);
+}
+
+/* 관심종목 카드 스타일 */
+.watchlist-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.watchlist-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-add {
+    padding: 0.75rem 1.5rem;
+    background: var(--accent-1, #4f46e5);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.btn-add:hover {
+    background: var(--accent-2, #4338ca);
 }

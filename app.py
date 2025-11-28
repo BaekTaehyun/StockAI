@@ -12,6 +12,7 @@ Flask 기반 웹 서버로 다음 기능을 제공합니다:
 from flask import Flask, jsonify, render_template, request, session, redirect, url_for
 from flask_cors import CORS
 from kis_api import KiwoomApi
+from data_fetcher import DataFetcher
 from datetime import timedelta
 import config
 
@@ -24,6 +25,9 @@ app.permanent_session_lifetime = timedelta(days=7) # 로그인 7일 유지
 
 # Kiwoom API 인스턴스 생성
 kiwoom = KiwoomApi()
+
+# 관심종목 관리 인스턴스 생성
+data_fetcher = DataFetcher()
 
 @app.before_request
 def require_login():
@@ -333,6 +337,70 @@ def get_market_indices():
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
+
+# ================================================================
+# 관심종목 API
+# ================================================================
+
+@app.route('/api/watchlist')
+def get_watchlist():
+    """관심종목 리스트 조회"""
+    try:
+        watchlist = data_fetcher.load_watchlist()
+        return jsonify({
+            'success': True,
+            'data': watchlist
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/watchlist/prices')
+def get_watchlist_prices():
+    """관심종목 시세 일괄 조회"""
+    try:
+        if not kiwoom.access_token:
+            kiwoom.get_access_token()
+        
+        prices = data_fetcher.fetch_watchlist_prices()
+        return jsonify({
+            'success': True,
+            'data': prices
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/watchlist/add', methods=['POST'])
+def add_to_watchlist():
+    """관심종목 추가"""
+    try:
+        code = request.json.get('code')
+        if not code:
+            return jsonify({'success': False, 'message': '종목 코드가 필요합니다'}), 400
+        
+        success = data_fetcher.add_to_watchlist(code)
+        return jsonify({
+            'success': success,
+            'message': '추가 완료' if success else '이미 존재하는 종목입니다'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/watchlist/remove', methods=['POST'])
+def remove_from_watchlist():
+    """관심종목 삭제"""
+    try:
+        code = request.json.get('code')
+        if not code:
+            return jsonify({'success': False, 'message': '종목 코드가 필요합니다'}), 400
+        
+        success = data_fetcher.remove_from_watchlist(code)
+        return jsonify({
+            'success': success,
+            'message': '삭제 완료' if success else '존재하지 않는 종목입니다'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 if __name__ == '__main__':
     # 토큰 사전 발급
