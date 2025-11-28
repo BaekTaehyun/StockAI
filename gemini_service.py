@@ -25,7 +25,7 @@ class GeminiService:
         today = datetime.datetime.now().strftime("%Y%m%d")
         filename = f"{normalized_code}_{analysis_type}_{today}.json"
         path = os.path.join(self.cache_dir, filename)
-        print(f"[DEBUG] Cache path: {code} → {normalized_code} → {filename}")
+        # print(f"[DEBUG] Cache path: {code} → {normalized_code} → {filename}")
         return path
 
     def _load_from_cache(self, code, analysis_type, force_refresh=False):
@@ -39,7 +39,7 @@ class GeminiService:
         cache_info = {'cached': False, 'reason': '', 'age_seconds': 0}
         
         if force_refresh:
-            print(f"[Cache] Force refresh requested for {code} ({analysis_type})")
+            # print(f"[Cache] Force refresh requested for {code} ({analysis_type})")
             cache_info['reason'] = 'force_refresh'
             return None, cache_info
 
@@ -52,20 +52,20 @@ class GeminiService:
                 age = current_time - mtime
                 
                 if age > 1800:
-                    print(f"[Cache] Expired (Age: {age:.1f}s > 1800s) for {code} ({analysis_type})")
+                    # print(f"[Cache] Expired (Age: {age:.1f}s > 1800s) for {code} ({analysis_type})")
                     cache_info['reason'] = f'expired ({age:.1f}s > 1800s)'
                     cache_info['age_seconds'] = age
                     return None, cache_info
                 
                 with open(path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                print(f"[Cache] HIT for {code} ({analysis_type}) - Age: {age:.1f}s")
+                # print(f"[Cache] HIT for {code} ({analysis_type}) - Age: {age:.1f}s")
                 cache_info['cached'] = True
                 cache_info['reason'] = 'hit'
                 cache_info['age_seconds'] = age
                 return data, cache_info
             else:
-                print(f"[Cache] MISS (File not found) for {code} ({analysis_type})")
+                # print(f"[Cache] MISS (File not found) for {code} ({analysis_type})")
                 cache_info['reason'] = 'not_found'
         except Exception as e:
             print(f"[Cache Error] Load failed: {e}")
@@ -78,7 +78,7 @@ class GeminiService:
             path = self._get_cache_path(code, analysis_type)
             with open(path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-            print(f"[Cache] Saved {analysis_type} for {code}")
+            # print(f"[Cache] Saved {analysis_type} for {code}")
         except Exception as e:
             print(f"[Cache Error] Save failed: {e}")
 
@@ -390,7 +390,8 @@ class GeminiService:
             
             # 디버깅: 프롬프트 확인
             # 디버깅: 프롬프트 전체 출력
-            print(f"\n{'='*50}\n[Debug] Generated Prompt:\n{prompt}\n{'='*50}\n")
+            # print(f"\n{'='*50}\n[Debug] Generated Prompt:\n{prompt}\n{'='*50}\n")
+
             
             result_text = self._call_gemini_api(prompt)
             

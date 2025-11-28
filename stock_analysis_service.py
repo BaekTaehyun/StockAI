@@ -36,7 +36,7 @@ class StockAnalysisService:
         try:
             # 종목 코드 정규화 (A 접두사 제거)
             normalized_code = code.lstrip('A') if code and code.startswith('A') else code
-            print(f"[Debug] Stock code normalization: {code} → {normalized_code}")
+            # print(f"[Debug] Stock code normalization: {code} → {normalized_code}")
             
             # 1. 현재가 정보 조회 (정규화된 코드 사용)
             price_info = self.kiwoom.get_current_price(normalized_code)
@@ -56,8 +56,9 @@ class StockAnalysisService:
             if daily_chart:
                 # 디버깅: 첫 번째 데이터 항목 출력하여 키 확인
                 if len(daily_chart) > 0:
-                    print(f"[Debug] First chart item keys: {daily_chart[0].keys()}")
-                    print(f"[Debug] First chart item sample: {daily_chart[0]}")
+                    # print(f"[Debug] First chart item keys: {daily_chart[0].keys()}")
+                    # print(f"[Debug] First chart item sample: {daily_chart[0]}")
+                    pass
 
                 for item in daily_chart:
                     # Kiwoom API 응답 필드명 매핑
@@ -133,7 +134,7 @@ class StockAnalysisService:
                 'raw_response': ''
             }
             try:
-                print(f"[Debug] AI 전망 생성 요청 - 펀더멘털 데이터: {fundamental_data}")
+                # print(f"[Debug] AI 전망 생성 요청 - 펀더멘털 데이터: {fundamental_data}")
                 # stock_info에 정규화된 코드 전달
                 stock_info_for_outlook = {
                     'code': normalized_code,  # 정규화된 코드 사용!
