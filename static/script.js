@@ -151,6 +151,14 @@ function createHoldingCard(stock) {
     const plClass = profitLoss >= 0 ? 'positive' : 'negative';
     const plSign = profitLoss >= 0 ? '+' : '';
 
+    // 손익에 따른 배경색과 테두리 색상 설정 (관심 종목과 동일)
+    const isProfit = profitLoss >= 0;
+    const bgColor = isProfit ? 'rgba(255, 100, 100, 0.05)' : 'rgba(100, 100, 255, 0.05)';
+    const borderColor = isProfit ? '#e53e3e' : '#3b82f6';
+
+    card.style.background = bgColor;
+    card.style.borderLeft = `4px solid ${borderColor}`;
+
     const sentimentElements = typeof createSentimentElements === 'function' ?
         createSentimentElements(stockCode) :
         { ribbonHtml: '', footerHtml: '' };
@@ -965,52 +973,44 @@ function createWatchlistCard(code, stockData) {
 
     card.innerHTML = `
         ${sentimentElements.ribbonHtml}
-        <div style="padding: 2.5rem 1.5rem 1.5rem 1.5rem;">
+        <div class="watchlist-card-content">
             <div style="margin-bottom: 1.5rem;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                <div class="watchlist-header">
                     <div>
-                        <div style="font-weight: 700; font-size: 1.4rem; color: var(--text-primary); margin-bottom: 0.25rem;">
-                            ${name}
-                        </div>
-                        <div style="font-size: 0.9rem; color: #888;">
-                            ${code}
-                        </div>
+                        <div class="watchlist-name">${name}</div>
+                        <div class="watchlist-code">${code}</div>
                     </div>
-                    <div style="font-size: 1.2rem; font-weight: 700; color: ${textColor};">
-                        ${sign}${rate.toFixed(2)}%
-                    </div>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 1rem;">
-                    <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">
-                        ${formatCurrency(price)}
-                    </div>
-                    <div style="font-size: 1.1rem; font-weight: 600; color: ${textColor};">
-                        ${sign}${formatCurrency(change)}
-                    </div>
-                </div>
-                <div style="border-top: 1px solid rgba(0,0,0,0.08); padding-top: 1rem;">
-                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
-                        <div>
-                            <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; font-weight: 600;">수급 정보</div>
-                            <div id="supply-${code}" style="font-size: 0.85rem; min-height: 24px;">
-                                <span style="color: #888;">분석중...</span>
-                            </div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; font-weight: 600;">등락 원인</div>
-                            <div id="reason-${code}" style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.4; min-height: 24px;">
-                                로딩중...
-                            </div>
-                        </div>
-                    </div>
-                    <button onclick="removeFromWatchlist('${code}'); event.stopPropagation();" 
-                        style="width: 100%; padding: 0.75rem; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem;">
-                        삭제
-                    </button>
+                    <div class="watchlist-rate" style="color: ${textColor};">${sign}${rate.toFixed(2)}%</div>
                 </div>
             </div>
-        ${sentimentElements.footerHtml}
-    `;
+            <div class="watchlist-price-row">
+                <div class="watchlist-price">${formatCurrency(price)}</div>
+                <div class="watchlist-change" style="color: ${textColor};">${sign}${formatCurrency(change)}</div>
+            </div>
+            <div style="padding-top: 1rem; margin-top: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; font-weight: 600;">수급 정보</div>
+                        <div id="supply-${code}" style="font-size: 0.85rem; min-height: 24px;">
+                            <span style="color: #888;">분석중...</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; font-weight: 600;">등락 원인</div>
+                        <div id="reason-${code}" style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.4; min-height: 24px;">
+                            로딩중...
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                    <button onclick="removeFromWatchlist('${code}'); event.stopPropagation();" 
+                        style="flex: 0 0 auto; padding: 0.5rem 1.2rem; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; line-height: 1.5;">
+                        삭제
+                    </button>
+                    <div id="footer-${code}" class="sentiment-footer" style="display: none; margin-left: auto; align-items: center; justify-content: flex-end; gap: 0.5rem;"></div>
+                </div>
+            </div>
+        `;
 
     card.onclick = (e) => {
         if (e.target.tagName !== 'BUTTON') {

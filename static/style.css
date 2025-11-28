@@ -1475,6 +1475,8 @@ body {
         border-radius: 12px;
         font-weight: 600;
         font-size: 0.8rem;
+        display: inline-block;
+        line-height: 1;
     }
 
     .sentiment-tag.긍정 {
@@ -1511,7 +1513,8 @@ body {
 
 .ribbon span {
     position: absolute;
-    top: 15px;
+    top: 20px;
+    /* 15px → 20px: 아래로 조금 내리기 */
     right: -35px;
     width: 140px;
     padding: 5px 0;
@@ -1539,14 +1542,12 @@ body {
 
 /* Sentiment Footer - PC에도 적용 */
 .sentiment-footer {
-    margin-top: 1rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    /* 이미 있지만 확인 */
     gap: 0.5rem;
-    flex-wrap: wrap;
+    /* flex-wrap: wrap; 이 줄 삭제하거나 주석 처리 */
 }
 
 .sentiment-tag {
@@ -1636,4 +1637,106 @@ body {
 
 .watchlist-section .section-header {
     margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+
+    /* 관심 종목 카드 모바일 최적화 */
+    .watchlist-card-content {
+        padding: 2rem 1rem 1rem 1rem !important;
+    }
+
+    .watchlist-name {
+        font-size: 1.2rem !important;
+    }
+
+    .watchlist-code {
+        font-size: 0.8rem !important;
+    }
+
+    .watchlist-rate {
+        font-size: 1rem !important;
+    }
+
+    .watchlist-price {
+        font-size: 1.6rem !important;
+    }
+
+    .watchlist-change {
+        font-size: 0.95rem !important;
+    }
+
+    /* 리본 크기 축소 */
+    .ai-ribbon,
+    .ribbon {
+        width: 60px !important;
+        height: 60px !important;
+    }
+
+    .ai-ribbon span,
+    .ribbon span {
+        font-size: 0.6rem !important;
+        width: 80px !important;
+        top: 12px !important;
+        right: -20px !important;
+        padding: 3px 0 !important;
+    }
+
+    /* 보유 종목 카드도 컴팩트하게 */
+    .holding-card {
+        padding: 1rem !important;
+    }
+
+    .holding-header {
+        padding-right: 60px !important;
+    }
+}
+
+/* 관심 종목 카드 콘텐츠 (데스크톱) */
+.watchlist-card-content {
+    padding: 3.5rem 1.5rem 1.5rem 1.5rem;
+}
+
+.watchlist-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.watchlist-name {
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.watchlist-code {
+    font-size: 0.9rem;
+    color: #888;
+}
+
+.watchlist-rate {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.watchlist-price-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 1rem;
+}
+
+.watchlist-price {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.watchlist-change {
+    font-size: 1.1rem;
+    font-weight: 600;
 }
