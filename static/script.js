@@ -965,7 +965,7 @@ function createWatchlistCard(code, stockData) {
 
     card.innerHTML = `
         ${sentimentElements.ribbonHtml}
-        <div style="padding: 1.5rem;">
+        <div style="padding: 2.5rem 1.5rem 1.5rem 1.5rem;">
             <div style="margin-bottom: 1.5rem;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
                     <div>
@@ -1009,8 +1009,8 @@ function createWatchlistCard(code, stockData) {
                     </button>
                 </div>
             </div>
-            ${sentimentElements.footerHtml}
-        `;
+        ${sentimentElements.footerHtml}
+    `;
 
     card.onclick = (e) => {
         if (e.target.tagName !== 'BUTTON') {
