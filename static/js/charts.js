@@ -43,6 +43,8 @@ const Charts = {
 
     // 기술적 분석 탭 렌더링
     renderTechnical(data, stockInfo) {
+        console.log('📊 [Technical] Rendering technical analysis:', data, stockInfo);
+
         // 현재가 가져오기
         const currentPriceStr = stockInfo ? stockInfo.current_price : '0';
         const currentPrice = parseInt(String(currentPriceStr).replace(/[^0-9]/g, '')) || 0;
