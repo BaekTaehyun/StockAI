@@ -95,7 +95,22 @@ class StockAnalysisService:
             except Exception as e:
                 print(f"[StockAnalysisService] 뉴스 분석 건너뜀: {e}")
             
-            # 5. AI 전망 생성 (Gemini) - Optional
+            # 5. 시장 데이터 수집 (Top-Down Analysis)
+            market_data = {}
+            try:
+                # 5-1. 시장 지수 (KOSPI/KOSDAQ)
+                market_data['market_index'] = self._get_market_indices_string()
+                
+                # 5-2. 주도 테마 (Gemini Search)
+                market_data['themes'] = self.gemini.fetch_market_themes()
+                
+                # 5-3. 종목 섹터 (Gemini Search)
+                market_data['sector'] = self.gemini.fetch_stock_sector(stock_name, code)
+                
+            except Exception as e:
+                print(f"[StockAnalysisService] 시장 데이터 수집 실패: {e}")
+
+            # 6. AI 전망 생성 (Gemini) - Optional
             outlook = {
                 'recommendation': '중립',
                 'confidence': 0,
@@ -108,7 +123,8 @@ class StockAnalysisService:
                     stock_info=price_info,
                     supply_demand=supply_demand,
                     technical_indicators=technical,
-                    news_analysis=news_analysis
+                    news_analysis=news_analysis,
+                    market_data=market_data
                 )
             except Exception as e:
                 print(f"[StockAnalysisService] AI 전망 건너뜀: {e}")
@@ -146,6 +162,28 @@ class StockAnalysisService:
                 'message': f'분석 중 오류 발생: {str(e)}'
             }
     
+    def _get_market_indices_string(self):
+        """
+        코스피/코스닥 지수 조회 및 문자열 포맷팅
+        """
+        try:
+            kospi = self.kiwoom.get_market_index("001")
+            kosdaq = self.kiwoom.get_market_index("101")
+            
+            result = []
+            if kospi:
+                sign = "▲" if float(kospi['rate']) > 0 else "▼" if float(kospi['rate']) < 0 else "-"
+                result.append(f"KOSPI {kospi['price']} ({sign} {kospi['rate']}%)")
+            
+            if kosdaq:
+                sign = "▲" if float(kosdaq['rate']) > 0 else "▼" if float(kosdaq['rate']) < 0 else "-"
+                result.append(f"KOSDAQ {kosdaq['price']} ({sign} {kosdaq['rate']}%)")
+                
+            return " / ".join(result) if result else "지수 정보 없음"
+        except Exception as e:
+            print(f"[StockAnalysisService] 지수 조회 실패: {e}")
+            return "지수 정보 없음"
+
     def get_supply_demand_data(self, code):
         """
         수급 데이터 조회

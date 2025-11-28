@@ -168,8 +168,106 @@ class GeminiService:
                 'sentiment': "중립",
                 'raw_response': ""
             }
+
+    def fetch_market_themes(self):
+        """
+        오늘의 주식 시장 주도 테마를 검색하고 AI로 요약 (캐싱 적용)
+        """
+        # 1. 캐시 확인 (테마는 'market_themes'라는 가상의 코드로 저장)
+        cached_data = self._load_from_cache('MARKET', 'themes')
+        if cached_data:
+            return cached_data
+
+        try:
+            # 검색 쿼리: "오늘 주식 시장 주도 테마", "오늘 증시 특징주"
+            search_query = "오늘 한국 주식 시장 주도 테마 특징주"
+            search_results = self.search_news(search_query)
+            
+            context = ""
+            if search_results:
+                for item in search_results:
+                    title = item.get('title', '')
+                    snippet = item.get('snippet', '')
+                    context += f"- {title}: {snippet}\n"
+            else:
+                context = "검색 결과 없음"
+
+            prompt = f"""
+            다음은 오늘 한국 주식 시장의 주요 뉴스 검색 결과입니다.
+            이 정보를 바탕으로 '오늘의 주도 테마' 3가지를 요약해주세요.
+            
+            [검색 결과]
+            {context}
+            
+            [요청사항]
+            - 가장 강한 상승세를 보인 테마 3개를 선정하세요.
+            - 각 테마별로 대표 종목이 있다면 괄호 안에 적어주세요.
+            - 답변은 쉼표(,)로 구분된 한 줄의 문자열로 작성하세요.
+            - 예시: 2차전지(에코프로), 반도체(삼성전자), 초전도체
+            """
+            
+            result_text = self._call_gemini_api(prompt)
+            if not result_text:
+                result_text = "테마 정보 없음"
+                
+            result = result_text.strip()
+            
+            # 2. 결과 캐싱
+            self._save_to_cache('MARKET', 'themes', result)
+            return result
+            
+        except Exception as e:
+            print(f"[Gemini] 테마 검색 실패: {e}")
+            return "테마 정보 확인 불가"
+
+    def fetch_stock_sector(self, stock_name, stock_code):
+        """
+        특정 종목의 섹터/테마 정보를 검색하고 AI로 추출 (캐싱 적용)
+        """
+        # 1. 캐시 확인
+        cached_data = self._load_from_cache(stock_code, 'sector')
+        if cached_data:
+            return cached_data
+
+        try:
+            search_query = f"{stock_name} 관련주 테마 섹터"
+            search_results = self.search_news(search_query)
+            
+            context = ""
+            if search_results:
+                for item in search_results:
+                    title = item.get('title', '')
+                    snippet = item.get('snippet', '')
+                    context += f"- {title}: {snippet}\n"
+            
+            prompt = f"""
+            다음은 '{stock_name}' 종목에 대한 검색 결과입니다.
+            이 종목이 속한 핵심 '섹터' 또는 '테마'를 1~2단어로 정의해주세요.
+            
+            [검색 결과]
+            {context}
+            
+            [요청사항]
+            - 설명 없이 핵심 섹터명만 출력하세요.
+            - 예시: 반도체 장비, 2차전지 소재, 제약바이오
+            """
+            
+            result_text = self._call_gemini_api(prompt)
+            if not result_text:
+                result_text = "알 수 없음"
+                
+            result = result_text.strip()
+            
+            # 2. 결과 캐싱
+            self._save_to_cache(stock_code, 'sector', result)
+            return result
+            
+        except Exception as e:
+            print(f"[Gemini] 섹터 검색 실패: {e}")
+            return "섹터 미상"
+
     
-    def generate_outlook(self, stock_name, stock_info, supply_demand, technical_indicators, news_analysis):
+    def generate_outlook(self, stock_name, stock_info, supply_demand, technical_indicators, news_analysis, market_data=None):
         """
         종합 정보를 바탕으로 AI 전망 생성 (캐싱 적용)
         """
@@ -191,8 +289,17 @@ class GeminiService:
             ma60 = technical_indicators.get('ma60', 0)
             ma_signal = technical_indicators.get('ma_signal', '중립')
             
+            # 시장 데이터 추출
+            market_data = market_data or {}
+            market_index_status = market_data.get('market_index', '정보 없음')
+            current_hot_themes = market_data.get('themes', '정보 없음')
+            stock_sector = market_data.get('sector', '정보 없음')
+            
             prompt = prompts.OUTLOOK_GENERATION_PROMPT.format(
                 stock_name=stock_name,
+                stock_sector=stock_sector,
+                market_index_status=market_index_status,
+                current_hot_themes=current_hot_themes,
                 current_price=stock_info.get('price', 'N/A'),
                 change_rate=stock_info.get('rate', 'N/A'),
                 foreign_net=supply_demand.get('foreign_net', 'N/A'),

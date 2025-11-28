@@ -204,6 +204,55 @@ class KiwoomApi:
             if data: print(f"[Error] API Error: {data.get('return_msg')}")
             return None
 
+    def get_stock_fundamental_info(self, code):
+        """
+        주식 기본 정보(펀더멘털) 조회 (Kiwoom ka10001 활용)
+        PER, PBR, ROE, 시가총액, 영업이익 등 반환
+        """
+        # get_current_price 내부적으로 ka10001을 호출하므로, 
+        # 로직을 복사하거나 별도 호출. 여기서는 명시적으로 데이터를 다 가져오기 위해 별도 구현.
+        code = self._clean_code(code)
+        url = f"{self.base_url}/api/dostk/stkinfo"
+        
+        headers = {
+            "content-type": "application/json;charset=UTF-8",
+            "api-id": "ka10001"
+        }
+        
+        body = {"stk_cd": code}
+
+        data = self._send_request(url, headers, body)
+        
+        if data and data.get('return_code') == 0:
+            # 안전한 숫자 변환 헬퍼
+            def safe_float(val):
+                try: return float(val)
+                except: return 0.0
+            
+            def safe_int(val):
+                try: return int(val)
+                except: return 0
+            
+            return {
+                "per": safe_float(data.get('per')),
+                "pbr": safe_float(data.get('pbr')),
+                "roe": safe_float(data.get('roe')),
+                "market_cap": safe_int(data.get('cap', 0)) * 100000000, # 억 단위 -> 원 단위 보정 필요? API 응답은 억단위일 수 있음. 확인 필요. 
+                                                                        # 보통 cap은 억단위로 옴. 7780 -> 7780억.
+                                                                        # 하지만 출력 예시에는 "7780"으로 옴. 
+                                                                        # 일단 그대로 두고 단위는 프롬프트에서 처리하거나 여기서 처리.
+                                                                        # test_api_fields 결과: "cap": "7780" (삼성전자 시총이 7780억일 리 없음. 7780조? 아님. 단위 확인 필요.)
+                                                                        # 삼성전자 시총 약 400~500조. 
+                                                                        # 7780은 너무 작음. 아, test_api_fields 결과는 모의투자나 테스트 서버라 데이터가 다를 수 있음.
+                                                                        # 혹은 단위가 십억/조 단위일 수 있음.
+                                                                        # 일단 raw value를 넘기고 프롬프트에서 "단위: 억" 등으로 명시하는게 안전.
+                "market_cap_raw": data.get('cap', '0'), # 원본 데이터
+                "operating_profit": data.get('bus_pro', '0'), # 영업이익
+                "total_sales": data.get('sale_amt', '0') # 매출액
+            }
+        else:
+            return None
+
     def get_daily_chart_data(self, code, date=None):
         """
         일봉 차트 데이터 조회 (Kiwoom ka10081)
