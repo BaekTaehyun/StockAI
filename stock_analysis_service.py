@@ -21,13 +21,14 @@ class StockAnalysisService:
         except (ValueError, TypeError):
             return 0
 
-    def get_full_analysis(self, code, stock_name=None):
+    def get_full_analysis(self, code, stock_name=None, force_refresh=False):
         """
         종목에 대한 종합 분석 수행
         
         Args:
             code: 종목코드
             stock_name: 종목명 (선택, 없으면 API로 조회)
+            force_refresh: 캐시 강제 갱신 여부
             
         Returns:
             종합 분석 데이터
@@ -90,7 +91,8 @@ class StockAnalysisService:
                     stock_name=stock_name,
                     stock_code=code,
                     current_price=price_info.get('price'),
-                    change_rate=price_info.get('rate')
+                    change_rate=price_info.get('rate'),
+                    force_refresh=force_refresh
                 )
             except Exception as e:
                 print(f"[StockAnalysisService] 뉴스 분석 건너뜀: {e}")
@@ -102,15 +104,24 @@ class StockAnalysisService:
                 market_data['market_index'] = self._get_market_indices_string()
                 
                 # 5-2. 주도 테마 (Gemini Search)
-                market_data['themes'] = self.gemini.fetch_market_themes()
+                market_data['themes'] = self.gemini.fetch_market_themes(force_refresh=force_refresh)
                 
                 # 5-3. 종목 섹터 (Gemini Search)
-                market_data['sector'] = self.gemini.fetch_stock_sector(stock_name, code)
+                market_data['sector'] = self.gemini.fetch_stock_sector(stock_name, code, force_refresh=force_refresh)
                 
             except Exception as e:
                 print(f"[StockAnalysisService] 시장 데이터 수집 실패: {e}")
 
-            # 6. AI 전망 생성 (Gemini) - Optional
+            # 6. 펀더멘털 데이터 수집 (Fundamental)
+            fundamental_data = {}
+            try:
+                fundamental_data = self.kiwoom.get_stock_fundamental_info(code)
+                if not fundamental_data:
+                    fundamental_data = {}
+            except Exception as e:
+                print(f"[StockAnalysisService] 펀더멘털 데이터 수집 실패: {e}")
+
+            # 7. AI 전망 생성 (Gemini) - Optional
             outlook = {
                 'recommendation': '중립',
                 'confidence': 0,
@@ -118,13 +129,16 @@ class StockAnalysisService:
                 'raw_response': ''
             }
             try:
+                print(f"[Debug] AI 전망 생성 요청 - 펀더멘털 데이터: {fundamental_data}")
                 outlook = self.gemini.generate_outlook(
                     stock_name=stock_name,
                     stock_info=price_info,
                     supply_demand=supply_demand,
                     technical_indicators=technical,
                     news_analysis=news_analysis,
-                    market_data=market_data
+                    market_data=market_data,
+                    fundamental_data=fundamental_data,
+                    force_refresh=force_refresh
                 )
             except Exception as e:
                 print(f"[StockAnalysisService] AI 전망 건너뜀: {e}")

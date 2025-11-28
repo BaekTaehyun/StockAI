@@ -212,7 +212,10 @@ def get_full_analysis(code):
         # 서비스의 kiwoom 인스턴스를 현재 토큰으로 동기화
         analysis_service.kiwoom = kiwoom
         
-        result = analysis_service.get_full_analysis(code)
+        # 강제 갱신 여부 확인 (쿼리 파라미터 refresh=true)
+        force_refresh = request.args.get('refresh', '').lower() == 'true'
+        
+        result = analysis_service.get_full_analysis(code, force_refresh=force_refresh)
         
         if result.get('success'):
             return jsonify(result)

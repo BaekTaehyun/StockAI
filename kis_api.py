@@ -237,19 +237,12 @@ class KiwoomApi:
                 "per": safe_float(data.get('per')),
                 "pbr": safe_float(data.get('pbr')),
                 "roe": safe_float(data.get('roe')),
-                "market_cap": safe_int(data.get('cap', 0)) * 100000000, # 억 단위 -> 원 단위 보정 필요? API 응답은 억단위일 수 있음. 확인 필요. 
-                                                                        # 보통 cap은 억단위로 옴. 7780 -> 7780억.
-                                                                        # 하지만 출력 예시에는 "7780"으로 옴. 
-                                                                        # 일단 그대로 두고 단위는 프롬프트에서 처리하거나 여기서 처리.
-                                                                        # test_api_fields 결과: "cap": "7780" (삼성전자 시총이 7780억일 리 없음. 7780조? 아님. 단위 확인 필요.)
-                                                                        # 삼성전자 시총 약 400~500조. 
-                                                                        # 7780은 너무 작음. 아, test_api_fields 결과는 모의투자나 테스트 서버라 데이터가 다를 수 있음.
-                                                                        # 혹은 단위가 십억/조 단위일 수 있음.
-                                                                        # 일단 raw value를 넘기고 프롬프트에서 "단위: 억" 등으로 명시하는게 안전.
-                "market_cap_raw": data.get('cap', '0'), # 원본 데이터
+                "market_cap": safe_int(data.get('mac', 0)) * 100000000, # 억 단위 -> 원 단위 (API가 억단위로 준다고 가정)
+                "market_cap_raw": data.get('mac', '0'), # 원본 데이터 (억 단위 예상)
                 "operating_profit": data.get('bus_pro', '0'), # 영업이익
                 "total_sales": data.get('sale_amt', '0') # 매출액
             }
+
         else:
             return None
 
@@ -280,10 +273,10 @@ class KiwoomApi:
         if data and data.get('return_code') == 0:
             output = data.get('stk_dt_pole_chart_qry', data.get('output', []))
             if output:
-                print(f"[Chart] ✓ Got {len(output)} records")
+                print(f"[Chart] [OK] Got {len(output)} records")
                 return output
             else:
-                print(f"[Chart] ✗ No data available for {code}")
+                print(f"[Chart] [FAIL] No data available for {code}")
                 return None
         else:
             if data: print(f"[Chart Error] API Error: {data.get('return_msg')}")

@@ -144,13 +144,153 @@
                     <!-- 기술적 분석 탭 -->
                     <div class="tab-content hidden" id="technical">
                         <div id="technicalContent"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+                        <!DOCTYPE html>
+                        <html lang="ko">
 
-    <script src="/static/script.js?v=20251128"></script>
-</body>
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <title>키움 주식 대시보드</title>
+                            <link rel="stylesheet" href="/static/style.css?v=20251128_2">
+                            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                        </head>
 
-</html>
+                        <body>
+                            <div class="container">
+                                <!-- 헤더 -->
+                                <header class="header">
+                                    <div class="logo">
+                                        <div class="logo-icon">📈</div>
+                                        <h1>키움 주식 모니터링</h1>
+                                    </div>
+                                    <div class="header-actions">
+                                        <div class="auth-status">
+                                            <div class="status-dot"></div>
+                                            <span class="status-text">연결됨</span>
+                                        </div>
+                                        <button class="btn-refresh" onclick="refreshData()">
+                                            <span class="icon">🔄</span>
+                                            새로고침
+                                        </button>
+                                    </div>
+                                </header>
+
+                                <!-- 시장 지수 -->
+                                <section class="market-indices">
+                                    <div class="index-card">
+                                        <h3>KOSPI</h3>
+                                        <div class="index-value" id="kospiPrice">-</div>
+                                        <div class="index-change" id="kospiChange">-</div>
+                                    </div>
+                                    <div class="index-card">
+                                        <h3>KOSDAQ</h3>
+                                        <div class="index-value" id="kosdaqPrice">-</div>
+                                        <div class="index-change" id="kosdaqChange">-</div>
+                                    </div>
+                                </section>
+
+                                <!-- 계좌 요약 -->
+                                <section class="account-summary">
+                                    <div class="summary-card">
+                                        <div class="card-icon">💰</div>
+                                        <div class="card-content">
+                                            <div class="card-label">총 매입금액</div>
+                                            <div class="card-value" id="totalPurchase">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="summary-card">
+                                        <div class="card-icon">📊</div>
+                                        <div class="card-content">
+                                            <div class="card-label">총 평가금액</div>
+                                            <div class="card-value" id="totalEval">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="summary-card profit-loss">
+                                        <div class="card-icon">💹</div>
+                                        <div class="card-content">
+                                            <div class="card-label">총 평가손익</div>
+                                            <div class="card-value" id="totalPL">-</div>
+                                            <div class="card-rate" id="profitRate">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="summary-card">
+                                        <div class="card-icon">📦</div>
+                                        <div class="card-content">
+                                            <div class="card-label">보유 종목</div>
+                                            <div class="card-value" id="holdingsCount">-</div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <!-- 보유 종목 리스트 -->
+                                <section class="holdings-section">
+                                    <div class="section-header">
+                                        <h2>보유 종목</h2>
+                                        <div class="search-box">
+                                            <input type="text" id="searchInput" placeholder="종목 검색..."
+                                                onkeyup="filterHoldings()">
+                                            <input type="hidden" id="guestSearch">
+                                        </div>
+                                    </div>
+                                    <div class="holdings-grid" id="holdingsGrid">
+                                        <!-- 종목 카드들이 여기에 동적으로 추가됩니다 -->
+                                    </div>
+                                </section>
+
+                                <!-- 관심 종목 섹션 -->
+                                <section class="watchlist-section" style="margin-top: 2rem;">
+                                    <div class="section-header">
+                                        <h2>관심 종목</h2>
+                                        <div class="search-box" style="display: flex; gap: 0.5rem;">
+                                            <input type="text" id="watchlistInput" placeholder="종목 코드 입력 (예: 005930)"
+                                                style="flex: 1;">
+                                            <button onclick="addToWatchlist()" class="btn-add">추가</button>
+                                        </div>
+                                    </div>
+                                    <div class="holdings-grid" id="watchlistGrid">
+                                        <!-- 관심종목 카드들이 여기에 동적으로 추가됩니다 -->
+                                    </div>
+                                </section>
+
+                                <!-- 종목 상세 모달 -->
+                                <div class="modal" id="stockModal" style="display: none;">
+                                    <div class="modal-content">
+                                        <span class="close" onclick="closeModal()">&times;</span>
+                                        <h2 id="modalTitle">종목 상세</h2>
+
+                                        <!-- 로딩 스피너 -->
+                                        <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+                                            <div class="spinner"></div>
+                                            <p>분석 중...</p>
+                                        </div>
+
+                                        <!-- 탭 네비게이션 -->
+                                        <div class="analysis-tabs" id="analysisTabs" style="display: none;">
+                                            <button class="tab active" onclick="switchTab('overview')">종합</button>
+                                            <button class="tab" onclick="switchTab('supply')">수급</button>
+                                            <button class="tab" onclick="switchTab('news')">뉴스</button>
+                                            <button class="tab" onclick="switchTab('technical')">기술적분석</button>
+
+                                            <!-- 뉴스 탭 -->
+                                            <div class="tab-content hidden" id="news">
+                                                <div id="newsContent"></div>
+                                            </div>
+
+                                            <!-- 기술적 분석 탭 -->
+                                            <div class="tab-content hidden" id="technical">
+                                                <div id="technicalContent"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- JS Modules -->
+                            <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+                            <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+                            <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+                            <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+                            <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+                        </body>
+
+                        </html>

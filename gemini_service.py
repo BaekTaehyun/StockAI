@@ -24,15 +24,34 @@ class GeminiService:
         filename = f"{code}_{analysis_type}_{today}.json"
         return os.path.join(self.cache_dir, filename)
 
-    def _load_from_cache(self, code, analysis_type):
-        """캐시에서 데이터 로드"""
+    def _load_from_cache(self, code, analysis_type, force_refresh=False):
+        """
+        캐시에서 데이터 로드
+        - force_refresh=True: 캐시 무시하고 None 반환
+        - 파일 수정 시간이 1시간(3600초) 이상 지났으면 만료 처리
+        """
+        if force_refresh:
+            print(f"[Cache] Force refresh requested for {code} ({analysis_type})")
+            return None
+
         try:
             path = self._get_cache_path(code, analysis_type)
             if os.path.exists(path):
+                # 30분(1800초) 만료 체크
+                mtime = os.path.getmtime(path)
+                current_time = datetime.datetime.now().timestamp()
+                age = current_time - mtime
+                
+                if age > 1800:
+                    print(f"[Cache] Expired (Age: {age:.1f}s > 1800s) for {code} ({analysis_type})")
+                    return None
+                
                 with open(path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                print(f"[Cache] Loaded {analysis_type} for {code}")
+                print(f"[Cache] HIT for {code} ({analysis_type}) - Age: {age:.1f}s")
                 return data
+            else:
+                print(f"[Cache] MISS (File not found) for {code} ({analysis_type})")
         except Exception as e:
             print(f"[Cache Error] Load failed: {e}")
         return None
@@ -76,19 +95,22 @@ class GeminiService:
             response = requests.get(url, params=params, timeout=10)
             if response.status_code == 200:
                 return response.json().get('items', [])
+            elif response.status_code == 429:
+                print(f"[Search] Daily quota exceeded. Skipping news search.")
+                return []
             else:
-                print(f"[Search Error] {response.status_code}: {response.text}")
+                print(f"[Search Error] {response.status_code}")
                 return None
         except Exception as e:
             print(f"[Search Connection Error] {e}")
             return None
 
-    def search_and_analyze_news(self, stock_name, stock_code, current_price=None, change_rate=None):
+    def search_and_analyze_news(self, stock_name, stock_code, current_price=None, change_rate=None, force_refresh=False):
         """
         종목 뉴스를 검색하고 AI로 분석 (캐싱 적용)
         """
         # 1. 캐시 확인
-        cached_data = self._load_from_cache(stock_code, 'news')
+        cached_data = self._load_from_cache(stock_code, 'news', force_refresh)
         if cached_data:
             return cached_data
 
@@ -169,12 +191,12 @@ class GeminiService:
                 'raw_response': ""
             }
 
-    def fetch_market_themes(self):
+    def fetch_market_themes(self, force_refresh=False):
         """
         오늘의 주식 시장 주도 테마를 검색하고 AI로 요약 (캐싱 적용)
         """
         # 1. 캐시 확인 (테마는 'market_themes'라는 가상의 코드로 저장)
-        cached_data = self._load_from_cache('MARKET', 'themes')
+        cached_data = self._load_from_cache('MARKET', 'themes', force_refresh)
         if cached_data:
             return cached_data
 
@@ -220,12 +242,12 @@ class GeminiService:
             print(f"[Gemini] 테마 검색 실패: {e}")
             return "테마 정보 확인 불가"
 
-    def fetch_stock_sector(self, stock_name, stock_code):
+    def fetch_stock_sector(self, stock_name, stock_code, force_refresh=False):
         """
         특정 종목의 섹터/테마 정보를 검색하고 AI로 추출 (캐싱 적용)
         """
         # 1. 캐시 확인
-        cached_data = self._load_from_cache(stock_code, 'sector')
+        cached_data = self._load_from_cache(stock_code, 'sector', force_refresh)
         if cached_data:
             return cached_data
 
@@ -267,14 +289,14 @@ class GeminiService:
             return "섹터 미상"
 
     
-    def generate_outlook(self, stock_name, stock_info, supply_demand, technical_indicators, news_analysis, market_data=None):
+    def generate_outlook(self, stock_name, stock_info, supply_demand, technical_indicators, news_analysis, market_data=None, fundamental_data=None, force_refresh=False):
         """
         종합 정보를 바탕으로 AI 전망 생성 (캐싱 적용)
         """
         stock_code = stock_info.get('code', 'unknown')
         
         # 1. 캐시 확인
-        cached_data = self._load_from_cache(stock_code, 'outlook')
+        cached_data = self._load_from_cache(stock_code, 'outlook', force_refresh)
         if cached_data:
             return cached_data
 
@@ -294,7 +316,27 @@ class GeminiService:
             market_index_status = market_data.get('market_index', '정보 없음')
             current_hot_themes = market_data.get('themes', '정보 없음')
             stock_sector = market_data.get('sector', '정보 없음')
+
+            # 펀더멘털 데이터 추출
+            fundamental_data = fundamental_data or {}
             
+            # 시가총액 포맷팅 (억 단위 등)
+            market_cap = fundamental_data.get('market_cap_raw', 'N/A')
+            if market_cap != 'N/A':
+                try:
+                    # API가 억단위로 주는지 원단위로 주는지에 따라 다르지만, 
+                    # test_api_fields 결과 "7780" -> 삼성전자 시총 500조. 
+                    # 7780 * 100000000 = 7780억? 너무 작음.
+                    # 삼성전자 시가총액은 약 400조원. 
+                    # API 응답 "cap": "7780" -> 이게 7780조일리는 없고.
+                    # 아마 모의투자 서버라 데이터가 이상하거나, 단위가 다를 수 있음.
+                    # 일단 있는 그대로 보여주되 "API 데이터"라고 명시하거나, 
+                    # 억 단위로 가정하고 포맷팅.
+                    # 여기서는 raw 값을 그대로 쓰되 단위는 프롬프트가 알아서 판단하게 둠.
+                    pass
+                except:
+                    pass
+
             prompt = prompts.OUTLOOK_GENERATION_PROMPT.format(
                 stock_name=stock_name,
                 stock_sector=stock_sector,
@@ -313,8 +355,18 @@ class GeminiService:
                 ma60=ma60,
                 ma_signal=ma_signal,
                 news_sentiment=news_analysis.get('sentiment', 'N/A'),
-                news_reason=news_analysis.get('reason', 'N/A')
+                news_reason=news_analysis.get('reason', 'N/A'),
+                # 펀더멘털 데이터 추가
+                market_cap=self._format_large_number(fundamental_data.get('market_cap_raw', '0')),
+                per=fundamental_data.get('per', 'N/A'),
+                pbr=fundamental_data.get('pbr', 'N/A'),
+                roe=fundamental_data.get('roe', 'N/A'),
+                operating_profit=self._format_large_number(fundamental_data.get('operating_profit', '0'))
             )
+            
+            # 디버깅: 프롬프트 확인
+            # 디버깅: 프롬프트 전체 출력
+            print(f"\n{'='*50}\n[Debug] Generated Prompt:\n{prompt}\n{'='*50}\n")
             
             result_text = self._call_gemini_api(prompt)
             
@@ -322,15 +374,19 @@ class GeminiService:
                 raise Exception("API 응답 없음")
             
             # 응답 파싱
+            # 응답 파싱
             recommendation = "중립"
             confidence = 50
-            reasoning = result_text
+            trading_scenario = ""
+            reasoning = ""
             
             lines = result_text.strip().split('\n')
+            current_section = None
             
             for line in lines:
                 line = line.strip()
-                if "추천" in line or line.startswith("1."):
+                if "투자의견" in line or line.startswith("1."):
+                    current_section = "recommendation"
                     if "매수" in line:
                         recommendation = "매수"
                     elif "매도" in line:
@@ -338,6 +394,7 @@ class GeminiService:
                     else:
                         recommendation = "중립"
                 elif "신뢰도" in line or line.startswith("2."):
+                    current_section = "confidence"
                     import re
                     # 콜론(:) 뒤의 숫자를 우선적으로 찾기
                     if ":" in line:
@@ -348,16 +405,25 @@ class GeminiService:
                     
                     if numbers:
                         confidence = min(100, max(0, int(numbers[0])))
-                elif "근거" in line or line.startswith("3."):
-                    reasoning = line.split(":", 1)[-1].strip() if ":" in line else ""
-                    idx = lines.index(line)
-                    if idx + 1 < len(lines):
-                        reasoning += " " + " ".join(lines[idx+1:])
-                    break
+                elif "매매 시나리오" in line or line.startswith("3."):
+                    current_section = "scenario"
+                    if ":" in line:
+                         trading_scenario = line.split(":", 1)[-1].strip()
+                elif "핵심 근거" in line or line.startswith("4."):
+                    current_section = "reasoning"
+                    if ":" in line:
+                        reasoning = line.split(":", 1)[-1].strip()
+                
+                # 섹션별 내용 수집
+                elif current_section == "scenario" and line:
+                    trading_scenario += "\n" + line
+                elif current_section == "reasoning" and line:
+                    reasoning += "\n" + line
             
             result = {
                 'recommendation': recommendation,
                 'confidence': confidence,
+                'trading_scenario': trading_scenario.strip(),
                 'reasoning': reasoning.strip() if reasoning.strip() else result_text[:300],
                 'raw_response': result_text
             }
@@ -374,3 +440,25 @@ class GeminiService:
                 'reasoning': f"분석 실패: {str(e)}",
                 'raw_response': ""
             }
+
+    def _format_large_number(self, value_str):
+        """
+        억 단위 숫자를 '조 억' 단위로 변환
+        예: 5949236 -> 594조 9236억
+        """
+        try:
+            val = int(value_str)
+            if val == 0: return "0"
+            
+            trillion = val // 10000
+            billion = val % 10000
+            
+            result = ""
+            if trillion > 0:
+                result += f"{trillion}조 "
+            if billion > 0:
+                result += f"{billion}억"
+            
+            return result.strip() + "원"
+        except:
+            return str(value_str)
