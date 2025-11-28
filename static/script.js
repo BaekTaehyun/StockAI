@@ -158,6 +158,7 @@ function createHoldingCard(stock) {
 
     card.style.background = bgColor;
     card.style.borderLeft = `4px solid ${borderColor}`;
+    const textColor = isProfit ? '#e53e3e' : '#3b82f6';  // 텍스트 색상 변수 추가
 
     const sentimentElements = typeof createSentimentElements === 'function' ?
         createSentimentElements(stockCode) :
@@ -170,8 +171,10 @@ function createHoldingCard(stock) {
                 <div class="holding-code">${stockCode.replace('A', '')}</div>
             </div>
             <div>
-                <div class="holding-pl ${plClass}">${plSign}${formatCurrency(profitLoss)}</div>
-                <div class="holding-pl ${plClass}">${plSign}${profitRate.toFixed(2)}%</div>
+                <div>
+                    <div class="holding-pl ${plClass}" style="color: ${textColor};">${plSign}${formatCurrency(profitLoss)}</div>
+                    <div class="holding-pl ${plClass}" style="color: ${textColor};">${plSign}${profitRate.toFixed(2)}%</div>
+                </div>
             </div>
         </div>
         <div class="holding-body">
@@ -181,7 +184,7 @@ function createHoldingCard(stock) {
             </div>
             <div class="holding-info">
                 <div class="holding-info-label">평가금액</div>
-                <div class="holding-info-value">${formatCurrency(evalAmount)}</div>
+                <div class="holding-info-value" style="color: ${textColor};">${formatCurrency(evalAmount)}</div>
             </div>
             <div class="holding-info">
                 <div class="holding-info-label">매입가</div>
@@ -189,7 +192,7 @@ function createHoldingCard(stock) {
             </div>
             <div class="holding-info">
                 <div class="holding-info-label">현재가</div>
-                <div class="holding-info-value">${formatCurrency(currentPrice)}</div>
+                <div class="holding-info-value" style="color: ${textColor};">${formatCurrency(currentPrice)}</div>
             </div>
         </div>
         ${sentimentElements.footerHtml}
@@ -353,13 +356,18 @@ function renderOverview(data) {
         outlook.recommendation === '매수' ? 'buy' :
             outlook.recommendation === '매도' ? 'sell' : 'neutral';
 
+    // 등락률에 따른 색상 변수 추가
+    const changeRate = parseFloat(stock_info.change_rate) || 0;
+    const isUp = changeRate >= 0;
+    const priceColor = isUp ? '#e53e3e' : '#3b82f6';
+
     const html = `
         <div class="analysis-section">
             <h3>주가 정보</h3>
             <div class="info-grid">
                 <div class="info-item">
                     <span class="label">현재가</span>
-                    <span class="value">${formatCurrency(stock_info.current_price)}</span>
+                    <span class="value" style="color: ${priceColor};">${formatCurrency(stock_info.current_price)}</span>
                 </div>
                 <div class="info-item">
                     <span class="label">전일대비</span>

@@ -318,7 +318,7 @@ body {
     margin-bottom: 1rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border);
-    padding-right: 90px;
+    padding-right: 40px;
 }
 
 .holding-name {
@@ -1688,7 +1688,7 @@ body {
     }
 
     .holding-header {
-        padding-right: 60px !important;
+        padding-right: 20px !important;
     }
 }
 
@@ -1739,4 +1739,47 @@ body {
 .watchlist-change {
     font-size: 1.1rem;
     font-weight: 600;
+}
+
+/* 상세 분석 - 주가 정보 그리드 */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+}
+
+.info-item .label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.info-item .value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.info-item .value.positive {
+    color: #e53e3e;
+}
+
+.info-item .value.negative {
+    color: #3b82f6;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
 }
