@@ -125,3 +125,21 @@ function formatAIText(text) {
 
     return formatted;
 }
+
+// 큰 숫자를 조/억 단위로 포맷팅 (조 단위 이상이면 "X조원", 그 이하는 "X억원")
+function formatLargeNumber(value) {
+    if (!value || value === 0) return 'N/A';
+
+    const billion = 100000000;  // 1억
+    const trillion = 1000000000000;  // 1조
+
+    if (value >= trillion) {
+        // 조 단위로 표시
+        const jo = (value / trillion).toFixed(1);
+        return `${jo}조원`;
+    } else {
+        // 억 단위로 표시
+        const eok = (value / billion).toFixed(0);
+        return `${parseInt(eok).toLocaleString()}억원`;
+    }
+}

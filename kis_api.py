@@ -238,10 +238,13 @@ class KiwoomApi:
                 "pbr": safe_float(data.get('pbr')),
                 "roe": safe_float(data.get('roe')),
                 "market_cap": safe_int(data.get('mac', 0)) * 100000000, # 억 단위 -> 원 단위 (API가 억단위로 준다고 가정)
-                "market_cap_raw": data.get('mac', '0'), # 원본 데이터 (억 단위 예상)
-                "operating_profit": data.get('bus_pro', '0'), # 영업이익
-                "total_sales": data.get('sale_amt', '0') # 매출액
+                "market_cap_raw": data.get('mac', '0'), # 원본 데이터 (억 단위)
+                "operating_profit": safe_int(data.get('bus_pro', 0)) * 100000000,  # 억 단위 -> 원 단위
+                "operating_profit_raw": data.get('bus_pro', '0'),  # 원본 데이터 (억 단위)
+                "total_sales": safe_int(data.get('sale_amt', 0)) * 100000000,  # 억 단위 -> 원 단위
+                "total_sales_raw": data.get('sale_amt', '0')  # 원본 데이터 (억 단위)
             }
+
 
         else:
             return None

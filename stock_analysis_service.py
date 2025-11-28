@@ -175,9 +175,11 @@ class StockAnalysisService:
                         'recommendation': outlook.get('recommendation', '중립'),
                         'confidence': outlook.get('confidence', 0),
                         'reasoning': outlook.get('reasoning', '')
-                    }
+                    },
+                    'fundamental_data': fundamental_data
                 }
             }
+
             
         except Exception as e:
             print(f"[StockAnalysisService] 종합 분석 실패: {e}")

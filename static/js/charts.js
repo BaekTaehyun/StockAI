@@ -42,8 +42,8 @@ const Charts = {
     },
 
     // 기술적 분석 탭 렌더링
-    renderTechnical(data, stockInfo) {
-        console.log('📊 [Technical] Rendering technical analysis:', data, stockInfo);
+    renderTechnical(data, stockInfo, fundamentalData = {}) {
+        console.log('📊 [Technical] Rendering technical analysis:', data, stockInfo, fundamentalData);
 
         // 현재가 가져오기
         const currentPriceStr = stockInfo ? stockInfo.current_price : '0';
@@ -164,6 +164,68 @@ const Charts = {
                     </div>
                 </div>
             </div>
+
+            <!-- 펀더멘털 분석 섹션 -->
+            <div class="analysis-section">
+                <h3>💰 펀더멘털 분석</h3>
+                <div class="fundamental-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <!-- 시가총액 -->
+                    <div class="fundamental-item" style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">시가총액</div>
+                        <div style="font-size: 1.3rem; font-weight: 700; color: var(--accent-1); margin-bottom: 0.25rem;">
+                            ${fundamentalData.market_cap ? formatLargeNumber(fundamentalData.market_cap) : 'N/A'}
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7;">
+                            ${fundamentalData.market_cap ? (fundamentalData.market_cap >= 10000000000000 ? '🔵 대형주' : fundamentalData.market_cap >= 1000000000000 ? '🟢 중형주' : '🟡 소형주') : ''}
+                        </div>
+                    </div>
+
+                    <!-- PER -->
+                    <div class="fundamental-item" style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">PER (배)</div>
+                        <div style="font-size: 1.3rem; font-weight: 700; color: ${fundamentalData.per && fundamentalData.per < 10 ? '#10b981' : fundamentalData.per && fundamentalData.per > 20 ? '#ef4444' : 'var(--accent-1)'}; margin-bottom: 0.25rem;">
+                            ${fundamentalData.per ? fundamentalData.per.toFixed(2) : 'N/A'}
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7;">
+                            ${fundamentalData.per ? (fundamentalData.per < 10 ? '✅ 저평가 가능성' : fundamentalData.per > 20 ? '⚠️ 고평가 가능성' : '➡️ 적정 수준') : '낮을수록 저평가'}
+                        </div>
+                    </div>
+
+                    <!-- PBR -->
+                    <div class="fundamental-item" style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">PBR (배)</div>
+                        <div style="font-size: 1.3rem; font-weight: 700; color: ${fundamentalData.pbr && fundamentalData.pbr < 1 ? '#10b981' : fundamentalData.pbr && fundamentalData.pbr > 2 ? '#ef4444' : 'var(--accent-1)'}; margin-bottom: 0.25rem;">
+                            ${fundamentalData.pbr ? fundamentalData.pbr.toFixed(2) : 'N/A'}
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7;">
+                            ${fundamentalData.pbr ? (fundamentalData.pbr < 1 ? '✅ 자산가치 이하' : fundamentalData.pbr > 2 ? '📈 성장성 반영' : '➡️ 적정 수준') : '1 기준'}
+                        </div>
+                    </div>
+
+                    <!-- ROE -->
+                    <div class="fundamental-item" style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">ROE (%)</div>
+                        <div style="font-size: 1.3rem; font-weight: 700; color: ${fundamentalData.roe && fundamentalData.roe >= 15 ? '#10b981' : fundamentalData.roe && fundamentalData.roe < 5 ? '#ef4444' : 'var(--accent-1)'}; margin-bottom: 0.25rem;">
+                            ${fundamentalData.roe ? fundamentalData.roe.toFixed(2) + '%' : 'N/A'}
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7;">
+                            ${fundamentalData.roe ? (fundamentalData.roe >= 15 ? '🌟 우수한 수익성' : fundamentalData.roe >= 10 ? '✅ 양호' : '⚠️ 개선 필요') : '높을수록 우수'}
+                        </div>
+                    </div>
+
+                    <!-- 영업이익 -->
+                    <div class="fundamental-item" style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">영업이익</div>
+                        <div style="font-size: 1.3rem; font-weight: 700; color: ${fundamentalData.operating_profit && fundamentalData.operating_profit > 0 ? '#10b981' : '#ef4444'}; margin-bottom: 0.25rem;">
+                            ${fundamentalData.operating_profit ? formatLargeNumber(fundamentalData.operating_profit) : 'N/A'}
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7;">
+                            ${fundamentalData.operating_profit ? (fundamentalData.operating_profit > 0 ? '✅ 흑자' : '❌ 적자') : '사업 수익성'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         `;
 
         document.getElementById('technicalContent').innerHTML = html;

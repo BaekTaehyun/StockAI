@@ -384,8 +384,9 @@ class GeminiService:
                 per=fundamental_data.get('per', 'N/A'),
                 pbr=fundamental_data.get('pbr', 'N/A'),
                 roe=fundamental_data.get('roe', 'N/A'),
-                operating_profit=self._format_large_number(fundamental_data.get('operating_profit', '0'))
+                operating_profit=self._format_large_number(fundamental_data.get('operating_profit_raw', '0'))
             )
+
             
             # 디버깅: 프롬프트 확인
             # 디버깅: 프롬프트 전체 출력

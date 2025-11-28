@@ -251,7 +251,7 @@ const UI = {
                 this.renderOverview(data);
                 this.renderSupplyDemand(data.supply_demand);
                 this.renderNews(data.news_analysis);
-                Charts.renderTechnical(data.technical, data.stock_info);
+                Charts.renderTechnical(data.technical, data.stock_info, data.fundamental_data);
             } else {
                 document.getElementById('overviewContent').innerHTML =
                     `<div class="error">분석 데이터를 불러올 수 없습니다: ${result.message}</div>`;
