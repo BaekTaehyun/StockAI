@@ -2,6 +2,7 @@ from kis_api import KiwoomApi
 from gemini_service import GeminiService
 from technical_indicators import TechnicalIndicators
 import config
+import time
 
 class StockAnalysisService:
     """주식 종목 종합 분석 서비스"""
@@ -12,6 +13,10 @@ class StockAnalysisService:
         self.kiwoom.get_access_token()
         self.gemini = GeminiService()
         
+        # 메모리 캐시 초기화
+        # 구조: { 'key': { 'data': ..., 'timestamp': ..., 'ttl': ... } }
+        self._memory_cache = {}
+        
     def _safe_int(self, value):
         """안전한 정수 변환"""
         try:
@@ -20,6 +25,26 @@ class StockAnalysisService:
             return int(value)
         except (ValueError, TypeError):
             return 0
+
+    def _get_cached_data(self, key):
+        """캐시된 데이터 조회"""
+        if key in self._memory_cache:
+            cache_item = self._memory_cache[key]
+            current_time = time.time()
+            if current_time - cache_item['timestamp'] < cache_item['ttl']:
+                return cache_item['data']
+            else:
+                # 만료된 캐시 삭제
+                del self._memory_cache[key]
+        return None
+
+    def _set_cached_data(self, key, data, ttl=60):
+        """데이터 캐싱"""
+        self._memory_cache[key] = {
+            'data': data,
+            'timestamp': time.time(),
+            'ttl': ttl
+        }
 
     def get_full_analysis(self, code, stock_name=None, force_refresh=False):
         """
@@ -38,18 +63,47 @@ class StockAnalysisService:
             normalized_code = code.lstrip('A') if code and code.startswith('A') else code
             # print(f"[Debug] Stock code normalization: {code} → {normalized_code}")
             
-            # 1. 현재가 정보 조회 (정규화된 코드 사용)
-            price_info = self.kiwoom.get_current_price(normalized_code)
+            # 1. 현재가 정보 조회 (캐싱 적용)
+            price_cache_key = f"price_{normalized_code}"
+            price_info = None
+            
+            if not force_refresh:
+                price_info = self._get_cached_data(price_cache_key)
+                
+            if not price_info:
+                price_info = self.kiwoom.get_current_price(normalized_code)
+                if price_info:
+                    self._set_cached_data(price_cache_key, price_info, ttl=60) # 60초 캐시
+            
             if not price_info:
                 return {'success': False, 'message': '주가 정보 조회 실패'}
             
             stock_name = stock_name or price_info.get('name', '알 수 없음')
             
-            # 2. 수급 데이터 조회 (정규화된 코드 사용)
-            supply_demand = self.get_supply_demand_data(normalized_code)
+            # 2. 수급 데이터 조회 (캐싱 적용)
+            supply_cache_key = f"supply_{normalized_code}"
+            supply_demand = None
             
-            # 3. 기술적 지표 계산 (일봉 데이터 필요, 정규화된 코드 사용)
-            daily_chart = self.kiwoom.get_daily_chart_data(normalized_code)
+            if not force_refresh:
+                supply_demand = self._get_cached_data(supply_cache_key)
+                
+            if not supply_demand:
+                supply_demand = self.get_supply_demand_data(normalized_code)
+                if supply_demand:
+                    self._set_cached_data(supply_cache_key, supply_demand, ttl=60) # 60초 캐시
+            
+            # 3. 기술적 지표 계산 (일봉 데이터 필요, 캐싱 적용)
+            # 일봉 데이터는 양이 많으므로 데이터 자체를 캐싱
+            chart_cache_key = f"chart_{normalized_code}"
+            daily_chart = None
+            
+            if not force_refresh:
+                daily_chart = self._get_cached_data(chart_cache_key)
+                
+            if not daily_chart:
+                daily_chart = self.kiwoom.get_daily_chart_data(normalized_code)
+                if daily_chart:
+                    self._set_cached_data(chart_cache_key, daily_chart, ttl=60) # 60초 캐시
             
             # 일봉 데이터가 있으면 전처리
             price_data = []
@@ -105,8 +159,17 @@ class StockAnalysisService:
             # 5. 시장 데이터 수집 (Top-Down Analysis)
             market_data = {}
             try:
-                # 5-1. 시장 지수 (KOSPI/KOSDAQ)
-                market_data['market_index'] = self._get_market_indices_string()
+                # 5-1. 시장 지수 (KOSPI/KOSDAQ) - 캐싱 적용
+                market_index_key = "market_index"
+                market_index_str = None
+                if not force_refresh:
+                    market_index_str = self._get_cached_data(market_index_key)
+                
+                if not market_index_str:
+                    market_index_str = self._get_market_indices_string()
+                    self._set_cached_data(market_index_key, market_index_str, ttl=60)
+                
+                market_data['market_index'] = market_index_str
                 
                 # 5-2. 주도 테마 (Gemini Search)
                 market_data['themes'] = self.gemini.fetch_market_themes(force_refresh=force_refresh)
@@ -117,14 +180,23 @@ class StockAnalysisService:
             except Exception as e:
                 print(f"[StockAnalysisService] 시장 데이터 수집 실패: {e}")
 
-            # 6. 펀더멘털 데이터 수집 (Fundamental, 정규화된 코드 사용)
-            fundamental_data = {}
-            try:
-                fundamental_data = self.kiwoom.get_stock_fundamental_info(normalized_code)
-                if not fundamental_data:
+            # 6. 펀더멘털 데이터 수집 (Fundamental, 정규화된 코드 사용) - 캐싱 적용
+            fundamental_key = f"fundamental_{normalized_code}"
+            fundamental_data = None
+            
+            if not force_refresh:
+                fundamental_data = self._get_cached_data(fundamental_key)
+                
+            if not fundamental_data:
+                try:
+                    fundamental_data = self.kiwoom.get_stock_fundamental_info(normalized_code)
+                    if not fundamental_data:
+                        fundamental_data = {}
+                    else:
+                        self._set_cached_data(fundamental_key, fundamental_data, ttl=300) # 5분 캐시
+                except Exception as e:
+                    print(f"[StockAnalysisService] 펀더멘털 데이터 수집 실패: {e}")
                     fundamental_data = {}
-            except Exception as e:
-                print(f"[StockAnalysisService] 펀더멘털 데이터 수집 실패: {e}")
 
             # 7. AI 전망 생성 (Gemini) - Optional
             outlook = {
@@ -175,7 +247,8 @@ class StockAnalysisService:
                     'outlook': {
                         'recommendation': outlook.get('recommendation', '중립'),
                         'confidence': outlook.get('confidence', 0),
-                        'reasoning': outlook.get('reasoning', '')
+                        'reasoning': outlook.get('reasoning', ''),
+                        '_cache_info': outlook.get('_cache_info', {})
                     },
                     'fundamental_data': fundamental_data
                 }

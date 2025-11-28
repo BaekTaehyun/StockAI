@@ -16,7 +16,7 @@ def test_ai_integration():
     print(f"Analyzing {code} to generate AI prompt...")
     
     # This will trigger get_full_analysis -> gemini.generate_outlook -> print prompt
-    result = service.get_full_analysis(code)
+    result = service.get_full_analysis(code, force_refresh=True)
     
     if result['success']:
         print("\nAnalysis Complete.")

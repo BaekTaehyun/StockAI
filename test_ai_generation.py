@@ -19,7 +19,7 @@ def test_ai_generation():
     }
     news_analysis = {'sentiment': '긍정', 'reason': '반도체 업황 개선 기대'}
     market_data = {'market_index': 'KOSPI 상승', 'themes': '반도체', 'sector': '전기전자'}
-    fundamental_data = {'market_cap_raw': '400000000000000', 'per': 15.0, 'pbr': 1.2, 'roe': 10.0, 'operating_profit': '5000000000000'}
+    fundamental_data = {'market_cap_raw': '5949236', 'per': 20.3, 'pbr': 1.73, 'roe': 9.0, 'operating_profit_raw': '327260'}
     
     try:
         print("Sending request to Gemini...")

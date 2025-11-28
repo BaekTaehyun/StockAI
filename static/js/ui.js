@@ -172,10 +172,10 @@ const UI = {
 
     // 모달 열기 및 데이터 로드 (강제 갱신 적용 + 중복 요청 방지)
     async openStockModal(stock) {
-        // 클릭 시 해당 종목 감성 정보 즉시 갱신
-        if (typeof updateSingleSentiment === 'function') {
-            updateSingleSentiment(stock.stk_cd);
-        }
+        // 클릭 시 감성 정보 갱신은 loadFullAnalysis 결과로 처리하므로 별도 호출 제거
+        // if (typeof updateSingleSentiment === 'function') {
+        //     updateSingleSentiment(stock.stk_cd);
+        // }
 
         const modal = document.getElementById('stockModal');
         const title = document.getElementById('modalTitle');
@@ -252,7 +252,13 @@ const UI = {
                 this.renderSupplyDemand(data.supply_demand);
                 this.renderNews(data.news_analysis);
                 Charts.renderTechnical(data.technical, data.stock_info, data.fundamental_data);
+
+                // 감성 정보 및 리본 업데이트 (중복 API 호출 방지)
+                if (typeof window.updateSentimentFromAnalysis === 'function') {
+                    window.updateSentimentFromAnalysis(code, data);
+                }
             } else {
+
                 document.getElementById('overviewContent').innerHTML =
                     `<div class="error">분석 데이터를 불러올 수 없습니다: ${result.message}</div>`;
             }

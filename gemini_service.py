@@ -17,6 +17,10 @@ class GeminiService:
         self.cache_dir = os.path.join(os.path.dirname(__file__), 'cache')
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
+            
+        # 메모리 캐시 초기화 (파일 I/O 감소 및 실패 대비)
+        # 구조: { 'key': { 'data': ..., 'timestamp': ... } }
+        self._memory_cache = {}
     
     def _get_cache_path(self, code, analysis_type):
         """캐시 파일 경로 생성 (종목코드_타입_날짜.json)"""
@@ -30,7 +34,7 @@ class GeminiService:
 
     def _load_from_cache(self, code, analysis_type, force_refresh=False):
         """
-        캐시에서 데이터 로드
+        캐시에서 데이터 로드 (메모리 -> 파일 순서)
         - force_refresh=True: 캐시 무시하고 (None, dict) 반환
         - 파일 수정 시간이 30분(1800초) 이상 지났으면 만료 처리
         Returns:
@@ -43,12 +47,28 @@ class GeminiService:
             cache_info['reason'] = 'force_refresh'
             return None, cache_info
 
+        current_time = datetime.datetime.now().timestamp()
+        cache_key = f"{code}_{analysis_type}"
+
+        # 1. 메모리 캐시 확인
+        if cache_key in self._memory_cache:
+            mem_data = self._memory_cache[cache_key]
+            age = current_time - mem_data['timestamp']
+            if age <= 1800:
+                # print(f"[Memory Cache] HIT for {code} ({analysis_type})")
+                cache_info['cached'] = True
+                cache_info['reason'] = 'memory_hit'
+                cache_info['age_seconds'] = age
+                return mem_data['data'], cache_info
+            else:
+                # 메모리 캐시 만료 -> 삭제
+                del self._memory_cache[cache_key]
+
         try:
             path = self._get_cache_path(code, analysis_type)
             if os.path.exists(path):
                 # 30분(1800초) 만료 체크
                 mtime = os.path.getmtime(path)
-                current_time = datetime.datetime.now().timestamp()
                 age = current_time - mtime
                 
                 if age > 1800:
@@ -59,6 +79,13 @@ class GeminiService:
                 
                 with open(path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
+                
+                # 파일 캐시 적중 시 메모리 캐시에도 업데이트
+                self._memory_cache[cache_key] = {
+                    'data': data,
+                    'timestamp': mtime
+                }
+                
                 # print(f"[Cache] HIT for {code} ({analysis_type}) - Age: {age:.1f}s")
                 cache_info['cached'] = True
                 cache_info['reason'] = 'hit'
@@ -73,14 +100,37 @@ class GeminiService:
         return None, cache_info
 
     def _save_to_cache(self, code, analysis_type, data):
-        """데이터를 캐시에 저장"""
+        """데이터를 캐시에 저장 (메모리 + 파일 Atomic Write)"""
         try:
+            # 1. 메모리 캐시 저장
+            cache_key = f"{code}_{analysis_type}"
+            self._memory_cache[cache_key] = {
+                'data': data,
+                'timestamp': datetime.datetime.now().timestamp()
+            }
+
+            # 2. 파일 캐시 저장 (Atomic Write: 임시 파일 -> 이름 변경)
             path = self._get_cache_path(code, analysis_type)
-            with open(path, 'w', encoding='utf-8') as f:
+            temp_path = path + ".tmp"
+            
+            with open(temp_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
+            
+            # 윈도우에서는 rename 시 대상 파일이 있으면 에러가 발생할 수 있으므로 replace 사용
+            if os.path.exists(path):
+                os.remove(path)
+            os.rename(temp_path, path)
+            
             # print(f"[Cache] Saved {analysis_type} for {code}")
         except Exception as e:
             print(f"[Cache Error] Save failed: {e}")
+            # 임시 파일 정리
+            if 'temp_path' in locals() and os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except:
+                    pass
+
 
     def _call_gemini_api(self, prompt_text):
         """Gemini SDK를 사용한 API 호출 (60초 timeout)"""
@@ -390,7 +440,7 @@ class GeminiService:
             
             # 디버깅: 프롬프트 확인
             # 디버깅: 프롬프트 전체 출력
-            # print(f"\n{'='*50}\n[Debug] Generated Prompt:\n{prompt}\n{'='*50}\n")
+            print(f"\n{'='*50}\n[Debug] Generated Prompt:\n{prompt}\n{'='*50}\n")
 
             
             result_text = self._call_gemini_api(prompt)

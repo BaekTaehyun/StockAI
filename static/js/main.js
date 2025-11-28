@@ -226,3 +226,24 @@ window.triggerWatchlistSentimentUpdate = (stocks) => {
         window.lastWatchlistSentimentUpdate = now;
     }
 };
+
+// 종합 분석 데이터로부터 감성 정보 업데이트 (UI.js에서 호출)
+window.updateSentimentFromAnalysis = (code, analysisData) => {
+    if (!analysisData || !analysisData.outlook || !analysisData.news_analysis) return;
+
+    const sentimentData = {
+        ai_recommendation: analysisData.outlook.recommendation,
+        ai_confidence: analysisData.outlook.confidence,
+        news_sentiment: analysisData.news_analysis.sentiment,
+        supply_trend: analysisData.supply_demand ? analysisData.supply_demand.trend : '정보 없음'
+    };
+
+    // 캐시 업데이트
+    sentimentCache[code] = {
+        timestamp: Date.now(),
+        data: sentimentData
+    };
+
+    // 리본 렌더링
+    renderRibbon(code, sentimentData);
+};
