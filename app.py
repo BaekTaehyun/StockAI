@@ -205,6 +205,9 @@ def get_full_analysis(code):
     try:
         from stock_analysis_service import StockAnalysisService
         
+        # 종목 코드 정규화 (A 접두사 제거)
+        normalized_code = code.lstrip('A') if code.startswith('A') else code
+        
         if not kiwoom.access_token:
             kiwoom.get_access_token()
         
@@ -215,7 +218,7 @@ def get_full_analysis(code):
         # 강제 갱신 여부 확인 (쿼리 파라미터 refresh=true)
         force_refresh = request.args.get('refresh', '').lower() == 'true'
         
-        result = analysis_service.get_full_analysis(code, force_refresh=force_refresh)
+        result = analysis_service.get_full_analysis(normalized_code, force_refresh=force_refresh)
         
         if result.get('success'):
             return jsonify(result)
