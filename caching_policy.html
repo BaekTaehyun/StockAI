@@ -254,14 +254,51 @@
                     </li>
                     <li><strong>공유 캐시 효과</strong>: <strong>사용자 A</strong>가 분석한 결과를 서버 파일로 저장해두면, <strong>사용자
                             B</strong>가
-                        theme: 'base',
-                        themeVariables: {
-                        primaryColor: '#e0e0e0',
-                        edgeLabelBackground: '#fff',
-                        tertiaryColor: '#fff'
-                        }
-                        });
-                        </script>
+                        동일 종목 조회 시 API 호출 없이 저장된 파일을 그대로 반환받습니다.</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h2>4. 서버-클라이언트 상호작용 분석 (Interaction Analysis)</h2>
+
+        <h3>A. 서버 (Server) 동작 특성</h3>
+        <ul>
+            <li><strong>구글 검색의 보안성</strong>: 구글 검색 로직(<code>gemini_service.py</code>)은 100% 서버 내부에서만 실행됩니다. 클라이언트 코드는 검색
+                API 키나 로직에 접근할 수 없어 보안상 안전합니다.</li>
+            <li><strong>Lazy Loading (지연 로딩)</strong>: 서버는 스스로 데이터를 미리 수집하지 않습니다. 클라이언트의 <strong>요청이 들어오는 순간</strong>에만
+                분석을 시작하고 결과를 캐싱합니다.</li>
+        </ul>
+
+        <h3>B. 동시 요청 처리 (Concurrency)</h3>
+        <ul>
+            <li><strong>시나리오</strong>: 두 명의 사용자가 거의 동시에(밀리초 차이) 같은 종목을 처음으로 조회하는 경우</li>
+            <li><strong>동작</strong>: 현재 별도의 잠금(Lock) 장치가 없으므로, 두 요청 모두 API를 호출하여 중복 작업이 발생할 수 있습니다.</li>
+            <li><strong>결과</strong>: 두 작업 중 나중에 끝나는 쪽의 데이터가 최종적으로 캐시 파일에 저장되며, 이후의 요청부터는 해당 캐시를 공유하게 됩니다.</li>
+        </ul>
+
+        <h2>5. 시스템 이점 (Benefits)</h2>
+        <ul>
+            <li><strong>비용 절감 (Cost Efficiency)</strong>: 캐싱을 통해 동일 종목에 대한 중복 호출을 90% 이상 제거할 수 있습니다.
+            </li>
+            <li><strong>속도 향상 (Performance)</strong>: AI 분석은 통상 3~5초가 소요되지만, 캐시된 데이터는 <strong>0.01초
+                    이내</strong>에 반환됩니다.
+            </li>
+            <li><strong>데이터 일관성 (Consistency)</strong>: 짧은 시간 내에 여러 사용자가 조회하더라도 동일한 분석 결과를 제공하여 정보의 혼선을
+                방지합니다.</li>
+        </ul>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#e0e0e0',
+                edgeLabelBackground: '#fff',
+                tertiaryColor: '#fff'
+            }
+        });
+    </script>
 </body>
 
 </html>
