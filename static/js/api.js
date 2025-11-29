@@ -106,7 +106,35 @@ const API = {
                 url += '?refresh=true';
                 console.log(`🔄 강제 갱신 요청: ${code}`);
             }
-            const response = await fetch(url);
+
+            // 타임아웃 설정 (30초)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+            let response;
+            try {
+                response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+            } catch (fetchError) {
+                clearTimeout(timeoutId);
+                if (fetchError.name === 'AbortError') {
+                    console.error('⏱️ 요청 시간 초과 (30초)');
+                    return {
+                        success: false,
+                        message: '서버 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.'
+                    };
+                }
+                throw fetchError;
+            }
+
+            if (!response.ok) {
+                console.error(`HTTP Error: ${response.status}`);
+                return {
+                    success: false,
+                    message: `서버 오류 (${response.status}). 잠시 후 다시 시도해주세요.`
+                };
+            }
+
             const data = await response.json();
 
             const elapsed = (performance.now() - startTime).toFixed(0);

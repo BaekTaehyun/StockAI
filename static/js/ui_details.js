@@ -347,7 +347,6 @@ Object.assign(window.UI, {
                     Charts.renderTechnical(data.technical, data.stock_info, data.fundamental_data);
                 }
 
-                // UI 표시 업데이트
                 // UI 표시 업데이트 (이미 표시되어 있지만, 로딩 스피너가 있다면 확실히 숨김)
                 if (loading) loading.style.display = 'none';
                 tabs.style.display = 'flex';
@@ -356,15 +355,66 @@ Object.assign(window.UI, {
                 // 기본 탭 활성화
                 this.switchTab('overview');
             } else {
-                alert('데이터를 불러오는데 실패했습니다.');
-                this.closeModal();
+                // 에러 메시지를 모달에 표시
+                const errorMessage = result.message || '데이터를 불러오는데 실패했습니다.';
+                this.showErrorInModal(errorMessage, code);
             }
         } catch (error) {
             console.error('상세 분석 로드 실패:', error);
-            alert('오류가 발생했습니다.');
-            this.closeModal();
+            // 네트워크 오류 등의 경우
+            const errorMsg = error.message === 'Failed to fetch'
+                ? '서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.'
+                : `오류가 발생했습니다: ${error.message}`;
+            this.showErrorInModal(errorMsg, code);
         }
     },
+
+    // 모달에 에러 메시지 표시
+    showErrorInModal(message, code) {
+        const html = `
+            <div class="analysis-section" style="text-align: center; padding: 3rem 1rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                <h3 style="color: var(--text-primary); margin-bottom: 1rem;">분석 실패</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.6;">${message}</p>
+                <button onclick="UI.retryAnalysis('${code}')" style="
+                    background: var(--accent);
+                    color: white;
+                    border: none;
+                    padding: 0.75rem 2rem;
+                    border-radius: 8px;
+                    font-size: 1rem;
+                    cursor: pointer;
+                    margin-right: 1rem;
+                ">다시 시도</button>
+                <button onclick="UI.closeModal()" style="
+                    background: var(--bg-secondary);
+                    color: var(--text-primary);
+                    border: 1px solid var(--border-color);
+                    padding: 0.75rem 2rem;
+                    border-radius: 8px;
+                    font-size: 1rem;
+                    cursor: pointer;
+                ">닫기</button>
+            </div>
+        `;
+        document.getElementById('overviewContent').innerHTML = html;
+        document.getElementById('supplyContent').innerHTML = '';
+        document.getElementById('newsContent').innerHTML = '';
+    },
+
+    // 분석 재시도
+    async retryAnalysis(code) {
+        // 로딩 상태로 재설정
+        document.getElementById('overviewContent').innerHTML = `
+            <div style="text-align: center; padding: 3rem;">
+                <div class="spinner" style="width: 40px; height: 40px; border-width: 4px; margin: 0 auto;"></div>
+                <p style="margin-top: 1rem; color: var(--text-secondary);">다시 시도하고 있습니다...</p>
+            </div>
+        `;
+        // 강제 새로고침으로 재시도
+        await this.loadStockAnalysis(code);
+    },
+
 
     // 탭 전환
     switchTab(tabName) {
