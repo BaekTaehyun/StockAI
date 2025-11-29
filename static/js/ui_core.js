@@ -50,24 +50,8 @@ Object.assign(window.UI, {
                 changeElem.style.color = 'var(--text-secondary)';
             }
         }
-
-        // Charts 객체가 있으면 기술적 지표 렌더링
-        if (typeof Charts !== 'undefined' && Charts.renderTechnical) {
-            Charts.renderTechnical(data.technical, data.stock_info, data.fundamental_data);
-        }
-
-        // 감성 정보 및 리본 업데이트 (중복 API 호출 방지)
-        if (typeof window.updateSentimentFromAnalysis === 'function') {
-            // code 변수가 여기 없는데? ui.js 원본을 보니 updateMarketIndex에 code가 없음.
-            // 원본: window.updateSentimentFromAnalysis(code, data);
-            // 근데 code가 정의되지 않음. 원본 버그인가?
-            // updateMarketIndex(type, data) -> type은 'kospi'/'kosdaq'.
-            // 감성 분석은 종목 코드 필요. 지수는 감성 분석 대상 아님.
-            // 원본 코드 254라인: window.updateSentimentFromAnalysis(code, data);
-            // code는 어디서 옴? ReferenceError 가능성.
-            // 일단 주석 처리하거나 안전하게 처리.
-            // console.warn("updateSentimentFromAnalysis called in updateMarketIndex but code is undefined");
-        }
+        // Note: Market indices don't have technical analysis data
+        // Charts.renderTechnical is only for individual stock analysis
     },
 
     // 탭 전환
