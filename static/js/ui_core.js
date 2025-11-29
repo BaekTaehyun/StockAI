@@ -120,19 +120,16 @@ Object.assign(window.UI, {
 
     // 데이터 새로고침 (버튼)
     refreshData() {
-        console.log('🔄 데이터 새로고침...');
+        console.log('🔄 데이터 새로고침 (강제 리로드)...');
         const btn = document.querySelector('.btn-refresh');
         if (btn) {
             btn.style.transform = 'rotate(360deg)';
             btn.style.transition = 'transform 0.5s ease';
-            setTimeout(() => {
-                btn.style.transform = '';
-            }, 500);
         }
 
-        // Main.js의 함수 호출 (전역으로 노출 필요)
-        if (window.loadAllData) {
-            window.loadAllData();
-        }
+        // 모바일 캐시 문제 해결을 위해 페이지 전체 리로드 수행
+        setTimeout(() => {
+            window.location.reload(true);
+        }, 300);
     }
 });
