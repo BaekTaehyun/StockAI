@@ -5,6 +5,7 @@ import os
 import datetime
 
 import prompts
+from gemini_cache import GeminiCache
 
 class GeminiService:
     """Google Gemini SDK를 사용한 AI 분석 서비스"""
@@ -13,129 +14,10 @@ class GeminiService:
         genai.configure(api_key=config.GEMINI_API_KEY)
         self.model = genai.GenerativeModel(config.AI_MODEL)
         
-        # 캐시 디렉토리 생성
-        self.cache_dir = os.path.join(os.path.dirname(__file__), 'cache')
-        if not os.path.exists(self.cache_dir):
-            os.makedirs(self.cache_dir)
-            
-        # 캐시 만료 시간 설정 (초 단위)
-        # 메모리 캐시: 10분 (600초) - 빠른 응답용, 자주 갱신
-        # 파일 캐시: 60분 (3600초) - API 비용 절감용, 길게 유지
-        self.CACHE_TTL_MEMORY = 600
-        self.CACHE_TTL_FILE = 3600
-            
-        # 메모리 캐시 초기화 (파일 I/O 감소 및 실패 대비)
-        # 구조: { 'key': { 'data': ..., 'timestamp': ... } }
-        self._memory_cache = {}
+        # 캐시 관리자 초기화
+        self.cache = GeminiCache()
     
-    def _get_cache_path(self, code, analysis_type):
-        """캐시 파일 경로 생성 (종목코드_타입_날짜.json)"""
-        # 종목 코드 정규화 (A 접두사 제거)
-        normalized_code = code.lstrip('A') if code and code.startswith('A') else code
-        today = datetime.datetime.now().strftime("%Y%m%d")
-        filename = f"{normalized_code}_{analysis_type}_{today}.json"
-        path = os.path.join(self.cache_dir, filename)
-        # print(f"[DEBUG] Cache path: {code} → {normalized_code} → {filename}")
-        return path
 
-    def _load_from_cache(self, code, analysis_type, force_refresh=False):
-        """
-        캐시에서 데이터 로드 (메모리 -> 파일 순서)
-        - force_refresh=True: 캐시 무시하고 (None, dict) 반환
-        - 파일 수정 시간이 30분(1800초) 이상 지났으면 만료 처리
-        Returns:
-            (data, cache_info) - data는 캐싱된 데이터 또는 None, cache_info는 캐시 상태 정보
-        """
-        cache_info = {'cached': False, 'reason': '', 'age_seconds': 0}
-        
-        if force_refresh:
-            # print(f"[Cache] Force refresh requested for {code} ({analysis_type})")
-            cache_info['reason'] = 'force_refresh'
-            return None, cache_info
-
-        current_time = datetime.datetime.now().timestamp()
-        cache_key = f"{code}_{analysis_type}"
-
-        # 1. 메모리 캐시 확인
-        if cache_key in self._memory_cache:
-            mem_data = self._memory_cache[cache_key]
-            age = current_time - mem_data['timestamp']
-            if age <= self.CACHE_TTL_MEMORY:
-                # print(f"[Memory Cache] HIT for {code} ({analysis_type})")
-                cache_info['cached'] = True
-                cache_info['reason'] = 'memory_hit'
-                cache_info['age_seconds'] = age
-                return mem_data['data'], cache_info
-            else:
-                # 메모리 캐시 만료 -> 삭제
-                del self._memory_cache[cache_key]
-
-        try:
-            path = self._get_cache_path(code, analysis_type)
-            if os.path.exists(path):
-                # 파일 캐시 만료 체크
-                mtime = os.path.getmtime(path)
-                age = current_time - mtime
-                
-                if age > self.CACHE_TTL_FILE:
-                    # print(f"[Cache] Expired (Age: {age:.1f}s > {self.CACHE_TTL_FILE}s) for {code} ({analysis_type})")
-                    cache_info['reason'] = f'expired ({age:.1f}s > {self.CACHE_TTL_FILE}s)'
-                    cache_info['age_seconds'] = age
-                    return None, cache_info
-                
-                with open(path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                
-                # 파일 캐시 적중 시 메모리 캐시에도 업데이트
-                self._memory_cache[cache_key] = {
-                    'data': data,
-                    'timestamp': mtime
-                }
-                
-                # print(f"[Cache] HIT for {code} ({analysis_type}) - Age: {age:.1f}s")
-                cache_info['cached'] = True
-                cache_info['reason'] = 'hit'
-                cache_info['age_seconds'] = age
-                return data, cache_info
-            else:
-                # print(f"[Cache] MISS (File not found) for {code} ({analysis_type})")
-                cache_info['reason'] = 'not_found'
-        except Exception as e:
-            print(f"[Cache Error] Load failed: {e}")
-            cache_info['reason'] = f'error: {str(e)}'
-        return None, cache_info
-
-    def _save_to_cache(self, code, analysis_type, data):
-        """데이터를 캐시에 저장 (메모리 + 파일 Atomic Write)"""
-        try:
-            # 1. 메모리 캐시 저장
-            cache_key = f"{code}_{analysis_type}"
-            self._memory_cache[cache_key] = {
-                'data': data,
-                'timestamp': datetime.datetime.now().timestamp()
-            }
-
-            # 2. 파일 캐시 저장 (Atomic Write: 임시 파일 -> 이름 변경)
-            path = self._get_cache_path(code, analysis_type)
-            temp_path = path + ".tmp"
-            
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            
-            # 윈도우에서는 rename 시 대상 파일이 있으면 에러가 발생할 수 있으므로 replace 사용
-            if os.path.exists(path):
-                os.remove(path)
-            os.rename(temp_path, path)
-            
-            # print(f"[Cache] Saved {analysis_type} for {code}")
-        except Exception as e:
-            print(f"[Cache Error] Save failed: {e}")
-            # 임시 파일 정리
-            if 'temp_path' in locals() and os.path.exists(temp_path):
-                try:
-                    os.remove(temp_path)
-                except:
-                    pass
 
 
     def _call_gemini_api(self, prompt_text):
@@ -204,7 +86,7 @@ class GeminiService:
         종목 뉴스를 검색하고 AI로 분석 (캐싱 적용)
         """
         # 1. 캐시 확인
-        cached_data, cache_info = self._load_from_cache(stock_code, 'news', force_refresh)
+        cached_data, cache_info = self.cache.load(stock_code, 'news', force_refresh)
         if cached_data:
             cached_data['_cache_info'] = cache_info
             return cached_data
@@ -275,7 +157,7 @@ class GeminiService:
             }
 
             # 2. 결과 캐싱
-            self._save_to_cache(stock_code, 'news', result)
+            self.cache.save(stock_code, 'news', result)
             return result
             
         except Exception as e:
@@ -292,7 +174,7 @@ class GeminiService:
         오늘의 주식 시장 주도 테마를 검색하고 AI로 요약 (캐싱 적용)
         """
         # 1. 캐시 확인 (테마는 'market_themes'라는 가상의 코드로 저장)
-        cached_data, _ = self._load_from_cache('MARKET', 'themes', force_refresh)
+        cached_data, _ = self.cache.load('MARKET', 'themes', force_refresh)
         if cached_data:
             return cached_data
 
@@ -331,7 +213,7 @@ class GeminiService:
             result = result_text.strip()
             
             # 2. 결과 캐싱
-            self._save_to_cache('MARKET', 'themes', result)
+            self.cache.save('MARKET', 'themes', result)
             return result
             
         except Exception as e:
@@ -343,7 +225,7 @@ class GeminiService:
         특정 종목의 섹터/테마 정보를 검색하고 AI로 추출 (캐싱 적용)
         """
         # 1. 캐시 확인
-        cached_data, _ = self._load_from_cache(stock_code, 'sector', force_refresh)
+        cached_data, _ = self.cache.load(stock_code, 'sector', force_refresh)
         if cached_data:
             return cached_data
 
@@ -377,7 +259,7 @@ class GeminiService:
             result = result_text.strip()
             
             # 2. 결과 캐싱
-            self._save_to_cache(stock_code, 'sector', result)
+            self.cache.save(stock_code, 'sector', result)
             return result
             
         except Exception as e:
@@ -392,7 +274,7 @@ class GeminiService:
         stock_code = stock_info.get('code', 'unknown')
         
         # 1. 캐시 확인
-        cached_data, cache_info = self._load_from_cache(stock_code, 'outlook', force_refresh)
+        cached_data, cache_info = self.cache.load(stock_code, 'outlook', force_refresh)
         if cached_data:
             cached_data['_cache_info'] = cache_info
             return cached_data
@@ -545,7 +427,7 @@ class GeminiService:
             }
 
             # 2. 결과 캐싱
-            self._save_to_cache(stock_code, 'outlook', result)
+            self.cache.save(stock_code, 'outlook', result)
             return result
             
         except Exception as e:

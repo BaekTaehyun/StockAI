@@ -160,21 +160,28 @@
             </thead>
             <tbody>
                 <tr>
-                    <td><span class="badge badge-client">클라이언트 캐시</span></td>
-                    <td>사용자 브라우저</td>
-                    <td>메모리 (JS 객체 <code>sentimentCache</code>)</td>
-                    <td><strong>30분</strong></td>
-                    <td>화면 깜빡임 방지, 서버 부하 감소, 즉각적인 UI 응답</td>
+                    <td><span class="badge badge-client">클라이언트 캐시 (L1)</span></td>
+                    <td>브라우저 메모리</td>
+                    <td>JS 객체 (<code>_analysisCache</code>)</td>
+                    <td><strong>10분</strong></td>
+                    <td><strong>초고속 응답 (Hot Data)</strong>, 화면 전환 시 즉시 로딩</td>
                 </tr>
                 <tr>
-                    <td><span class="badge badge-server-mem">서버 메모리 캐시</span></td>
+                    <td><span class="badge badge-client">클라이언트 스토리지 (L2)</span></td>
+                    <td>브라우저 저장소</td>
+                    <td>LocalStorage</td>
+                    <td><strong>60분</strong></td>
+                    <td><strong>새로고침 유지</strong>, 서버 요청 최소화</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-server-mem">서버 메모리 캐시 (L1)</span></td>
                     <td>Flask 서버</td>
                     <td>RAM (<code>_memory_cache</code>)</td>
                     <td><strong>10분</strong></td>
                     <td><strong>초고속 응답 (Hot Data)</strong>, 자주 조회되는 종목의 빠른 반환</td>
                 </tr>
                 <tr>
-                    <td><span class="badge badge-server-file">서버 파일 캐시</span></td>
+                    <td><span class="badge badge-server-file">서버 파일 캐시 (L2)</span></td>
                     <td>서버 디스크</td>
                     <td>JSON 파일 (<code>cache/</code>)</td>
                     <td><strong>60분</strong></td>
@@ -189,57 +196,58 @@
         <div class="mermaid">
             sequenceDiagram
             participant User as 👤 사용자 (브라우저)
-            participant ClientCache as 📦 클라이언트 캐시 (JS)
+            participant ClientL1 as 📦 클라이언트 L1 (Memory)
+            participant ClientL2 as � 클라이언트 L2 (Storage)
             participant Server as 🖥️ 서버 (Flask)
             participant ServerCache as 🗄️ 서버 캐시 (File/Mem)
             participant Gemini as 🧠 Google Gemini API
 
-            Note over User, ClientCache: 1. 데이터 요청
-            User->>ClientCache: 종목 분석 요청 (삼성전자)
+            Note over User, ClientL1: 1. 데이터 요청
+            User->>ClientL1: 종목 분석 요청 (삼성전자)
 
-            alt 클라이언트 캐시 유효 (Hit)
-            ClientCache-->>User: ⚡ 즉시 반환 (0ms)
-            else 클라이언트 캐시 없음 (Miss)
-            ClientCache->>Server: 2. API 요청 (/api/analyze)
+            alt L1 캐시 유효 (Hit)
+            ClientL1-->>User: ⚡ 즉시 반환 (0ms)
+            else L1 캐시 없음 (Miss)
+            ClientL1->>ClientL2: 2. L2 스토리지 확인
 
-            Server->>ServerCache: 3. 서버 캐시 확인
+            alt L2 캐시 유효 (Hit)
+            ClientL2-->>User: 💾 스토리지 데이터 반환
+            ClientL2->>ClientL1: L1으로 승격 (Promote)
+            else L2 캐시 없음 (Miss)
+            ClientL2->>Server: 3. API 요청 (/api/analyze)
+
+            Server->>ServerCache: 4. 서버 캐시 확인
 
             alt 서버 캐시 유효 (Hit)
             ServerCache-->>Server: 📂 파일/메모리 데이터 반환
             else 서버 캐시 없음 (Miss)
-            Server->>Gemini: 4. AI 분석 요청 (💰 비용 발생)
-            Gemini-->>Server: 5. 분석 결과 응답
-            Server->>ServerCache: 6. 결과 저장 (공유 캐시 생성)
+            Server->>Gemini: 5. AI 분석 요청 (💰 비용 발생)
+            Gemini-->>Server: 6. 분석 결과 응답
+            Server->>ServerCache: 7. 결과 저장 (공유 캐시 생성)
             end
 
-            Server-->>ClientCache: 7. 응답 전송
-            ClientCache-->>User: 8. 화면 표시 & 캐시 저장
+            Server-->>ClientL2: 8. 응답 전송 & L2 저장
+            ClientL2-->>ClientL1: 9. L1 저장
+            ClientL1-->>User: 10. 화면 표시
+            end
             end
         </div>
 
         <h2>3. 상세 구현 로직</h2>
 
-        <h3>A. 클라이언트 측 캐싱 (<code>static/js/main.js</code>, <code>ui.js</code>)</h3>
+        <h3>A. 클라이언트 측 캐싱 (<code>static/js/ui.js</code>)</h3>
         <ul>
-            <li><strong>저장소</strong>: <code>window.sentimentCache</code> (메모리 객체)</li>
+            <li><strong>계층적 구조</strong>: <strong>L1(메모리)</strong> → <strong>L2(LocalStorage)</strong> 순서로 확인합니다.</li>
             <li><strong>동작 원리</strong>:
                 <ol>
-                    <li><strong>자동 갱신 (리본/배지)</strong>: <code>updateSingleSentiment</code> 함수가 주기적으로 호출될 때, 캐시에 데이터가 있고
-                        30분이 지나지 않았다면 API 호출을 건너뛰고 캐시된 데이터를 사용합니다.</li>
-                    <li><strong>수동 클릭 (상세 모달)</strong>: 사용자가 카드를 클릭하면 <code>openStockModal</code> 함수가 실행됩니다.
-                        <ul>
-                            <li>이때 <code>loadFullAnalysis(code, false)</code>를 호출하여 <strong>강제 갱신을 하지 않고</strong> 서버 캐시를
-                                우선 확인합니다.</li>
-                            <li><strong>중복 요청 방지</strong>: 이미 해당 종목에 대한 분석 요청이 진행 중이라면(<code>_pendingRequests</code>),
-                                새로운 요청을 보내지 않고 기존 요청이 완료될 때까지 기다립니다.</li>
-                        </ul>
-                    </li>
-                    <li><strong>데이터 동기화</strong>: 상세 분석이 완료되면 <code>updateSentimentFromAnalysis</code>가 호출되어 최신 분석 결과를
-                        <code>sentimentCache</code>에도 즉시 반영합니다. 덕분에 모달을 닫아도 리스트의 정보가 최신 상태로 유지됩니다.
+                    <li><strong>L1 메모리 캐시</strong>: <code>_analysisCache</code> 객체에 데이터를 저장합니다. 앱 사용 중 탭 전환이나 반복 클릭 시
+                        <strong>0ms</strong> 응답을 보장합니다. (TTL 10분)</li>
+                    <li><strong>L2 스토리지 캐시</strong>: <code>localStorage</code>에 JSON 문자열로 저장합니다. <strong>브라우저
+                            새로고침</strong> 후에도 데이터가 유지되어 서버 부하를 줄입니다. (TTL 60분)</li>
+                    <li><strong>중복 요청 방지</strong>: <code>_pendingRequests</code>를 통해 동일 종목에 대한 중복 네트워크 요청을 원천 차단합니다.
                     </li>
                 </ol>
             </li>
-            <li><strong>효과</strong>: 사용자가 카드를 반복해서 클릭하거나 탭을 빠르게 이동해도 불필요한 네트워크 요청이 발생하지 않아 쾌적한 UX를 제공합니다.</li>
         </ul>
 
         <h3>B. 서버 측 캐싱 (<code>gemini_service.py</code>)</h3>
@@ -249,11 +257,9 @@
             <li><strong>파일 캐시 (L2)</strong>:
                 <ul>
                     <li>경로: <code>cache/{종목코드}_{타입}_{날짜}.json</code></li>
-                    <li><strong>Atomic Write</strong>: 데이터 손상을 방지하기 위해 임시 파일 작성 후 이름 변경(<code>rename</code>)
-                        방식을 사용합니다.
+                    <li><strong>Atomic Write</strong>: 데이터 손상을 방지하기 위해 임시 파일 작성 후 이름 변경(<code>rename</code>) 방식을 사용합니다.
                     </li>
-                    <li><strong>공유 캐시 효과</strong>: <strong>사용자 A</strong>가 분석한 결과를 서버 파일로 저장해두면, <strong>사용자
-                            B</strong>가
+                    <li><strong>공유 캐시 효과</strong>: <strong>사용자 A</strong>가 분석한 결과를 서버 파일로 저장해두면, <strong>사용자 B</strong>가
                         동일 종목 조회 시 API 호출 없이 저장된 파일을 그대로 반환받습니다.</li>
                 </ul>
             </li>
@@ -278,13 +284,10 @@
 
         <h2>5. 시스템 이점 (Benefits)</h2>
         <ul>
-            <li><strong>비용 절감 (Cost Efficiency)</strong>: 캐싱을 통해 동일 종목에 대한 중복 호출을 90% 이상 제거할 수 있습니다.
+            <li><strong>비용 절감 (Cost Efficiency)</strong>: 캐싱을 통해 동일 종목에 대한 중복 호출을 90% 이상 제거할 수 있습니다.</li>
+            <li><strong>속도 향상 (Performance)</strong>: AI 분석은 통상 3~5초가 소요되지만, 캐시된 데이터는 <strong>0.01초 이내</strong>에 반환됩니다.
             </li>
-            <li><strong>속도 향상 (Performance)</strong>: AI 분석은 통상 3~5초가 소요되지만, 캐시된 데이터는 <strong>0.01초
-                    이내</strong>에 반환됩니다.
-            </li>
-            <li><strong>데이터 일관성 (Consistency)</strong>: 짧은 시간 내에 여러 사용자가 조회하더라도 동일한 분석 결과를 제공하여 정보의 혼선을
-                방지합니다.</li>
+            <li><strong>데이터 일관성 (Consistency)</strong>: 짧은 시간 내에 여러 사용자가 조회하더라도 동일한 분석 결과를 제공하여 정보의 혼선을 방지합니다.</li>
         </ul>
     </div>
 

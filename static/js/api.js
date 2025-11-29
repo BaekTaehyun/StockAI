@@ -36,9 +36,52 @@ const API = {
         }
     },
 
+    // L1 캐시 (메모리) - 10분
+    memoryCache: {},
+    MEMORY_TTL: 10 * 60 * 1000,
+
+    // L2 캐시 (LocalStorage) - 60분
+    STORAGE_KEY_PREFIX: 'stock_analysis_',
+    STORAGE_TTL: 60 * 60 * 1000,
+
     // 종합 분석 데이터 로드 (강제 갱신 지원)
     async fetchFullAnalysis(code, forceRefresh = false) {
         const startTime = performance.now();
+        const now = Date.now();
+
+        // 1. 캐시 확인 (강제 갱신이 아닐 경우)
+        if (!forceRefresh) {
+            // L1 확인 (메모리)
+            if (this.memoryCache[code]) {
+                const { data, timestamp } = this.memoryCache[code];
+                if (now - timestamp < this.MEMORY_TTL) {
+                    console.log(`🚀 L1 Cache Hit (Memory): ${code}`);
+                    return data;
+                } else {
+                    delete this.memoryCache[code]; // 만료됨
+                }
+            }
+
+            // L2 확인 (LocalStorage)
+            try {
+                const storageKey = `${this.STORAGE_KEY_PREFIX}${code}`;
+                const stored = localStorage.getItem(storageKey);
+                if (stored) {
+                    const { data, timestamp } = JSON.parse(stored);
+                    if (now - timestamp < this.STORAGE_TTL) {
+                        console.log(`💾 L2 Cache Hit (Storage): ${code}`);
+                        // L1으로 승격
+                        this.memoryCache[code] = { data, timestamp: now };
+                        return data;
+                    } else {
+                        localStorage.removeItem(storageKey); // 만료됨
+                    }
+                }
+            } catch (e) {
+                console.warn('L2 Cache Error:', e);
+            }
+        }
+
         try {
             let url = `${API_BASE}/api/analysis/full/${code}`;
             if (forceRefresh) {
@@ -56,13 +99,25 @@ const API = {
                 const outlookCache = data.data.outlook?._cache_info;
 
                 if (newsCache) {
-                    const cacheStatus = newsCache.cached ? `✅ Cache HIT (${newsCache.age_seconds.toFixed(1)}s old)` : `❌ Cache MISS (${newsCache.reason})`;
+                    const cacheStatus = newsCache.cached ? `✅ Server Cache HIT (${newsCache.age_seconds.toFixed(1)}s old)` : `❌ Server Cache MISS (${newsCache.reason})`;
                     console.log(`📰 뉴스 분석: ${cacheStatus}`);
                 }
 
                 if (outlookCache) {
-                    const cacheStatus = outlookCache.cached ? `✅ Cache HIT (${outlookCache.age_seconds.toFixed(1)}s old)` : `❌ Cache MISS (${outlookCache.reason})`;
+                    const cacheStatus = outlookCache.cached ? `✅ Server Cache HIT (${outlookCache.age_seconds.toFixed(1)}s old)` : `❌ Server Cache MISS (${outlookCache.reason})`;
                     console.log(`🔮 AI 전망: ${cacheStatus}`);
+                }
+
+                // 클라이언트 캐시에 저장
+                // L1 저장
+                this.memoryCache[code] = { data, timestamp: now };
+
+                // L2 저장
+                try {
+                    const storageKey = `${this.STORAGE_KEY_PREFIX}${code}`;
+                    localStorage.setItem(storageKey, JSON.stringify({ data, timestamp: now }));
+                } catch (e) {
+                    console.warn('L2 Save Error:', e);
                 }
             }
 
