@@ -235,7 +235,8 @@
                         </ul>
                     </li>
                     <li><strong>데이터 동기화</strong>: 상세 분석이 완료되면 <code>updateSentimentFromAnalysis</code>가 호출되어 최신 분석 결과를
-                        <code>sentimentCache</code>에도 즉시 반영합니다. 덕분에 모달을 닫아도 리스트의 정보가 최신 상태로 유지됩니다.</li>
+                        <code>sentimentCache</code>에도 즉시 반영합니다. 덕분에 모달을 닫아도 리스트의 정보가 최신 상태로 유지됩니다.
+                    </li>
                 </ol>
             </li>
             <li><strong>효과</strong>: 사용자가 카드를 반복해서 클릭하거나 탭을 빠르게 이동해도 불필요한 네트워크 요청이 발생하지 않아 쾌적한 UX를 제공합니다.</li>
@@ -253,34 +254,14 @@
                     </li>
                     <li><strong>공유 캐시 효과</strong>: <strong>사용자 A</strong>가 분석한 결과를 서버 파일로 저장해두면, <strong>사용자
                             B</strong>가
-                        동일 종목 조회 시 API 호출 없이 저장된 파일을 그대로 반환받습니다.</li>
-                </ul>
-            </li>
-        </ul>
-
-        <h2>4. 시스템 이점 (Benefits)</h2>
-        <ul>
-            <li><strong>비용 절감 (Cost Efficiency)</strong>: 캐싱을 통해 동일 종목에 대한 중복 호출을 90% 이상 제거할 수 있습니다.
-            </li>
-            <li><strong>속도 향상 (Performance)</strong>: AI 분석은 통상 3~5초가 소요되지만, 캐시된 데이터는 <strong>0.01초
-                    이내</strong>에 반환됩니다.
-            </li>
-            <li><strong>데이터 일관성 (Consistency)</strong>: 짧은 시간 내에 여러 사용자가 조회하더라도 동일한 분석 결과를 제공하여 정보의 혼선을
-                방지합니다.</li>
-        </ul>
-    </div>
-
-    <script>
-        mermaid.initialize({
-            startOnLoad: true,
-            theme: 'base',
-            themeVariables: {
-                primaryColor: '#e0e0e0',
-                edgeLabelBackground: '#fff',
-                tertiaryColor: '#fff'
-            }
-        });
-    </script>
+                        theme: 'base',
+                        themeVariables: {
+                        primaryColor: '#e0e0e0',
+                        edgeLabelBackground: '#fff',
+                        tertiaryColor: '#fff'
+                        }
+                        });
+                        </script>
 </body>
 
 </html>
