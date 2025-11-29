@@ -18,6 +18,12 @@ class GeminiService:
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
             
+        # 캐시 만료 시간 설정 (초 단위)
+        # 메모리 캐시: 10분 (600초) - 빠른 응답용, 자주 갱신
+        # 파일 캐시: 60분 (3600초) - API 비용 절감용, 길게 유지
+        self.CACHE_TTL_MEMORY = 600
+        self.CACHE_TTL_FILE = 3600
+            
         # 메모리 캐시 초기화 (파일 I/O 감소 및 실패 대비)
         # 구조: { 'key': { 'data': ..., 'timestamp': ... } }
         self._memory_cache = {}
@@ -54,7 +60,7 @@ class GeminiService:
         if cache_key in self._memory_cache:
             mem_data = self._memory_cache[cache_key]
             age = current_time - mem_data['timestamp']
-            if age <= 1800:
+            if age <= self.CACHE_TTL_MEMORY:
                 # print(f"[Memory Cache] HIT for {code} ({analysis_type})")
                 cache_info['cached'] = True
                 cache_info['reason'] = 'memory_hit'
@@ -67,13 +73,13 @@ class GeminiService:
         try:
             path = self._get_cache_path(code, analysis_type)
             if os.path.exists(path):
-                # 30분(1800초) 만료 체크
+                # 파일 캐시 만료 체크
                 mtime = os.path.getmtime(path)
                 age = current_time - mtime
                 
-                if age > 1800:
-                    # print(f"[Cache] Expired (Age: {age:.1f}s > 1800s) for {code} ({analysis_type})")
-                    cache_info['reason'] = f'expired ({age:.1f}s > 1800s)'
+                if age > self.CACHE_TTL_FILE:
+                    # print(f"[Cache] Expired (Age: {age:.1f}s > {self.CACHE_TTL_FILE}s) for {code} ({analysis_type})")
+                    cache_info['reason'] = f'expired ({age:.1f}s > {self.CACHE_TTL_FILE}s)'
                     cache_info['age_seconds'] = age
                     return None, cache_info
                 
