@@ -96,13 +96,14 @@ class KiwoomApi:
                     res.encoding = 'utf-8'
                     data = res.json()
                     # JSON 파싱 성공했으면 데이터 검증
-                    return data
+                    # return data  <-- Removed to allow error checking below
                 except (json.JSONDecodeError, UnicodeDecodeError):
                     # UTF-8 실패 시 EUC-KR 시도
                     try:
                         res.encoding = 'euc-kr'
                         data = res.json()
-                        return data
+                        # return data <-- Should also not return here if we want to check errors? 
+                        # Actually, let's just let it fall through.
                     except:
                         print("[API] JSON Decode Error with both UTF-8 and EUC-KR")
                         return None
@@ -111,13 +112,22 @@ class KiwoomApi:
                 msg = data.get('return_msg', '')
                 code = data.get('return_code')
                 
-                # If error code indicates token issue (8005, etc.)
-                if code is not None and str(code) != '0' and ('Token' in msg or '8005' in str(code) or '인증' in msg):
-                    print(f"[API] Token invalid ({msg}). Refreshing token and retrying...")
+                # If error code indicates token issue (8005, etc.) or generic auth failure
+                # 키움 API 에러 메시지 예: "유효하지 않은 토큰입니다", "접근 권한이 없습니다", "Token expired"
+                is_token_error = False
+                if code is not None and str(code) != '0':
+                    error_keywords = ['Token', 'token', '8005', '인증', '권한', 'Access', 'access', 'Expired', 'expired']
+                    if any(keyword in msg for keyword in error_keywords):
+                        is_token_error = True
+
+                if is_token_error:
+                    print(f"[API] Token invalid (Code: {code}, Msg: {msg}). Refreshing token and retrying...")
                     
                     if self.get_access_token():
                         # 헤더 업데이트 및 재시도
                         headers["authorization"] = f"Bearer {self.access_token}"
+                        print(f"[API] Retrying request to {url} with new token...")
+                        
                         if method == 'POST':
                             res = requests.post(url, headers=headers, data=json.dumps(body) if body else None, timeout=10)
                         else:
@@ -130,6 +140,8 @@ class KiwoomApi:
                             except:
                                 res.encoding = 'utf-8'
                                 return res.json()
+                        else:
+                            print(f"[API] Retry failed with status {res.status_code}: {res.text}")
                     else:
                         print("[API] Failed to refresh token.")
                         return None
