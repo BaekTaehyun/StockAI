@@ -117,3 +117,62 @@
         padding: 0.5rem !important;
     }
 }
+
+/* ================================================================
+   정보 섹션 (시장 지수, 계좌 요약) 가독성 개선
+   ================================================================ */
+@media (max-width: 768px) {
+
+    /* 시장 지수 & 계좌 요약 - 2열 그리드 배치 */
+    .market-indices,
+    .account-summary {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        /* 2개씩 배치 */
+        gap: 0.5rem !important;
+        flex-direction: unset !important;
+        /* 기존 flex 해제 */
+    }
+
+    /* 카드 패딩 축소 */
+    .index-card,
+    .summary-card {
+        padding: 0.75rem !important;
+        min-width: auto !important;
+        /* 기존 min-width 해제 */
+    }
+
+    /* 텍스트 크기 축소 */
+    .index-card h3,
+    .card-label {
+        font-size: 0.75rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+
+    .index-value,
+    .card-value {
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+    }
+
+    .index-change,
+    .card-rate {
+        font-size: 0.7rem !important;
+    }
+
+    .card-icon {
+        font-size: 1.2rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+
+    /* 계좌 요약 카드 내부 정렬 */
+    .summary-card {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    .summary-card .card-content {
+        margin-left: 0 !important;
+    }
+}
