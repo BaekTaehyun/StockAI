@@ -44,6 +44,17 @@ Object.assign(window.UI, {
         const isUp = changeRate >= 0;
         const priceColor = isUp ? '#e53e3e' : '#3b82f6';
 
+        // 수급 트렌드 로직 (쌍끌이 등)
+        const fNet = supply_demand.foreign_net;
+        const iNet = supply_demand.institution_net;
+        let trendBadge = supply_demand.trend;
+
+        if (fNet > 0 && iNet > 0) {
+            trendBadge = '<span class="badge-supply buy">쌍끌이 매수 🚀</span>';
+        } else if (fNet < 0 && iNet < 0) {
+            trendBadge = '<span class="badge-supply sell">양매도 📉</span>';
+        }
+
         const html = `
             <div class="analysis-section">
                 <h3>주가 정보</h3>
@@ -87,7 +98,7 @@ Object.assign(window.UI, {
                         <span class="label">기관</span>
                         <span class="value">${formatNumber(supply_demand.institution_net)}주</span>
                     </div>
-                    <div class="trend">${supply_demand.trend}</div>
+                    <div class="trend">${trendBadge}</div>
                 </div>
             </div>
 
@@ -107,6 +118,24 @@ Object.assign(window.UI, {
 
     // 수급 탭 렌더링
     renderSupplyDemand(data) {
+        const fNet = data.foreign_net;
+        const iNet = data.institution_net;
+        let trendHtml = `<p>${data.trend}</p>`;
+
+        if (fNet > 0 && iNet > 0) {
+            trendHtml = `
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+                    <span class="badge-supply buy" style="font-size: 1.2rem; padding: 0.5rem 1rem;">쌍끌이 매수 🚀</span>
+                    <p style="margin: 0; font-size: 0.9rem; opacity: 0.8;">외국인과 기관이 동시에 매수하고 있습니다</p>
+                </div>`;
+        } else if (fNet < 0 && iNet < 0) {
+            trendHtml = `
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+                    <span class="badge-supply sell" style="font-size: 1.2rem; padding: 0.5rem 1rem;">양매도 📉</span>
+                    <p style="margin: 0; font-size: 0.9rem; opacity: 0.8;">외국인과 기관이 동시에 매도하고 있습니다</p>
+                </div>`;
+        }
+
         const html = `
             <div class="analysis-section">
                 <h3>외국인 매매</h3>
@@ -151,15 +180,13 @@ Object.assign(window.UI, {
             <div class="analysis-section">
                 <h3>수급 트렌드</h3>
                 <div class="trend-box">
-                    <p>${data.trend}</p>
+                    ${trendHtml}
                 </div>
             </div>
         `;
 
         document.getElementById('supplyContent').innerHTML = html;
     },
-
-    // 뉴스 탭 렌더링
     renderNews(data) {
         const formattedSummary = formatNewsText(data.summary);
         const formattedReason = formatNewsText(data.reason);
@@ -245,6 +272,37 @@ Object.assign(window.UI, {
             console.error('상세 분석 로드 실패:', error);
             alert('오류가 발생했습니다.');
             this.closeModal();
+        }
+    },
+
+    // 탭 전환
+    switchTab(tabName) {
+        console.log('Switching to tab:', tabName);
+
+        // 모든 탭 버튼 비활성화
+        document.querySelectorAll('.analysis-tabs .tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+
+        // 모든 탭 콘텐츠 숨김
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+
+        // 선택된 탭 활성화 (data-tab 속성 사용)
+        const activeTab = document.querySelector(`.analysis-tabs .tab[data-tab="${tabName}"]`);
+        if (activeTab) {
+            activeTab.classList.add('active');
+        } else {
+            console.warn(`Tab button for ${tabName} not found`);
+        }
+
+        // 선택된 콘텐츠 표시
+        const activeContent = document.getElementById(tabName);
+        if (activeContent) {
+            activeContent.classList.remove('hidden');
+        } else {
+            console.warn(`Content for ${tabName} not found`);
         }
     }
 });
