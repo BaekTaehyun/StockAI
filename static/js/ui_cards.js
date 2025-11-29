@@ -240,7 +240,7 @@ Object.assign(window.UI, {
 
         card.style.background = bgColor;
         card.style.borderLeft = `4px solid ${isUp ? '#e53e3e' : '#3b82f6'}`;
-        card.style.marginBottom = '1.5rem';
+        // marginBottom은 CSS에서 관리 (모바일 반응형 적용 위해)
 
         const sentimentElements = typeof createSentimentElements === 'function' ?
             createSentimentElements(code) :

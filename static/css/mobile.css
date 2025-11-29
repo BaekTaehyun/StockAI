@@ -1,0 +1,119 @@
+/* ================================================================
+   모바일 전용 스타일시트
+   ================================================================ */
+
+/* Section Header - 관심종목 세로 텍스트 문제 해결 */
+@media (max-width: 768px) {
+    .section-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1rem !important;
+    }
+
+    .section-header h2 {
+        white-space: nowrap !important;
+        width: 100% !important;
+    }
+
+    .search-box {
+        width: 100% !important;
+    }
+
+    .search-box input {
+        min-width: auto !important;
+        width: 100% !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .section-header {
+        gap: 0.75rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    .search-box input {
+        font-size: 0.9rem !important;
+        padding: 0.6rem 1rem !important;
+    }
+
+    .btn-add {
+        padding: 0.6rem 1rem !important;
+        font-size: 0.9rem !important;
+    }
+}
+
+/* 모달 레이아웃 - 5/5/90 비율 */
+@media (max-width: 768px) {
+    .modal {
+        padding: 0 !important;
+    }
+
+    .modal-content {
+        width: 100% !important;
+        height: 100vh !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .modal-content h2 {
+        flex: 0 0 auto !important;
+        height: 5vh !important;
+        min-height: 40px !important;
+        max-height: 50px !important;
+        padding: 0.5rem 1rem !important;
+        font-size: 1rem !important;
+        margin: 0 !important;
+        border-bottom: 1px solid var(--border) !important;
+    }
+
+    .close {
+        top: 0.5rem !important;
+        right: 0.5rem !important;
+        font-size: 1.5rem !important;
+    }
+
+    .analysis-tabs {
+        flex: 0 0 auto !important;
+        height: 5vh !important;
+        min-height: 40px !important;
+        max-height: 50px !important;
+        padding: 0.25rem 0.5rem !important;
+        overflow-x: auto !important;
+        border-bottom: 1px solid var(--border) !important;
+    }
+
+    .analysis-tabs .tab {
+        padding: 0.4rem 0.6rem !important;
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+    }
+
+    #modalBody {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    .tab-content {
+        padding: 0.75rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-content h2 {
+        font-size: 0.95rem !important;
+        padding: 0.4rem 0.75rem !important;
+    }
+
+    .analysis-tabs .tab {
+        padding: 0.3rem 0.5rem !important;
+        font-size: 0.75rem !important;
+    }
+
+    .tab-content {
+        padding: 0.5rem !important;
+    }
+}
