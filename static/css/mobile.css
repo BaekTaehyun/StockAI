@@ -153,6 +153,7 @@
     .card-value {
         font-size: 1rem !important;
         font-weight: 600 !important;
+        color: var(--text-primary) !important;
     }
 
     .index-change,
@@ -174,5 +175,23 @@
 
     .summary-card .card-content {
         margin-left: 0 !important;
+    }
+}
+
+/* 전역 스피너 크기 조정 (모바일) */
+@media (max-width: 768px) {
+    .spinner {
+        width: 30px !important;
+        height: 30px !important;
+        border-width: 3px !important;
+    }
+
+    .loading-spinner {
+        padding: 1.5rem !important;
+    }
+
+    .loading-spinner p {
+        font-size: 0.9rem !important;
+        margin-top: 0.5rem !important;
     }
 }
