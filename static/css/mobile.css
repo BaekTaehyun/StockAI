@@ -77,17 +77,16 @@
 
     .analysis-tabs {
         flex: 0 0 auto !important;
-        height: 5vh !important;
-        min-height: 40px !important;
-        max-height: 50px !important;
-        padding: 0.25rem 0.5rem !important;
+        height: auto !important;
+        min-height: 55px !important;
+        padding: 0.5rem 0.5rem !important;
         overflow-x: auto !important;
         border-bottom: 1px solid var(--border) !important;
     }
 
     .analysis-tabs .tab {
-        padding: 0.4rem 0.6rem !important;
-        font-size: 0.8rem !important;
+        padding: 0.6rem 1rem !important;
+        font-size: 0.95rem !important;
         white-space: nowrap !important;
     }
 
@@ -104,17 +103,13 @@
 
 @media (max-width: 480px) {
     .modal-content h2 {
-        font-size: 0.95rem !important;
-        padding: 0.4rem 0.75rem !important;
+        font-size: 1rem !important;
+        padding: 0.6rem 0.75rem !important;
     }
 
     .analysis-tabs .tab {
-        padding: 0.3rem 0.5rem !important;
-        font-size: 0.75rem !important;
-    }
-
-    .tab-content {
-        padding: 0.5rem !important;
+        padding: 0.5rem 0.8rem !important;
+        font-size: 0.9rem !important;
     }
 }
 
