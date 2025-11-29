@@ -1,4 +1,20 @@
-// ui_cards.js - Card management functions
+/**
+ * ui_cards.js - 카드 UI 렌더링 모듈
+ * ================================================================
+ * 보유 종목 카드 및 관심종목 카드의 생성과 업데이트를 담당합니다.
+ * 
+ * 주요 기능:
+ * - 보유 종목 카드 생성 및 업데이트
+ * - 관심종목 카드 생성 및 표시
+ * - 수급 정보 로드 (외국인/기관 순매수)
+ * - AI 매매 전략 표시 (진입가/목표가/손절가)
+ * 
+ * 특징:
+ * - 카드 재사용: 기존 카드는 데이터만 업데이트하여 깜빡임 방지
+ * - 비동기 전략 로드: 카드 생성 후 100ms 후 전략 정보 로드
+ * ================================================================
+ */
+
 window.UI = window.UI || {};
 
 Object.assign(window.UI, {
@@ -306,12 +322,18 @@ Object.assign(window.UI, {
                     const institution = data.supply_demand.institution_net || 0;
 
                     let badge = '';
-                    if (foreigner > 0) {
+                    if (foreigner > 0 && institution > 0) {
+                        badge = '<span class="badge-supply buy">쌍끌이 매수 🚀</span>';
+                    } else if (foreigner < 0 && institution < 0) {
+                        badge = '<span class="badge-supply sell">양매도 📉</span>';
+                    } else if (foreigner > 0) {
                         badge = '<span class="badge-supply buy">외인 매수중 📈</span>';
                     } else if (foreigner < 0) {
                         badge = '<span class="badge-supply sell">외인 매도중 📉</span>';
                     } else if (institution > 0) {
                         badge = '<span class="badge-supply buy">기관 매수중 🏢</span>';
+                    } else if (institution < 0) {
+                        badge = '<span class="badge-supply sell">기관 매도중 📉</span>';
                     } else {
                         badge = '<span class="badge-supply neutral">수급 보합</span>';
                     }
@@ -372,12 +394,18 @@ Object.assign(window.UI, {
                     const institution = data.supply_demand.institution_net || 0;
 
                     let badge = '';
-                    if (foreigner > 0) {
+                    if (foreigner > 0 && institution > 0) {
+                        badge = '<span class="badge-supply buy">쌍끌이 매수 🚀</span>';
+                    } else if (foreigner < 0 && institution < 0) {
+                        badge = '<span class="badge-supply sell">양매도 📉</span>';
+                    } else if (foreigner > 0) {
                         badge = '<span class="badge-supply buy">외인 매수중 📈</span>';
                     } else if (foreigner < 0) {
                         badge = '<span class="badge-supply sell">외인 매도중 📉</span>';
                     } else if (institution > 0) {
                         badge = '<span class="badge-supply buy">기관 매수중 🏢</span>';
+                    } else if (institution < 0) {
+                        badge = '<span class="badge-supply sell">기관 매도중 📉</span>';
                     } else {
                         badge = '<span class="badge-supply neutral">수급 보합</span>';
                     }

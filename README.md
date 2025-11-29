@@ -1,116 +1,181 @@
-# 키움 주식 모니터링 시스템
+# 📈 StockAI - AI 기반 한국 주식 모니터링 대시보드
 
-키움증권 REST API를 활용한 실시간 주식 모니터링 및 AI 기반 투자 분석 시스템입니다.
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-2.0+-green.svg)](https://flask.palletsprojects.com/)
+[![License](https://img.shields.io/badge/License-Custom-red.svg)](#license)
 
-## 주요 기능
+키움증권 OpenAPI와 Google Gemini AI를 활용한 실시간 주식 모니터링 및 AI 투자 분석 웹 애플리케이션입니다.
 
-- ✅ 실시간 보유 종목 조회 및 수익률 표시
-- ✅ 시장 지수 (KOSPI, KOSDAQ) 모니터링
-- ✅ 기술적 분석 (RSI, MACD, 이동평균선)
-- ✅ AI 기반 뉴스 분석 및 투자 의견
-- ✅ 수급 현황 (외국인/기관 매매 동향)
+![StockAI Dashboard](docs/screenshot.png)
 
-## 설치 방법
+## ✨ 주요 기능
 
-### 1. 필수 요구사항
+### 🤖 AI 기반 투자 분석
+- **Google Gemini AI 통합**: 종목별 맞춤형 투자 의견 자동 생성
+- **다층 캐싱 시스템**: 메모리(10분) + 파일(60분) 티어드 캐싱으로 빠른 응답
+- **실시간 시장 분석**: 기본적/기술적 분석 결합
+
+### 📊 실시간 데이터 모니터링
+- 보유 종목 실시간 가격 추적
+- 시장 지수 (KOSPI/KOSDAQ) 모니터링
+- 외국인/기관 수급 정보
+- 관심 종목 관리
+
+### 📈 기술적 분석
+- RSI (상대강도지수)
+- MACD (이동평균 수렴확산)
+- 이동평균선 (5/20/60일)
+- 실시간 차트 시각화
+
+### 💡 스마트 UI/UX
+- 모바일 반응형 디자인
+- 다크 테마
+- 실시간 업데이트
+- 직관적인 대시보드
+
+## 🚀 시작하기
+
+### 필수 요구사항
+
 - Python 3.8 이상
-- 키움증권 REST API 계정 (https://www.kiwoom.com/)
-- Google Gemini API 키 (https://makersuite.google.com/app/apikey)
+- 키움증권 계좌 (OpenAPI 이용 신청 필요)
+- Google Gemini API 키
 
-### 2. 의존성 설치
+### 설치
+
+1. **저장소 클론**
+```bash
+git clone https://github.com/BaekTaehyun/StockAI.git
+cd StockAI
+```
+
+2. **가상환경 생성 및 활성화**
+```bash
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+```
+
+3. **의존성 설치**
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. 설정 파일 구성
-1. `config.py.template`을 `config.py`로 복사
-2. `config.py`에 본인의 API 키 입력:
-   - `APP_KEY`: 키움 API 키
-   - `APP_SECRET`: 키움 시크릿 키
-   - `ACCOUNT_NO`: 계좌번호
-   - `GEMINI_API_KEY`: Google Gemini API 키
-
-```bash
-copy config.py.template config.py
-# config.py 파일을 편집기로 열어서 키 입력
+4. **환경 설정**
+`config.py.template`을 `config.py`로 복사하고 API키 입력:
+```python
+# API 키 설정
+GEMINI_API_KEY = "your-gemini-api-key"
+APP_KEY = "your-kiwoom-app-key"
+APP_SECRET = "your-kiwoom-app-secret"
+ACCOUNT_NO = "your-account-number"
 ```
 
-### 4. 실행
+### 실행
+
 ```bash
 python app.py
 ```
 
 브라우저에서 `http://localhost:5000` 접속
 
-
-## 📦 주식 분석 기능 추가 설치
-
-AI 분석 및 기술적 지표 기능을 사용하려면 추가 패키지 설치가 필요합니다:
-
-```bash
-python -m pip install pandas pandas-ta google-generativeai
-```
-
-## 🔑 Gemini API 키 발급 (AI 분석용)
-
-1. [Google AI Studio](https://makersuite.google.com/app/apikey)에 접속하여 API 키 발급
-2. `config.py` 파일의 `GEMINI_API_KEY` 항목에 키 입력
-
-## ✅ 주요 기능 상세
-
-### 1. 종합 분석
-- **AI 투자 의견**: 매수/매도/중립 의견 및 신뢰도 점수 제공
-- **뉴스 분석**: 최근 뉴스 기반 등락 원인 분석 (Gemini Grounding 활용)
-- **수급 분석**: 외국인/기관 매매 동향 시각화
-
-### 2. 기술적 분석
-- **RSI (상대강도지수)**: 과매수/과매도 구간 식별
-- **MACD**: 추세 전환 신호 포착
-- **이동평균선**: 5일, 20일, 60일 이동평균선 제공
-
-## 🚀 실행 방법
-
-```bash
-run_app.bat
-# 또는
-python app.py
-```
-
-브라우저에서 `http://localhost:5000` 접속
-
-## ⚠️ 주의사항 및 트러블슈팅
-
-- **"gemini_service" 모듈 에러**: `google-generativeai` 패키지 설치 필요
-- **API Key 에러**: `config.py`에 올바른 키가 입력되었는지 확인
-- **수급 데이터 0 표시**: 장중이 아니거나 API 데이터 수신 지연일 수 있음
-
-## 프로젝트 구조
+## 📁 프로젝트 구조
 
 ```
-주식모니터링/
+StockAI/
 ├── app.py                      # Flask 메인 애플리케이션
-├── kis_api.py                  # 키움 REST API 클라이언트
-├── stock_analysis_service.py   # 주식 분석 서비스
-├── technical_indicators.py     # 기술적 지표 계산
-├── gemini_service.py          # AI 분석 서비스
-├── config.py                  # 설정 파일 (⚠️ git에 커밋 금지)
-├── static/                    # 정적 파일 (CSS, JS)
-└── templates/                 # HTML 템플릿
+├── config.py.template          # 설정 템플릿
+├── requirements.txt            # Python 의존성
+│
+├── kis_api.py                  # 키움증권 API 연동
+├── gemini_service.py          # Gemini AI 서비스
+├── gemini_cache.py            # AI 응답 캐싱
+├── stock_analysis_service.py  # 주식 분석 로직
+├── technical_indicators.py    # 기술적 지표 계산
+├── prompts.py                 # AI 프롬프트 관리
+│
+├── static/
+│   ├── css/                   # 스타일시트
+│   └── js/                    # JavaScript 모듈
+│       ├── main.js           # 메인 로직
+│       ├── api.js            # API 통신
+│       ├── ui_core.js        # 핵심 UI 기능
+│       ├── ui_cards.js       # 카드 UI 렌더링
+│       └── ui_details.js     # 상세 모달 UI
+│
+└── templates/
+    └── index.html             # 메인 템플릿
 ```
 
-## 보안 주의사항
+## 🔑 API 키 발급
 
-⚠️ **중요**: 다음 파일들은 절대 공개 저장소에 업로드하지 마세요!
-- `config.py` - API 키 포함
-- `*.txt` (키 파일들)
-- `cache/` 폴더
+### 1. Google Gemini API
+1. [Google AI Studio](https://aistudio.google.com/) 접속
+2. "Get API Key" 클릭
+3. 새 API 키 생성
 
-`.gitignore` 파일이 이미 설정되어 있으니 확인하세요.
+### 2. 키움증권 OpenAPI
+1. [키움증권 OpenAPI](https://apiportal.koreainvestment.com/) 접속
+2. 회원가입 및 앱 등록
+3. App Key, App Secret 발급
 
-## 라이선스
+## 💻 기술 스택
 
-개인 프로젝트용
+**Backend**
+- Python 3.8+
+- Flask 2.0+
+- Google Gemini AI API
 
-## 문의
+**Frontend**
+- Vanilla JavaScript (ES6+)
+- Chart.js (차트 시각화)
+- CSS3 (Flexbox, Grid)
 
-문제가 발생하면 Issue를 등록해주세요.
+**데이터**
+- 한국투자증권(키움) OpenAPI
+- JSON 파일 기반 캐싱
+
+## 📝 사용 예시
+
+### 1. 보유 종목 확인
+대시보드에서 실시간으로 보유 종목의 가격 변동과 수익률을 확인할 수 있습니다.
+
+### 2. AI 투자 분석
+종목 카드 클릭 시 Gemini AI가 생성한 맞춤형 투자 의견을 확인:
+- 매수/매도/중립 추천
+- 신뢰도 점수
+- 상세 분석 근거
+- 목표가 제시
+
+### 3. 기술적 분석
+모달의 "기술적분석" 탭에서 RSI, MACD, 이동평균선 등의 지표를 시각적으로 확인
+
+## 🤝 기여하기
+
+이 프로젝트는 개인 프로젝트이지만, 개선 제안과 이슈 리포트를 환영합니다!
+
+## 📧 연락처
+
+- **작성자**: 백태현 (Baek Taehyun)
+- **이메일**: bak1210@gmail.com
+- **GitHub**: [BaekTaehyun](https://github.com/BaekTaehyun)
+
+## 📄 License
+
+이 프로젝트는 사용자 지정 라이선스 하에 배포됩니다. 
+**사용 시 이메일 연락을 부탁드립니다**: bak1210@gmail.com
+
+자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
+
+## ⚠️ 면책조항
+
+이 애플리케이션은 정보 제공 목적으로만 제공되며, 투자 권유나 투자 조언이 아닙니다. 
+모든 투자 결정은 사용자 본인의 책임하에 이루어져야 합니다.
+
+## 🙏 감사의 말
+
+- [Google Gemini AI](https://ai.google.dev/) - AI 분석 제공
+- [한국투자증권](https://www.koreainvestment.com/) - 주식 데이터 API 제공
+
+---
+
+⭐ 이 프로젝트가 도움이 되셨다면 Star를 눌러주세요!

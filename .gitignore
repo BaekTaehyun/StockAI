@@ -21,6 +21,8 @@ ENV/
 
 # 중요: 개인 정보가 포함된 파일
 config.py
+config.py.backup
+*.backup
 *.txt
 !requirements.txt
 
@@ -33,6 +35,17 @@ cache/
 # 백업 파일
 *_backup*.zip
 *.bak
+
+# 임시 디렉토리
+temp_restore/
+temp/
+tmp/
+
+# 문서 파일 (API 문서 등)
+*.xlsx
+*.xls
+*.doc
+*.docx
 
 # OS
 .DS_Store
