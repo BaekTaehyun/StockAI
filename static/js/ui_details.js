@@ -371,6 +371,11 @@ Object.assign(window.UI, {
                 this.renderSupplyDemand(data.supply_demand);
                 this.renderNews(data.news_analysis);
 
+                // 리본 및 전역 캐시 동기화 (중요: 상세 분석이 최신이면 리본도 업데이트)
+                if (window.updateSentimentFromAnalysis) {
+                    window.updateSentimentFromAnalysis(code, data);
+                }
+
                 // 기술적 분석 렌더링 (Charts.js 사용)
                 if (typeof Charts !== 'undefined' && Charts.renderTechnical) {
                     Charts.renderTechnical(data.technical, data.stock_info, data.fundamental_data);
