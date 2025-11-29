@@ -13,6 +13,7 @@ from flask import Flask, jsonify, render_template, request, session, redirect, u
 from flask_cors import CORS
 from kis_api import KiwoomApi
 from data_fetcher import DataFetcher
+from theme_service import ThemeService
 from datetime import timedelta
 import config
 
@@ -28,6 +29,9 @@ kiwoom = KiwoomApi()
 
 # 관심종목 관리 인스턴스 생성
 data_fetcher = DataFetcher()
+
+# 테마 서비스 인스턴스 생성
+theme_service = ThemeService()
 
 @app.before_request
 def require_login():
@@ -409,15 +413,95 @@ def remove_from_watchlist():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+# ================================================================
+# 테마 API
+# ================================================================
+
+@app.route('/api/themes')
+def get_themes():
+    """테마 목록 조회 (캐시된 데이터)"""
+    try:
+        data = theme_service.get_themes()
+        return jsonify({
+            'success': True,
+            'data': data
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/themes/search')
+def search_themes():
+    """테마 검색"""
+    try:
+        keyword = request.args.get('q', '')
+        results = theme_service.search_theme(keyword)
+        return jsonify({
+            'success': True,
+            'data': results
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/themes/refresh', methods=['POST'])
+def refresh_themes():
+    """테마 캐시 수동 갱신"""
+    try:
+        success = theme_service.update_cache()
+        if success:
+            return jsonify({
+                'success': True,
+                'message': '테마 캐시 갱신 완료'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': '테마 캐시 갱신 실패'
+            }), 500
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 if __name__ == '__main__':
-    # 토큰 사전 발급
     print("=== 서버 시작 중 ===")
+    
+    # 1. 토큰 사전 발급
     if kiwoom.get_access_token():
         print("[OK] 인증 완료!")
+    
+    # 2. 테마 캐시 초기화 (서버 시작 전 필수)
+    print("\n[ThemeService] 테마 캐시 초기화 중...")
+    if not theme_service.is_cache_valid():
+        print("[ThemeService] 캐시가 없거나 만료됨. 새로 생성합니다...")
+        if theme_service.update_cache():
+            cache_info = theme_service.get_cache_info()
+            print(f"[ThemeService] ✓ 캐시 생성 완료: {cache_info.get('theme_count')}개 테마")
+        else:
+            print("[ThemeService] ✗ 캐시 생성 실패 - 서비스 제한 모드로 시작")
+    else:
+        cache_info = theme_service.get_cache_info()
+        print(f"[ThemeService] ✓ 기존 캐시 사용: {cache_info.get('theme_count')}개 테마")
+    
+    # 3. 스케줄러 초기화 (매일 오전 9시 테마 캐시 갱신)
+    from apscheduler.schedulers.background import BackgroundScheduler
+    
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        func=theme_service.update_cache,
+        trigger='cron',
+        hour=9,
+        minute=0,
+        id='daily_theme_update',
+        replace_existing=True
+    )
+    scheduler.start()
+    print("[Scheduler] ✓ 매일 오전 9시 자동 갱신 예약 완료")
     
     print("\n서버 주소: http://localhost:5000")
     print("브라우저에서 위 주소로 접속하세요!\n")
     
     # 보안 주의: 외부 접속(0.0.0.0) 허용 시 반드시 debug=False로 설정해야 합니다.
     # debug=True 상태에서 외부 접속을 허용하면 원격 코드 실행 취약점이 발생할 수 있습니다.
-    app.run(debug=False, host='0.0.0.0', port=5000)
+    try:
+        app.run(debug=False, host='0.0.0.0', port=5000)
+    finally:
+        scheduler.shutdown()

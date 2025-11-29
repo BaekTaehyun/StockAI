@@ -12,10 +12,13 @@ class GeminiCache:
             os.makedirs(self.cache_dir)
             
         # 캐시 만료 시간 설정 (초 단위)
-        # 메모리 캐시: 10분 (600초) - 빠른 응답용, 자주 갱신
-        # 파일 캐시: 60분 (3600초) - API 비용 절감용, 길게 유지
+        # 일반 캐시: 메모리 10분, 파일 60분
         self.CACHE_TTL_MEMORY = 600
         self.CACHE_TTL_FILE = 3600
+        
+        # 테마 캐시: 메모리 10분, 파일 12시간 (시장 테마는 하루 종일 큰 변화가 없음)
+        self.CACHE_TTL_MEMORY_THEMES = 600
+        self.CACHE_TTL_FILE_THEMES = 43200  # 12시간
             
         # 메모리 캐시 초기화 (파일 I/O 감소 및 실패 대비)
         # 구조: { 'key': { 'data': ..., 'timestamp': ... } }
@@ -34,7 +37,7 @@ class GeminiCache:
         """
         캐시에서 데이터 로드 (메모리 -> 파일 순서)
         - force_refresh=True: 캐시 무시하고 (None, dict) 반환
-        - 파일 수정 시간이 60분(3600초) 이상 지났으면 만료 처리
+        - 테마 캐시: 파일 12시간, 일반 캐시: 파일 60분
         Returns:
             (data, cache_info) - data는 캐싱된 데이터 또는 None, cache_info는 캐시 상태 정보
         """
@@ -46,12 +49,17 @@ class GeminiCache:
 
         current_time = datetime.datetime.now().timestamp()
         cache_key = f"{code}_{analysis_type}"
+        
+        # TTL 선택: 테마는 12시간, 나머지는 기본값
+        is_themes = (analysis_type == 'themes')
+        memory_ttl = self.CACHE_TTL_MEMORY_THEMES if is_themes else self.CACHE_TTL_MEMORY
+        file_ttl = self.CACHE_TTL_FILE_THEMES if is_themes else self.CACHE_TTL_FILE
 
         # 1. 메모리 캐시 확인
         if cache_key in self._memory_cache:
             mem_data = self._memory_cache[cache_key]
             age = current_time - mem_data['timestamp']
-            if age <= self.CACHE_TTL_MEMORY:
+            if age <= memory_ttl:
                 cache_info['cached'] = True
                 cache_info['reason'] = 'memory_hit'
                 cache_info['age_seconds'] = age
@@ -67,8 +75,8 @@ class GeminiCache:
                 mtime = os.path.getmtime(path)
                 age = current_time - mtime
                 
-                if age > self.CACHE_TTL_FILE:
-                    cache_info['reason'] = f'expired ({age:.1f}s > {self.CACHE_TTL_FILE}s)'
+                if age > file_ttl:
+                    cache_info['reason'] = f'expired ({age:.1f}s > {file_ttl}s)'
                     cache_info['age_seconds'] = age
                     return None, cache_info
                 

@@ -89,17 +89,32 @@ class KiwoomApi:
                 res = requests.get(url, headers=headers, timeout=10)
 
             if res.status_code == 200:
-                data = res.json()
+                # Kiwoom API는 헤더에서 charset을 제대로 명시하지 않음
+                # UTF-8로 먼저 시도하고, 실패하면 EUC-KR 시도
+                try:
+                    # 먼저 UTF-8로 시도
+                    res.encoding = 'utf-8'
+                    data = res.json()
+                    # JSON 파싱 성공했으면 데이터 검증
+                    return data
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    # UTF-8 실패 시 EUC-KR 시도
+                    try:
+                        res.encoding = 'euc-kr'
+                        data = res.json()
+                        return data
+                    except:
+                        print("[API] JSON Decode Error with both UTF-8 and EUC-KR")
+                        return None
                 
-                # 토큰 만료/유효하지 않음 에러 체크 (8005 등)
+                # Check for token expiration or errors in response body
                 msg = data.get('return_msg', '')
                 code = data.get('return_code')
                 
-                # 에러 코드가 있고, 메시지에 'Token'이나 '8005'가 포함된 경우
+                # If error code indicates token issue (8005, etc.)
                 if code is not None and str(code) != '0' and ('Token' in msg or '8005' in str(code) or '인증' in msg):
                     print(f"[API] Token invalid ({msg}). Refreshing token and retrying...")
                     
-                    # 토큰 재발급
                     if self.get_access_token():
                         # 헤더 업데이트 및 재시도
                         headers["authorization"] = f"Bearer {self.access_token}"
@@ -109,7 +124,12 @@ class KiwoomApi:
                             res = requests.get(url, headers=headers, timeout=10)
                             
                         if res.status_code == 200:
-                            return res.json()
+                            # Retry decoding
+                            try:
+                                return res.json()
+                            except:
+                                res.encoding = 'utf-8'
+                                return res.json()
                     else:
                         print("[API] Failed to refresh token.")
                         return None
@@ -376,3 +396,64 @@ class KiwoomApi:
         # 안전을 위해 빈 리스트 반환 또는 에러 로그 출력
         print(f"[Warning] get_minute_chart_data not fully implemented for {code}")
         return []
+
+    def get_theme_group_list(self, search_type="0", date_type="1", fluctuation_type="3"):
+        """
+        테마 그룹 리스트 조회 (Kiwoom ka90001)
+        
+        Args:
+            search_type (str): 0:전체검색, 1:테마검색, 2:종목검색 (qry_tp)
+            date_type (str): 기간수익률 기준일 (1~99) (date_tp)
+            fluctuation_type (str): 1:상위기간수익률, 2:하위기간수익률, 3:상위등락률, 4:하위등락률 (flu_pl_amt_tp)
+            
+        Returns:
+            list: 테마 리스트 (thema_grp)
+        """
+        url = f"{self.base_url}/api/dostk/thme"
+        
+        headers = {
+            "content-type": "application/json;charset=UTF-8",
+            "api-id": "ka90001"
+        }
+        
+        body = {
+            "qry_tp": search_type,
+            "date_tp": date_type,
+            "flu_pl_amt_tp": fluctuation_type,
+            "stex_tp": "3" # 1:KRX, 2:NXT, 3:통합
+        }
+
+        print(f"[Theme] Requesting theme list (type={search_type})...")
+        data = self._send_request(url, headers, body)
+        
+        if data and data.get('return_code') == 0:
+            return data.get('thema_grp', [])
+        else:
+            if data: print(f"[Theme] API Error: {data.get('return_msg')}")
+            return None
+
+    def get_theme_stocks(self, theme_code):
+        """
+        테마 구성 종목 조회 (Kiwoom ka90002 - 추정)
+        """
+        url = f"{self.base_url}/api/dostk/thme" # Assuming same endpoint
+        
+        headers = {
+            "content-type": "application/json;charset=UTF-8",
+            "api-id": "ka90002"
+        }
+        
+        body = {
+            "thema_grp_cd": theme_code,
+            "qry_tp": "1", # Guessing
+            "stex_tp": "3" # 1:KRX, 2:NXT, 3:통합
+        }
+
+        print(f"[Theme] Requesting stocks for theme {theme_code}...")
+        data = self._send_request(url, headers, body)
+        
+        if data and data.get('return_code') == 0:
+            return data.get('thema_comp_stk', []) # Correct key: thema_comp_stk
+        else:
+            if data: print(f"[Theme] API Error: {data.get('return_msg')}")
+            return None

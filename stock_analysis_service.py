@@ -1,6 +1,7 @@
 from kis_api import KiwoomApi
 from gemini_service import GeminiService
 from technical_indicators import TechnicalIndicators
+from theme_service import ThemeService
 import config
 import time
 
@@ -12,6 +13,7 @@ class StockAnalysisService:
         # 자동으로 액세스 토큰 획득
         self.kiwoom.get_access_token()
         self.gemini = GeminiService()
+        self.theme_service = ThemeService()
         
         # 메모리 캐시 초기화
         # 구조: { 'key': { 'data': ..., 'timestamp': ..., 'ttl': ... } }
@@ -174,8 +176,21 @@ class StockAnalysisService:
                 # 5-2. 주도 테마 (Gemini Search)
                 market_data['themes'] = self.gemini.fetch_market_themes(force_refresh=force_refresh)
                 
-                # 5-3. 종목 섹터 (Gemini Search, 정규화된 코드 사용)
-                market_data['sector'] = self.gemini.fetch_stock_sector(stock_name, normalized_code, force_refresh=force_refresh)
+                # 5-3. 종목 테마 (Theme Service - REST API 캐시 사용)
+                themes_found = self.theme_service.find_themes_by_stock(stock_name)
+                if themes_found:
+                    # 찾은 테마들을 등락률과 함께 문자열로 결합
+                    theme_info_list = []
+                    for t in themes_found[:3]:  # 최대 3개
+                        theme_name = t['theme_name']
+                        theme_flu = t['theme_fluctuation']
+                        theme_info_list.append(f"{theme_name}({theme_flu})")
+                    
+                    market_data['sector'] = ', '.join(theme_info_list)
+                    print(f"[Analysis] 종목 '{stock_name}' 테마: {market_data['sector']}")
+                else:
+                    market_data['sector'] = '테마 정보 없음'
+                    print(f"[Analysis] 종목 '{stock_name}' 테마를 찾을 수 없습니다")
                 
             except Exception as e:
                 print(f"[StockAnalysisService] 시장 데이터 수집 실패: {e}")
