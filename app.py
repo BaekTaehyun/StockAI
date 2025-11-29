@@ -33,6 +33,17 @@ data_fetcher = DataFetcher()
 # 테마 서비스 인스턴스 생성
 theme_service = ThemeService()
 
+@app.after_request
+def add_header(response):
+    """
+    모바일 캐시 문제 해결을 위한 헤더 추가
+    모든 응답에 대해 캐시를 무효화합니다.
+    """
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
+
 @app.before_request
 def require_login():
     """모든 요청에 대해 로그인 여부 확인"""
