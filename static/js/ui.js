@@ -59,6 +59,16 @@ const UI = {
             const card = this.createHoldingCard(stock);
             grid.appendChild(card);
         });
+
+        // DOM에 추가된 후 전략 정보 로드
+        setTimeout(() => {
+            holdings.forEach(stock => {
+                const stockCode = stock.stk_cd || '';
+                if (stockCode) {
+                    this.loadStrategyInfo(null, stockCode);
+                }
+            });
+        }, 100);
     },
 
     // 종목 카드 생성
@@ -126,8 +136,26 @@ const UI = {
                     <div class="holding-info-value" style="color: ${textColor};">${formatCurrency(currentPrice)}</div>
                 </div>
             </div>
+            <div style="margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
+                    <div>
+                        <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; font-weight: 600;">수급 정보</div>
+                        <div id="supply-${stockCode}" style="font-size: 0.85rem; min-height: 24px;">
+                            <span style="color: #888;">분석중...</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; font-weight: 600;">AI 매매 전략</div>
+                        <div id="strategy-${stockCode}" style="font-size: 0.85rem; min-height: 24px;">
+                            <span style="color: #666;">로딩중...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
             ${sentimentElements.footerHtml}
         `;
+
         return card;
     },
 
@@ -575,9 +603,11 @@ const UI = {
                             </div>
                         </div>
                         <div>
-                            <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; font-weight: 600;">등락 원인</div>
-                            <div id="reason-${code}" style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.4; min-height: 24px;">
-                                로딩중...
+                            <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; font-weight: 600;">AI 매매 전략</div>
+                            <div id="strategy-${code}" style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.4; min-height: 24px;">
+                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                    <span style="background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; color: #888;">로딩중...</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -608,9 +638,9 @@ const UI = {
         if (cardElement.getAttribute('data-supply-loaded') === 'true') return;
 
         const supplyElem = document.getElementById(`supply-${code}`);
-        const reasonElem = document.getElementById(`reason-${code}`);
+        const strategyElem = document.getElementById(`strategy-${code}`);
 
-        if (!supplyElem || !reasonElem) return;
+        if (!supplyElem || !strategyElem) return;
 
         try {
             // 여기서는 강제 갱신 없이 로드
@@ -636,12 +666,30 @@ const UI = {
                     supplyElem.innerHTML = badge;
                 }
 
-                if (data.news_analysis && data.news_analysis.reason) {
-                    const reason = data.news_analysis.reason.split('\n')[0].substring(0, 60);
-                    reasonElem.textContent = reason + (reason.length >= 60 ? '...' : '');
-                    reasonElem.style.color = 'var(--text-primary)';
+                if (data.outlook && data.outlook.price_strategy) {
+                    const strategy = data.outlook.price_strategy;
+                    const entry = strategy.entry || '-';
+                    const target = strategy.target || '-';
+                    const stopLoss = strategy.stop_loss || '-';
+
+                    strategyElem.innerHTML = `
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                                <span style="color: #aaa;">진입</span>
+                                <span style="color: #fff; font-weight: 600;">${entry}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                                <span style="color: #aaa;">목표</span>
+                                <span style="color: #f87171; font-weight: 600;">${target}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                                <span style="color: #aaa;">손절</span>
+                                <span style="color: #60a5fa; font-weight: 600;">${stopLoss}</span>
+                            </div>
+                        </div>
+                    `;
                 } else {
-                    reasonElem.innerHTML = '<span style="color: #888;">-</span>';
+                    strategyElem.innerHTML = '<span style="color: #888;">전략 수립 중...</span>';
                 }
 
                 cardElement.setAttribute('data-supply-loaded', 'true');
@@ -649,7 +697,72 @@ const UI = {
         } catch (error) {
             console.error(`수급 정보 로드 실패 (${code}):`, error);
             supplyElem.innerHTML = '<span style="color: #888; font-size: 0.75rem;">-</span>';
-            reasonElem.innerHTML = '<span style="color: #888;">-</span>';
+            strategyElem.innerHTML = '<span style="color: #888;">-</span>';
+        }
+    },
+
+    // 전략 정보 로드 (보유종목용)
+    async loadStrategyInfo(cardElement, code) {
+        const strategyElem = document.getElementById(`strategy-${code}`);
+        const supplyElem = document.getElementById(`supply-${code}`);
+
+        if (!strategyElem) return;
+
+        try {
+            const result = await API.fetchFullAnalysis(code, false);
+
+            if (result.success && result.data) {
+                const data = result.data;
+
+                // 수급 정보 업데이트
+                if (supplyElem && data.supply_demand) {
+                    const foreigner = data.supply_demand.foreign_net || 0;
+                    const institution = data.supply_demand.institution_net || 0;
+
+                    let badge = '';
+                    if (foreigner > 0) {
+                        badge = '<span style="display: inline-block; background: #10b981; color: white; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">외인 매수중 📈</span>';
+                    } else if (foreigner < 0) {
+                        badge = '<span style="display: inline-block; background: #ef4444; color: white; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">외인 매도중 📉</span>';
+                    } else if (institution > 0) {
+                        badge = '<span style="display: inline-block; background: #6366f1; color: white; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">기관 매수중 🏢</span>';
+                    } else {
+                        badge = '<span style="color: #888; font-size: 0.8rem;">수급 보합</span>';
+                    }
+                    supplyElem.innerHTML = badge;
+                }
+
+                // 전략 정보 업데이트
+                if (data.outlook && data.outlook.price_strategy) {
+                    const strategy = data.outlook.price_strategy;
+                    const entry = strategy.entry || '-';
+                    const target = strategy.target || '-';
+                    const stopLoss = strategy.stop_loss || '-';
+
+                    strategyElem.innerHTML = `
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                                <span style="color: #aaa;">진입</span>
+                                <span style="color: #fff; font-weight: 600;">${entry}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                                <span style="color: #aaa;">목표</span>
+                                <span style="color: #f87171; font-weight: 600;">${target}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                                <span style="color: #aaa;">손절</span>
+                                <span style="color: #60a5fa; font-weight: 600;">${stopLoss}</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    strategyElem.innerHTML = '<span style="color: #888;">전략 수립 중...</span>';
+                }
+            }
+        } catch (error) {
+            console.error(`전략 정보 로드 실패 (${code}):`, error);
+            if (supplyElem) supplyElem.innerHTML = '<span style="color: #888;">-</span>';
+            strategyElem.innerHTML = '<span style="color: #888;">-</span>';
         }
     }
 };

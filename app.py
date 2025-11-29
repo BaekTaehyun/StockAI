@@ -285,7 +285,8 @@ def get_sentiment_analysis(code):
                     'news_sentiment': data['news_analysis']['sentiment'],
                     'supply_trend': data['supply_demand']['trend'],
                     'ai_recommendation': data['outlook']['recommendation'],
-                    'ai_confidence': data['outlook']['confidence']
+                    'ai_confidence': data['outlook']['confidence'],
+                    'price_strategy': data['outlook'].get('price_strategy')
                 }
             })
         else:

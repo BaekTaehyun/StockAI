@@ -248,6 +248,9 @@ class StockAnalysisService:
                         'recommendation': outlook.get('recommendation', '중립'),
                         'confidence': outlook.get('confidence', 0),
                         'reasoning': outlook.get('reasoning', ''),
+                        'trading_scenario': outlook.get('trading_scenario', ''),
+                        'price_strategy': outlook.get('price_strategy', {}),
+                        'raw_response': outlook.get('raw_response', ''),
                         '_cache_info': outlook.get('_cache_info', {})
                     },
                     'fundamental_data': fundamental_data

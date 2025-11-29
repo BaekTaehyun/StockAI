@@ -32,12 +32,20 @@ def test_ai_generation():
         print(f"Recommendation: {result.get('recommendation')}")
         print(f"Confidence: {result.get('confidence')}")
         print(f"Scenario: {result.get('trading_scenario')[:50]}...")
-        print(f"Reasoning: {result.get('reasoning')[:50]}...")
+        print(f"Reasoning (Detailed): {result.get('reasoning')[:100]}...")
         
+        price_strategy = result.get('price_strategy', {})
+        print(f"Price Strategy: {price_strategy}")
+
         if result.get('recommendation') in ['매수', '매도', '중립']:
             print("[PASS] Valid recommendation received")
         else:
             print(f"[FAIL] Invalid recommendation: {result.get('recommendation')}")
+            
+        if price_strategy.get('entry') and price_strategy.get('target') and price_strategy.get('stop_loss'):
+             print("[PASS] Price strategy parsed successfully")
+        else:
+             print("[WARN] Price strategy incomplete (might be due to AI response variation)")
             
     except Exception as e:
         print(f"[FAIL] Exception occurred: {e}")

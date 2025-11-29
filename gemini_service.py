@@ -140,9 +140,27 @@ class GeminiService:
                 prompt_text,
                 request_options={'timeout': 60}
             )
-            return response.text
+            
+            # 디버깅: 응답 확인
+            print(f"[Gemini API] Response received")
+            print(f"[Gemini API] Response object type: {type(response)}")
+            
+            # Safety ratings 확인 (응답이 차단되었는지 확인)
+            if hasattr(response, 'prompt_feedback'):
+                print(f"[Gemini API] Prompt feedback: {response.prompt_feedback}")
+            
+            # 응답 텍스트 확인
+            if hasattr(response, 'text') and response.text:
+                print(f"[Gemini API] Response text length: {len(response.text)}")
+                return response.text
+            else:
+                print(f"[Gemini API] No text in response. Candidates: {response.candidates if hasattr(response, 'candidates') else 'N/A'}")
+                return None
+                
         except Exception as e:
-            print(f"[Gemini API Error] {e}")
+            print(f"[Gemini API Error] {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
     def search_news(self, query):
@@ -440,7 +458,8 @@ class GeminiService:
             
             # 디버깅: 프롬프트 확인
             # 디버깅: 프롬프트 전체 출력
-            print(f"\n{'='*50}\n[Debug] Generated Prompt:\n{prompt}\n{'='*50}\n")
+            # 디버깅: 프롬프트 확인 (필요시 주석 해제)
+            # print(f"\n{'='*50}\n[Debug] Generated Prompt:\n{prompt}\n{'='*50}\n")
 
             
             result_text = self._call_gemini_api(prompt)
@@ -453,7 +472,7 @@ class GeminiService:
             recommendation = "중립"
             confidence = 50
             trading_scenario = ""
-            reasoning = ""
+            detailed_analysis = ""
             
             lines = result_text.strip().split('\n')
             current_section = None
@@ -484,22 +503,37 @@ class GeminiService:
                     current_section = "scenario"
                     if ":" in line:
                          trading_scenario = line.split(":", 1)[-1].strip()
-                elif "핵심 근거" in line or line.startswith("4."):
-                    current_section = "reasoning"
+                elif "상세 분석" in line or line.startswith("4."):
+                    current_section = "detailed_analysis"
                     if ":" in line:
-                        reasoning = line.split(":", 1)[-1].strip()
+                        detailed_analysis = line.split(":", 1)[-1].strip()
                 
                 # 섹션별 내용 수집
                 elif current_section == "scenario" and line:
                     trading_scenario += "\n" + line
-                elif current_section == "reasoning" and line:
-                    reasoning += "\n" + line
+                elif current_section == "detailed_analysis" and line:
+                    detailed_analysis += "\n" + line
             
+            # 매매 시나리오에서 가격 정보 추출 (간단한 파싱)
+            price_strategy = {'entry': '', 'target': '', 'stop_loss': ''}
+            try:
+                scenario_lines = trading_scenario.split('\n')
+                for s_line in scenario_lines:
+                    if "진입" in s_line:
+                        price_strategy['entry'] = s_line.split(":", 1)[-1].strip()
+                    elif "목표" in s_line:
+                        price_strategy['target'] = s_line.split(":", 1)[-1].strip()
+                    elif "손절" in s_line:
+                        price_strategy['stop_loss'] = s_line.split(":", 1)[-1].strip()
+            except:
+                pass
+
             result = {
                 'recommendation': recommendation,
                 'confidence': confidence,
                 'trading_scenario': trading_scenario.strip(),
-                'reasoning': reasoning.strip() if reasoning.strip() else result_text[:300],
+                'price_strategy': price_strategy,
+                'reasoning': detailed_analysis.strip() if detailed_analysis.strip() else result_text[:500],
                 'raw_response': result_text,
                 '_cache_info': {'cached': False, 'reason': 'new_data', 'age_seconds': 0}
             }

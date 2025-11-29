@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadHoldings();
         loadMarketIndices();
         loadWatchlist();
-    }, 1000);
+    }, 2000);
 });
 
 // 데이터 로드 함수들 (UI와 API 연결)
@@ -176,28 +176,56 @@ window.updateSingleSentiment = updateSingleSentiment;
 function renderRibbon(code, data) {
     const ribbon = document.getElementById(`ribbon-${code}`);
     const footer = document.getElementById(`footer-${code}`);
+    const strategyElem = document.getElementById(`strategy-${code}`);
 
-    if (!ribbon) return;
+    if (ribbon) {
+        const recommendation = data.ai_recommendation || data.recommendation || '중립';
+        let ribbonClass = 'neutral';
 
-    const recommendation = data.ai_recommendation;
-    let ribbonClass = 'neutral';
+        if (recommendation === '매수') {
+            ribbonClass = 'buy';
+        } else if (recommendation === '매도') {
+            ribbonClass = 'sell';
+        }
 
-    if (recommendation === '매수') {
-        ribbonClass = 'buy';
-    } else if (recommendation === '매도') {
-        ribbonClass = 'sell';
+        ribbon.className = `ribbon ${ribbonClass}`;
+        ribbon.innerHTML = `<span>${recommendation}</span>`;
+        ribbon.style.display = 'block';
     }
 
-    ribbon.className = `ribbon ${ribbonClass}`;
-    ribbon.innerHTML = `<span>${recommendation}</span>`;
-    ribbon.style.display = 'block';
-
     if (footer) {
+        const sentiment = data.news_sentiment || '중립';
+        const confidence = data.ai_confidence || data.confidence || 0;
+
         footer.innerHTML = `
-            <span class="sentiment-tag ${data.news_sentiment}">${data.news_sentiment}</span>
-            <span class="confidence-tag">신뢰도 ${data.ai_confidence}%</span>
+            <span class="sentiment-tag ${sentiment}">${sentiment}</span>
+            <span class="confidence-tag">신뢰도 ${confidence}%</span>
         `;
         footer.style.display = 'flex';
+    }
+
+    // 전략 정보 업데이트
+    if (strategyElem && data.price_strategy) {
+        const entry = data.price_strategy.entry || '-';
+        const target = data.price_strategy.target || '-';
+        const stopLoss = data.price_strategy.stop_loss || '-';
+
+        strategyElem.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                    <span style="color: #aaa;">진입</span>
+                    <span style="color: #fff; font-weight: 600;">${entry}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                    <span style="color: #aaa;">목표</span>
+                    <span style="color: #f87171; font-weight: 600;">${target}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                    <span style="color: #aaa;">손절</span>
+                    <span style="color: #60a5fa; font-weight: 600;">${stopLoss}</span>
+                </div>
+            </div>
+        `;
     }
 }
 
@@ -235,7 +263,9 @@ window.updateSentimentFromAnalysis = (code, analysisData) => {
         ai_recommendation: analysisData.outlook.recommendation,
         ai_confidence: analysisData.outlook.confidence,
         news_sentiment: analysisData.news_analysis.sentiment,
-        supply_trend: analysisData.supply_demand ? analysisData.supply_demand.trend : '정보 없음'
+        supply_trend: analysisData.supply_demand ? analysisData.supply_demand.trend : '정보 없음',
+        price_strategy: analysisData.outlook.price_strategy,
+        supply_demand: analysisData.supply_demand
     };
 
     // 캐시 업데이트
