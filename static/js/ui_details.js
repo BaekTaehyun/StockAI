@@ -53,20 +53,38 @@ Object.assign(window.UI, {
 
     // 종합 탭 렌더링
     renderOverview(data) {
+        console.log('renderOverview called with:', data);
+
+        if (!data) {
+            console.error('Data is null or undefined');
+            return;
+        }
+
         const { stock_info, supply_demand, news_analysis, outlook } = data;
 
-        const recommendationClass =
-            outlook.recommendation === '매수' ? 'buy' :
-                outlook.recommendation === '매도' ? 'sell' : 'neutral';
+        // 데이터 유효성 검사
+        if (!stock_info) console.warn('stock_info is missing');
+        if (!supply_demand) console.warn('supply_demand is missing');
+        if (!news_analysis) console.warn('news_analysis is missing');
+        if (!outlook) console.warn('outlook is missing');
 
-        const changeRate = parseFloat(stock_info.change_rate) || 0;
+        const safeOutlook = outlook || { recommendation: '중립', confidence: 0, trading_scenario: '', reasoning: '' };
+        const safeStockInfo = stock_info || { current_price: 0, change: 0, change_rate: 0 };
+        const safeSupply = supply_demand || { foreign_net: 0, institution_net: 0, trend: '' };
+        const safeNews = news_analysis || { sentiment: '중립', reason: '' };
+
+        const recommendationClass =
+            safeOutlook.recommendation === '매수' ? 'buy' :
+                safeOutlook.recommendation === '매도' ? 'sell' : 'neutral';
+
+        const changeRate = parseFloat(safeStockInfo.change_rate) || 0;
         const isUp = changeRate >= 0;
         const priceColor = isUp ? '#e53e3e' : '#3b82f6';
 
         // 수급 트렌드 로직 (쌍끌이 등)
-        const fNet = supply_demand.foreign_net;
-        const iNet = supply_demand.institution_net;
-        let trendBadge = supply_demand.trend;
+        const fNet = safeSupply.foreign_net;
+        const iNet = safeSupply.institution_net;
+        let trendBadge = safeSupply.trend;
 
         if (fNet > 0 && iNet > 0) {
             trendBadge = '<span class="badge-supply buy">쌍끌이 매수 🚀</span>';
@@ -74,65 +92,75 @@ Object.assign(window.UI, {
             trendBadge = '<span class="badge-supply sell">양매도 📉</span>';
         }
 
-        const html = `
-            <div class="analysis-section">
-                <h3>주가 정보</h3>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="label">현재가</span>
-                        <span class="value" style="color: ${priceColor};">${formatCurrency(stock_info.current_price)}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">전일대비</span>
-                        <span class="value ${stock_info.change_rate >= 0 ? 'positive' : 'negative'}">
-                            ${formatCurrency(stock_info.change)} (${stock_info.change_rate}%)
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="analysis-section">
-                <h3>AI 투자 의견</h3>
-                <div class="outlook-card ${recommendationClass}">
-                    <div class="outlook-header">
-                        <span class="recommendation">${outlook.recommendation}</span>
-                        <span class="confidence">신뢰도 ${outlook.confidence}%</span>
-                    </div>
-                    <div class="trading-scenario" style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                         <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">매매 시나리오</h4>
-                         <div style="font-family: inherit; color: var(--text-secondary); line-height: 1.6;">${formatAIText(outlook.trading_scenario || '시나리오 정보 없음')}</div>
-                    </div>
-                    <div class="reasoning" style="margin-top: 1rem; line-height: 1.6; color: var(--text-secondary);">${formatAIText(outlook.reasoning)}</div>
-                </div>
-            </div>
-
-            <div class="analysis-section">
-                <h3>수급 현황</h3>
-                <div class="supply-summary">
-                    <div class="supply-item ${supply_demand.foreign_net >= 0 ? 'positive' : 'negative'}">
-                        <span class="label">외국인</span>
-                        <span class="value">${formatNumber(supply_demand.foreign_net)}주</span>
-                    </div>
-                    <div class="supply-item ${supply_demand.institution_net >= 0 ? 'positive' : 'negative'}">
-                        <span class="label">기관</span>
-                        <span class="value">${formatNumber(supply_demand.institution_net)}주</span>
-                    </div>
-                    <div class="trend">${trendBadge}</div>
-                </div>
-            </div>
-
-            <div class="analysis-section">
-                <h3>뉴스 요약</h3>
-                <div class="news-summary">
-                    <div class="sentiment ${news_analysis.sentiment}">${news_analysis.sentiment}</div>
-                    <div class="news-box">
-                        ${formatNewsText(news_analysis.reason)}
+        try {
+            const html = `
+                <div class="analysis-section">
+                    <h3>주가 정보</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="label">현재가</span>
+                            <span class="value" style="color: ${priceColor};">${formatCurrency(safeStockInfo.current_price)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">전일대비</span>
+                            <span class="value ${changeRate >= 0 ? 'positive' : 'negative'}">
+                                ${formatCurrency(safeStockInfo.change)} (${safeStockInfo.change_rate}%)
+                            </span>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
 
-        document.getElementById('overviewContent').innerHTML = html;
+                <div class="analysis-section">
+                    <h3>AI 투자 의견</h3>
+                    <div class="outlook-card ${recommendationClass}">
+                        <div class="outlook-header">
+                            <span class="recommendation">${safeOutlook.recommendation}</span>
+                            <span class="confidence">신뢰도 ${safeOutlook.confidence}%</span>
+                        </div>
+                        <div class="trading-scenario" style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                             <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">매매 시나리오</h4>
+                             <div style="font-family: inherit; color: var(--text-secondary); line-height: 1.6;">${formatAIText(safeOutlook.trading_scenario || '시나리오 정보 없음')}</div>
+                        </div>
+                        <div class="reasoning" style="margin-top: 1rem; line-height: 1.6; color: var(--text-secondary);">${formatAIText(safeOutlook.reasoning)}</div>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <h3>수급 현황</h3>
+                    <div class="supply-summary">
+                        <div class="supply-item ${safeSupply.foreign_net >= 0 ? 'positive' : 'negative'}">
+                            <span class="label">외국인</span>
+                            <span class="value">${formatNumber(safeSupply.foreign_net)}주</span>
+                        </div>
+                        <div class="supply-item ${safeSupply.institution_net >= 0 ? 'positive' : 'negative'}">
+                            <span class="label">기관</span>
+                            <span class="value">${formatNumber(safeSupply.institution_net)}주</span>
+                        </div>
+                        <div class="trend">${trendBadge}</div>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <h3>뉴스 요약</h3>
+                    <div class="news-summary">
+                        <div class="sentiment ${safeNews.sentiment}">${safeNews.sentiment}</div>
+                        <div class="news-box">
+                            ${formatNewsText(safeNews.reason)}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const contentEl = document.getElementById('overviewContent');
+            if (contentEl) {
+                contentEl.innerHTML = html;
+                console.log('overviewContent updated successfully');
+            } else {
+                console.error('overviewContent element not found');
+            }
+        } catch (e) {
+            console.error('Error in renderOverview HTML generation:', e);
+        }
     },
 
     // 수급 탭 렌더링
