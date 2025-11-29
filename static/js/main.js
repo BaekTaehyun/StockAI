@@ -125,7 +125,7 @@ window.loadAllData = () => {
 
 // 감성 분석 관련 함수들
 function createSentimentElements(stockCode) {
-    const ribbonHtml = `<div id="ribbon-${stockCode}" class="ribbon" style="display: none;"><span>분석중</span></div>`;
+    const ribbonHtml = `<div id="ribbon-${stockCode}" class="ai-ribbon" style="display: none;"><span>분석중</span></div>`;
     const footerHtml = `<div id="footer-${stockCode}" class="sentiment-footer" style="display: none;"></div>`;
     return { ribbonHtml, footerHtml };
 }
@@ -188,7 +188,7 @@ function renderRibbon(code, data) {
             ribbonClass = 'sell';
         }
 
-        ribbon.className = `ribbon ${ribbonClass}`;
+        ribbon.className = `ai-ribbon ${ribbonClass}`;
         ribbon.innerHTML = `<span>${recommendation}</span>`;
         ribbon.style.display = 'block';
     }

@@ -1,0 +1,254 @@
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--bg-card);
+    padding: 3rem;
+    border-radius: 24px;
+    border: 1px solid var(--border);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.close {
+    position: sticky;
+    top: 0;
+    float: right;
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.3s ease;
+    z-index: 1001;
+    background: var(--bg-card);
+    padding: 0.5rem;
+    border-radius: 8px;
+}
+
+.close:hover {
+    color: var(--danger);
+}
+
+/* Analysis Tabs */
+.analysis-tabs {
+    display: flex;
+    gap: 1rem;
+    margin: 2rem 0;
+    border-bottom: 2px solid var(--border);
+}
+
+.analysis-tabs .tab {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-bottom: 3px solid transparent;
+}
+
+.analysis-tabs .tab.active {
+    color: var(--accent-1);
+    border-bottom-color: var(--accent-1);
+}
+
+.analysis-tabs .tab:hover {
+    color: var(--text-primary);
+}
+
+/* Tab Content */
+.tab-content {
+    padding: 1.5rem 0;
+}
+
+.tab-content.hidden {
+    display: none;
+}
+
+/* Analysis Sections */
+.analysis-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+.analysis-section h3 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    color: var(--accent-1);
+}
+
+/* Info Grid */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.info-item .label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.info-item .value {
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.info-item .value.positive {
+    color: var(--success);
+}
+
+.info-item .value.negative {
+    color: var(--danger);
+}
+
+/* Outlook Card */
+.outlook-card {
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 2px solid;
+}
+
+.outlook-card.buy {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--success);
+}
+
+.outlook-card.sell {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--danger);
+}
+
+.outlook-card.neutral {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: var(--warning);
+}
+
+.outlook-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.recommendation {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.confidence {
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+.reasoning {
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+/* Supply Demand */
+.supply-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.supply-item {
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.supply-item.positive {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.supply-item.negative {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.supply-item .label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.supply-item .value {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.supply-item.positive .value {
+    color: var(--success);
+}
+
+.supply-item.negative .value {
+    color: var(--danger);
+}
+
+.trend {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 1rem;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 8px;
+    color: var(--accent-1);
+    font-weight: 600;
+    margin-top: 1rem;
+}
+
+.supply-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+}
+
+.detail-row.total {
+    background: rgba(99, 102, 241, 0.1);
+    font-weight: 700;
+    border: 1px solid var(--accent-1);
+}
+
+.trend-box {
+    padding: 1rem;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 8px;
+    text-align: center;
+    color: var(--accent-1);
+    font-weight: 600;
+}

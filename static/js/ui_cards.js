@@ -112,15 +112,17 @@ Object.assign(window.UI, {
             <div style="margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid rgba(255,255,255,0.1);">
                 <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
                     <div>
-                        <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; font-weight: 600;">수급 정보</div>
-                        <div id="supply-${stockCode}" style="font-size: 0.85rem; min-height: 24px;">
-                            <span style="color: #888;">분석중...</span>
+                        <div class="section-header-title">수급 정보</div>
+                        <div id="supply-${stockCode}" style="min-height: 24px;">
+                            <span class="badge-supply neutral">분석중...</span>
                         </div>
                     </div>
                     <div>
-                        <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; font-weight: 600;">AI 매매 전략</div>
-                        <div id="strategy-${stockCode}" style="font-size: 0.85rem; min-height: 24px;">
-                            <span style="color: #666;">로딩중...</span>
+                        <div class="section-header-title">AI 매매 전략</div>
+                        <div id="strategy-${stockCode}" style="min-height: 24px;">
+                            <div class="strategy-loading">
+                                <span class="strategy-loading-pill">로딩중...</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -247,16 +249,16 @@ Object.assign(window.UI, {
                 <div style="padding-top: 1rem; margin-top: 1rem;">
                     <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
                         <div>
-                            <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; font-weight: 600;">수급 정보</div>
-                            <div id="supply-${code}" style="font-size: 0.85rem; min-height: 24px;">
-                                <span style="color: #888;">분석중...</span>
+                            <div class="section-header-title">수급 정보</div>
+                            <div id="supply-${code}" style="min-height: 24px;">
+                                <span class="badge-supply neutral">분석중...</span>
                             </div>
                         </div>
                         <div>
-                            <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; font-weight: 600;">AI 매매 전략</div>
-                            <div id="strategy-${code}" style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.4; min-height: 24px;">
-                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                    <span style="background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; color: #888;">로딩중...</span>
+                            <div class="section-header-title">AI 매매 전략</div>
+                            <div id="strategy-${code}" style="min-height: 24px;">
+                                <div class="strategy-loading">
+                                    <span class="strategy-loading-pill">로딩중...</span>
                                 </div>
                             </div>
                         </div>
@@ -305,13 +307,13 @@ Object.assign(window.UI, {
 
                     let badge = '';
                     if (foreigner > 0) {
-                        badge = '<span style="display: inline-block; background: #10b981; color: white; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">외인 매수중 📈</span>';
+                        badge = '<span class="badge-supply buy">외인 매수중 📈</span>';
                     } else if (foreigner < 0) {
-                        badge = '<span style="display: inline-block; background: #ef4444; color: white; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">외인 매도중 📉</span>';
+                        badge = '<span class="badge-supply sell">외인 매도중 📉</span>';
                     } else if (institution > 0) {
-                        badge = '<span style="display: inline-block; background: #6366f1; color: white; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">기관 매수중 🏢</span>';
+                        badge = '<span class="badge-supply buy">기관 매수중 🏢</span>';
                     } else {
-                        badge = '<span style="color: #888; font-size: 0.8rem;">수급 보합</span>';
+                        badge = '<span class="badge-supply neutral">수급 보합</span>';
                     }
                     supplyElem.innerHTML = badge;
                 }
@@ -323,23 +325,23 @@ Object.assign(window.UI, {
                     const stopLoss = strategy.stop_loss || '-';
 
                     strategyElem.innerHTML = `
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
-                                <span style="color: #aaa;">진입</span>
-                                <span style="color: #fff; font-weight: 600;">${entry}</span>
+                        <div class="strategy-grid">
+                            <div class="strategy-row">
+                                <span class="strategy-label">진입</span>
+                                <span class="strategy-value entry">${entry}</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
-                                <span style="color: #aaa;">목표</span>
-                                <span style="color: #f87171; font-weight: 600;">${target}</span>
+                            <div class="strategy-row">
+                                <span class="strategy-label">목표</span>
+                                <span class="strategy-value target">${target}</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
-                                <span style="color: #aaa;">손절</span>
-                                <span style="color: #60a5fa; font-weight: 600;">${stopLoss}</span>
+                            <div class="strategy-row">
+                                <span class="strategy-label">손절</span>
+                                <span class="strategy-value stop">${stopLoss}</span>
                             </div>
                         </div>
                     `;
                 } else {
-                    strategyElem.innerHTML = '<span style="color: #888;">전략 수립 중...</span>';
+                    strategyElem.innerHTML = '<span class="badge-supply neutral">전략 수립 중...</span>';
                 }
 
                 cardElement.setAttribute('data-supply-loaded', 'true');
@@ -371,13 +373,13 @@ Object.assign(window.UI, {
 
                     let badge = '';
                     if (foreigner > 0) {
-                        badge = '<span style="display: inline-block; background: #10b981; color: white; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">외인 매수중 📈</span>';
+                        badge = '<span class="badge-supply buy">외인 매수중 📈</span>';
                     } else if (foreigner < 0) {
-                        badge = '<span style="display: inline-block; background: #ef4444; color: white; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">외인 매도중 📉</span>';
+                        badge = '<span class="badge-supply sell">외인 매도중 📉</span>';
                     } else if (institution > 0) {
-                        badge = '<span style="display: inline-block; background: #6366f1; color: white; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">기관 매수중 🏢</span>';
+                        badge = '<span class="badge-supply buy">기관 매수중 🏢</span>';
                     } else {
-                        badge = '<span style="color: #888; font-size: 0.8rem;">수급 보합</span>';
+                        badge = '<span class="badge-supply neutral">수급 보합</span>';
                     }
                     supplyElem.innerHTML = badge;
                 }
@@ -390,23 +392,23 @@ Object.assign(window.UI, {
                     const stopLoss = strategy.stop_loss || '-';
 
                     strategyElem.innerHTML = `
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
-                                <span style="color: #aaa;">진입</span>
-                                <span style="color: #fff; font-weight: 600;">${entry}</span>
+                        <div class="strategy-grid">
+                            <div class="strategy-row">
+                                <span class="strategy-label">진입</span>
+                                <span class="strategy-value entry">${entry}</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
-                                <span style="color: #aaa;">목표</span>
-                                <span style="color: #f87171; font-weight: 600;">${target}</span>
+                            <div class="strategy-row">
+                                <span class="strategy-label">목표</span>
+                                <span class="strategy-value target">${target}</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
-                                <span style="color: #aaa;">손절</span>
-                                <span style="color: #60a5fa; font-weight: 600;">${stopLoss}</span>
+                            <div class="strategy-row">
+                                <span class="strategy-label">손절</span>
+                                <span class="strategy-value stop">${stopLoss}</span>
                             </div>
                         </div>
                     `;
                 } else {
-                    strategyElem.innerHTML = '<span style="color: #888;">전략 수립 중...</span>';
+                    strategyElem.innerHTML = '<span class="badge-supply neutral">전략 수립 중...</span>';
                 }
             }
         } catch (error) {
