@@ -48,33 +48,49 @@ const UI = {
     // 보유 종목 리스트 표시
     displayHoldings(holdings) {
         const grid = document.getElementById('holdingsGrid');
-        grid.innerHTML = '';
 
         if (!holdings || holdings.length === 0) {
             grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-secondary);">보유 종목이 없습니다</div>';
             return;
         }
 
-        holdings.forEach(stock => {
-            const card = this.createHoldingCard(stock);
-            grid.appendChild(card);
+        // 기존 카드 코드 목록
+        const existingCards = Array.from(grid.querySelectorAll('.holding-card'));
+        const existingCodes = existingCards.map(card => card.getAttribute('data-code'));
+        const newCodes = holdings.map(stock => stock.stk_cd);
+
+        // 없어진 종목 카드 제거
+        existingCards.forEach(card => {
+            const code = card.getAttribute('data-code');
+            if (!newCodes.includes(code)) {
+                card.remove();
+            }
         });
 
-        // DOM에 추가된 후 전략 정보 로드
-        setTimeout(() => {
-            holdings.forEach(stock => {
-                const stockCode = stock.stk_cd || '';
-                if (stockCode) {
-                    this.loadStrategyInfo(null, stockCode);
-                }
-            });
-        }, 100);
+        // 카드 업데이트 또는 생성
+        holdings.forEach(stock => {
+            const stockCode = stock.stk_cd || '';
+            const existingCard = grid.querySelector(`[data-code="${stockCode}"]`);
+
+            if (existingCard) {
+                // 기존 카드 데이터만 업데이트 (수급/전략 섹션은 건드리지 않음)
+                this.updateHoldingCardData(existingCard, stock);
+            } else {
+                // 새 카드 생성
+                const card = this.createHoldingCard(stock);
+                grid.appendChild(card);
+
+                // 새 카드에만 전략 정보 로드
+                setTimeout(() => this.loadStrategyInfo(null, stockCode), 100);
+            }
+        });
     },
 
     // 종목 카드 생성
     createHoldingCard(stock) {
         const card = document.createElement('div');
         card.className = 'holding-card';
+        card.setAttribute('data-code', stock.stk_cd || '');
         card.onclick = () => this.openStockModal(stock);
 
         // 숫자 변환
@@ -157,6 +173,44 @@ const UI = {
         `;
 
         return card;
+    },
+
+    // 보유 종목 카드 데이터 업데이트 (수급/전략 섹션 유지)
+    updateHoldingCardData(card, stock) {
+        const quantity = parseInt(stock.rmnd_qty) || 0;
+        const purchasePrice = parseInt(stock.pur_pric) || 0;
+        const currentPrice = parseInt(stock.cur_prc) || 0;
+        const profitLoss = parseInt(stock.evltv_prft) || 0;
+        const profitRate = parseFloat(stock.prft_rt) || 0;
+        const evalAmount = parseInt(stock.evlt_amt) || 0;
+
+        const plClass = profitLoss >= 0 ? 'positive' : 'negative';
+        const plSign = profitLoss >= 0 ? '+' : '';
+        const isProfit = profitLoss >= 0;
+        const textColor = isProfit ? '#e53e3e' : '#3b82f6';
+
+        // 손익 업데이트
+        const plElements = card.querySelectorAll('.holding-pl');
+        if (plElements.length >= 2) {
+            plElements[0].textContent = `${plSign}${formatCurrency(profitLoss)}`;
+            plElements[0].className = `holding-pl ${plClass}`;
+            plElements[0].style.color = textColor;
+
+            plElements[1].textContent = `${plSign}${profitRate.toFixed(2)}%`;
+            plElements[1].className = `holding-pl ${plClass}`;
+            plElements[1].style.color = textColor;
+        }
+
+        // 보유수량, 평가금액, 현재가 업데이트
+        const infoValues = card.querySelectorAll('.holding-info-value');
+        if (infoValues.length >= 4) {
+            infoValues[0].textContent = `${formatNumber(quantity)}주`;
+            infoValues[1].textContent = formatCurrency(evalAmount);
+            infoValues[1].style.color = textColor;
+            infoValues[2].textContent = formatCurrency(purchasePrice);
+            infoValues[3].textContent = formatCurrency(currentPrice);
+            infoValues[3].style.color = textColor;
+        }
     },
 
     // 시장 지수 업데이트
