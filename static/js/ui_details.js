@@ -297,23 +297,24 @@ Object.assign(window.UI, {
 
             <div class="analysis-section">
                 <h3>AI 투자 의견</h3>
-                <div class="outlook-card neutral" style="min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                    <div class="spinner" style="width: 40px; height: 40px; border-width: 4px; margin-bottom: 1rem;"></div>
-                    <p style="color: var(--text-secondary);">AI가 종목을 분석하고 있습니다...</p>
+                <div class="outlook-card neutral" style="min-height: 120px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <div class="spinner" style="width: 24px; height: 24px; border-width: 3px; margin-bottom: 0.5rem;"></div>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">분석 중...</p>
                 </div>
             </div>
 
+
             <div class="analysis-section">
                 <h3>수급 현황</h3>
-                <div class="supply-summary" style="display: flex; justify-content: center; padding: 2rem;">
-                    <span style="color: var(--text-secondary);">수급 데이터 분석 중...</span>
+                <div class="supply-summary" style="display: flex; justify-content: center; padding: 1rem;">
+                    <span style="color: var(--text-secondary); font-size: 0.9rem;">분석 중...</span>
                 </div>
             </div>
 
             <div class="analysis-section">
                 <h3>뉴스 요약</h3>
-                <div class="news-summary" style="display: flex; justify-content: center; padding: 2rem;">
-                    <span style="color: var(--text-secondary);">최신 뉴스 분석 중...</span>
+                <div class="news-summary" style="display: flex; justify-content: center; padding: 1rem;">
+                    <span style="color: var(--text-secondary); font-size: 0.9rem;">분석 중...</span>
                 </div>
             </div>
         `;
@@ -407,8 +408,8 @@ Object.assign(window.UI, {
         // 로딩 상태로 재설정
         document.getElementById('overviewContent').innerHTML = `
             <div style="text-align: center; padding: 3rem;">
-                <div class="spinner" style="width: 40px; height: 40px; border-width: 4px; margin: 0 auto;"></div>
-                <p style="margin-top: 1rem; color: var(--text-secondary);">다시 시도하고 있습니다...</p>
+                <div class="spinner" style="width: 24px; height: 24px; border-width: 3px; margin: 0 auto 0.5rem;"></div>
+                <p style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">다시 시도하고 있습니다...</p>
             </div>
         `;
         // 강제 새로고침으로 재시도
