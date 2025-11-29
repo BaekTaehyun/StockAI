@@ -275,8 +275,8 @@ Object.assign(window.UI, {
         title.textContent = `${stock.stk_nm} (${stock.stk_cd})`;
         modal.style.display = 'flex';
 
-        // 전역 로딩 스피너 숨김
-        loading.style.display = 'none';
+        // 전역 로딩 스피너 숨김 (존재할 경우)
+        if (loading) loading.style.display = 'none';
 
         // 탭과 본문 즉시 표시
         tabs.style.display = 'flex';

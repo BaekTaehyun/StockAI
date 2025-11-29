@@ -178,7 +178,7 @@
     }
 }
 
-/* 전역 스피너 크기 조정 (모바일) */
+/* 전역 스피너 크기 조정 (모바일) 및 강제 숨김 */
 @media (max-width: 768px) {
     .spinner {
         width: 30px !important;
@@ -187,6 +187,7 @@
     }
 
     .loading-spinner {
+        display: none !important;
         padding: 1.5rem !important;
     }
 

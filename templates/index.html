@@ -8,10 +8,10 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>키움 주식 대시보드</title>
-    <link rel="stylesheet" href="/static/css/core.css?v=20251130_2">
-    <link rel="stylesheet" href="/static/css/cards.css?v=20251130_2">
-    <link rel="stylesheet" href="/static/css/details.css?v=20251130_2">
-    <link rel="stylesheet" href="/static/css/mobile.css?v=20251130_2">
+    <link rel="stylesheet" href="/static/css/core.css?v=20251130_3">
+    <link rel="stylesheet" href="/static/css/cards.css?v=20251130_3">
+    <link rel="stylesheet" href="/static/css/details.css?v=20251130_3">
+    <link rel="stylesheet" href="/static/css/mobile.css?v=20251130_3">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
@@ -116,8 +116,8 @@
                 <span class="close" onclick="closeModal()">&times;</span>
                 <h2 id="modalTitle">종목 상세</h2>
 
-                <!-- 로딩 스피너 -->
-                <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+                <!-- 로딩 스피너 (더 이상 사용하지 않음, 강제 숨김) -->
+                <div id="loadingSpinner" class="loading-spinner" style="display: none !important;">
                     <div class="spinner"></div>
                     <p>분석 중...</p>
                 </div>
@@ -157,13 +157,13 @@
     </div>
 
     <!-- JS Modules -->
-    <script src="{{ url_for('static', filename='js/utils.js') }}?v=20251130_2"></script>
-    <script src="{{ url_for('static', filename='js/api.js') }}?v=20251130_2"></script>
-    <script src="{{ url_for('static', filename='js/charts.js') }}?v=20251130_2"></script>
-    <script src="{{ url_for('static', filename='js/ui_core.js') }}?v=20251130_2"></script>
-    <script src="{{ url_for('static', filename='js/ui_cards.js') }}?v=20251130_2"></script>
-    <script src="{{ url_for('static', filename='js/ui_details.js') }}?v=20251130_2"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}?v=20251130_2"></script>
+    <script src="{{ url_for('static', filename='js/utils.js') }}?v=20251130_3"></script>
+    <script src="{{ url_for('static', filename='js/api.js') }}?v=20251130_3"></script>
+    <script src="{{ url_for('static', filename='js/charts.js') }}?v=20251130_3"></script>
+    <script src="{{ url_for('static', filename='js/ui_core.js') }}?v=20251130_3"></script>
+    <script src="{{ url_for('static', filename='js/ui_cards.js') }}?v=20251130_3"></script>
+    <script src="{{ url_for('static', filename='js/ui_details.js') }}?v=20251130_3"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=20251130_3"></script>
 </body>
 
 </html>
