@@ -246,12 +246,83 @@ Object.assign(window.UI, {
         // 초기화
         title.textContent = `${stock.stk_nm} (${stock.stk_cd})`;
         modal.style.display = 'flex';
-        loading.style.display = 'block';
-        tabs.style.display = 'none';
-        body.style.display = 'none';
+
+        // 전역 로딩 스피너 숨김
+        loading.style.display = 'none';
+
+        // 탭과 본문 즉시 표시
+        tabs.style.display = 'flex';
+        body.style.display = 'block';
+
+        // 초기 데이터(주가 정보) 렌더링 및 로딩 상태 표시
+        this.renderInitialOverview(stock);
+
+        // 기본 탭 활성화
+        this.switchTab('overview');
 
         // 데이터 로드
         this.loadStockAnalysis(stock.stk_cd);
+    },
+
+    // 초기 개요 렌더링 (주가 정보 즉시 표시 + 로딩 인디케이터)
+    renderInitialOverview(stock) {
+        const currentPrice = parseInt(stock.price || stock.cur_prc || 0);
+        // change, change_rate 정보가 stock 객체에 없을 수도 있음 (목록에서 넘겨받은 데이터에 따라 다름)
+        // ui_cards.js에서 넘겨주는 데이터 구조 확인 필요. 보통 price만 넘겨주는 경우가 많음.
+        // 여기서는 일단 있는 정보로 렌더링하고, 없는 정보는 '-'로 표시하거나 계산 시도
+
+        // ui_cards.js의 openStockModal 호출부를 보면: 
+        // { code, name, price: stockData.price, stk_cd: code, stk_nm: name } 형태로 넘김 (관심종목)
+        // 보유종목은 전체 stock 객체를 넘김.
+
+        // 포맷팅
+        const formattedPrice = formatCurrency(currentPrice);
+
+        const html = `
+            <div class="analysis-section">
+                <h3>주가 정보</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="label">현재가</span>
+                        <span class="value" style="color: var(--text-primary);">${formattedPrice}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">전일대비</span>
+                        <span class="value">
+                            <span style="font-size: 0.9rem; color: var(--text-secondary);">데이터 로딩중...</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-section">
+                <h3>AI 투자 의견</h3>
+                <div class="outlook-card neutral" style="min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <div class="spinner" style="width: 40px; height: 40px; border-width: 4px; margin-bottom: 1rem;"></div>
+                    <p style="color: var(--text-secondary);">AI가 종목을 분석하고 있습니다...</p>
+                </div>
+            </div>
+
+            <div class="analysis-section">
+                <h3>수급 현황</h3>
+                <div class="supply-summary" style="display: flex; justify-content: center; padding: 2rem;">
+                    <span style="color: var(--text-secondary);">수급 데이터 분석 중...</span>
+                </div>
+            </div>
+
+            <div class="analysis-section">
+                <h3>뉴스 요약</h3>
+                <div class="news-summary" style="display: flex; justify-content: center; padding: 2rem;">
+                    <span style="color: var(--text-secondary);">최신 뉴스 분석 중...</span>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('overviewContent').innerHTML = html;
+
+        // 다른 탭들도 로딩 상태로 초기화
+        document.getElementById('supplyContent').innerHTML = '<div style="padding: 3rem; text-align: center; color: var(--text-secondary);">데이터를 불러오는 중입니다...</div>';
+        document.getElementById('newsContent').innerHTML = '<div style="padding: 3rem; text-align: center; color: var(--text-secondary);">데이터를 불러오는 중입니다...</div>';
     },
 
     // 종목 상세 분석 데이터 로드
@@ -277,7 +348,8 @@ Object.assign(window.UI, {
                 }
 
                 // UI 표시 업데이트
-                loading.style.display = 'none';
+                // UI 표시 업데이트 (이미 표시되어 있지만, 로딩 스피너가 있다면 확실히 숨김)
+                if (loading) loading.style.display = 'none';
                 tabs.style.display = 'flex';
                 body.style.display = 'block';
 

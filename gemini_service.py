@@ -1,4 +1,5 @@
 import google.generativeai as genai
+from google.api_core import exceptions
 import config
 import json
 import os
@@ -45,8 +46,20 @@ class GeminiService:
                 print(f"[Gemini API] No text in response. Candidates: {response.candidates if hasattr(response, 'candidates') else 'N/A'}")
                 return None
                 
+        except exceptions.DeadlineExceeded:
+            print(f"[Gemini API Error] Timeout (60s exceeded). The model took too long to respond.")
+            return None
+        except exceptions.ResourceExhausted:
+            print(f"[Gemini API Error] Quota exceeded (429). Please try again later.")
+            return None
+        except exceptions.ServiceUnavailable:
+            print(f"[Gemini API Error] Service unavailable (503). Google servers might be overloaded.")
+            return None
+        except exceptions.GoogleAPICallError as e:
+            print(f"[Gemini API Error] API Call Error ({e.code}): {e.message}")
+            return None
         except Exception as e:
-            print(f"[Gemini API Error] {type(e).__name__}: {e}")
+            print(f"[Gemini API Error] Unexpected error: {type(e).__name__}: {e}")
             import traceback
             traceback.print_exc()
             return None

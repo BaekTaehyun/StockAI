@@ -106,7 +106,7 @@ async function loadHoldings() {
 
         const now = Date.now();
         const isFirst = !window.lastSentimentUpdate;
-        const interval = window.SENTIMENT_REFRESH_INTERVAL || (30 * 60 * 1000); // 30분
+        const interval = window.SENTIMENT_REFRESH_INTERVAL || (2 * 60 * 60 * 1000); // 2시간
 
         if (isFirst || now - (window.lastSentimentUpdate || 0) > interval) {
             console.log('🎗️ 리본 정보 업데이트 시작', isFirst ? '(첫 로드)' : '(주기적 갱신)');
@@ -158,7 +158,7 @@ async function updateAllSentiments(holdings) {
         if (code) {
             // 7초 딜레이 추가 (첫 번째 종목은 즉시 실행)
             if (i > 0) {
-                await new Promise(resolve => setTimeout(resolve, 7000));
+                await new Promise(resolve => setTimeout(resolve, 60000)); // 1분 간격
             }
             await updateSingleSentiment(code);
         }
@@ -263,7 +263,7 @@ window.triggerWatchlistSentimentUpdate = (stocks) => {
 
     const now = Date.now();
     const isFirst = !window.lastWatchlistSentimentUpdate;
-    const interval = 30 * 60 * 1000; // 30분
+    const interval = 2 * 60 * 60 * 1000; // 2시간
 
     if (isFirst || now - (window.lastWatchlistSentimentUpdate || 0) > interval) {
         console.log('🎗️ 관심종목 리본 정보 업데이트');
