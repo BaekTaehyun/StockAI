@@ -327,9 +327,15 @@ Object.assign(window.UI, {
                     } else if (foreigner < 0 && institution < 0) {
                         badge = '<span class="badge-supply sell">양매도 📉</span>';
                     } else if (foreigner > 0 && institution < 0) {
-                        badge = '<span class="badge-supply buy">외인매수/기관매도</span>';
+                        badge = `<div style="display: flex; flex-direction: column; gap: 4px;">
+                            <span class="badge-supply buy" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">외인 매수</span>
+                            <span class="badge-supply sell" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">기관 매도</span>
+                        </div>`;
                     } else if (foreigner < 0 && institution > 0) {
-                        badge = '<span class="badge-supply sell">외인매도/기관매수</span>';
+                        badge = `<div style="display: flex; flex-direction: column; gap: 4px;">
+                            <span class="badge-supply sell" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">외인 매도</span>
+                            <span class="badge-supply buy" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">기관 매수</span>
+                        </div>`;
                     } else if (foreigner > 0) {
                         badge = '<span class="badge-supply buy">외인 매수중 📈</span>';
                     } else if (foreigner < 0) {
@@ -403,9 +409,15 @@ Object.assign(window.UI, {
                     } else if (foreigner < 0 && institution < 0) {
                         badge = '<span class="badge-supply sell">양매도 📉</span>';
                     } else if (foreigner > 0 && institution < 0) {
-                        badge = '<span class="badge-supply buy">외인매수/기관매도</span>';
+                        badge = `<div style="display: flex; flex-direction: column; gap: 4px;">
+                            <span class="badge-supply buy" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">외인 매수</span>
+                            <span class="badge-supply sell" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">기관 매도</span>
+                        </div>`;
                     } else if (foreigner < 0 && institution > 0) {
-                        badge = '<span class="badge-supply sell">외인매도/기관매수</span>';
+                        badge = `<div style="display: flex; flex-direction: column; gap: 4px;">
+                            <span class="badge-supply sell" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">외인 매도</span>
+                            <span class="badge-supply buy" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">기관 매수</span>
+                        </div>`;
                     } else if (foreigner > 0) {
                         badge = '<span class="badge-supply buy">외인 매수중 📈</span>';
                     } else if (foreigner < 0) {
