@@ -326,6 +326,10 @@ Object.assign(window.UI, {
                         badge = '<span class="badge-supply buy">쌍끌이 매수 🚀</span>';
                     } else if (foreigner < 0 && institution < 0) {
                         badge = '<span class="badge-supply sell">양매도 📉</span>';
+                    } else if (foreigner > 0 && institution < 0) {
+                        badge = '<span class="badge-supply buy">외인매수/기관매도</span>';
+                    } else if (foreigner < 0 && institution > 0) {
+                        badge = '<span class="badge-supply sell">외인매도/기관매수</span>';
                     } else if (foreigner > 0) {
                         badge = '<span class="badge-supply buy">외인 매수중 📈</span>';
                     } else if (foreigner < 0) {
@@ -398,6 +402,10 @@ Object.assign(window.UI, {
                         badge = '<span class="badge-supply buy">쌍끌이 매수 🚀</span>';
                     } else if (foreigner < 0 && institution < 0) {
                         badge = '<span class="badge-supply sell">양매도 📉</span>';
+                    } else if (foreigner > 0 && institution < 0) {
+                        badge = '<span class="badge-supply buy">외인매수/기관매도</span>';
+                    } else if (foreigner < 0 && institution > 0) {
+                        badge = '<span class="badge-supply sell">외인매도/기관매수</span>';
                     } else if (foreigner > 0) {
                         badge = '<span class="badge-supply buy">외인 매수중 📈</span>';
                     } else if (foreigner < 0) {
