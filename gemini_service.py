@@ -22,12 +22,12 @@ class GeminiService:
 
 
     def _call_gemini_api(self, prompt_text):
-        """Gemini SDK를 사용한 API 호출 (60초 timeout)"""
+        """Gemini SDK를 사용한 API 호출 (120초 timeout)"""
         try:
-            # timeout 설정: 60초
+            # timeout 설정: 120초 (긴 분석에 대비)
             response = self.model.generate_content(
                 prompt_text,
-                request_options={'timeout': 60}
+                request_options={'timeout': 120}
             )
             
             # 디버깅: 응답 확인
