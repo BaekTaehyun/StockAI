@@ -279,10 +279,57 @@ class GeminiService:
             print(f"[Gemini] 섹터 검색 실패: {e}")
             return "섹터 미상"
 
-    
-    def generate_outlook(self, stock_name, stock_info, supply_demand, technical_indicators, news_analysis, market_data=None, fundamental_data=None, force_refresh=False):
+    def select_core_themes(self, stock_name, stock_code, all_themes, force_refresh=False):
+        """
+        종목의 전체 테마 중 핵심 테마 3~5개를 AI로 선정 (30일 캐싱)
+        """
+        # 1. 캐시 확인 (유효기간 30일)
+        cached_data, _ = self.cache.load(stock_code, 'core_themes', force_refresh)
+        if cached_data:
+            return cached_data
+
+        try:
+            # 테마 이름만 추출
+            theme_names = [t['theme_name'] for t in all_themes]
+            theme_list_str = ", ".join(theme_names)
+            
+            prompt = prompts.CORE_THEME_SELECTION_PROMPT.format(
+                stock_name=stock_name,
+                all_themes=theme_list_str
+            )
+            
+            result_text = self._call_gemini_api(prompt)
+            if not result_text:
+                return theme_names[:3] # 실패 시 앞의 3개 반환
+            
+            # JSON 파싱 시도
+            import re
+            try:
+                # 대괄호 안의 내용만 추출
+                match = re.search(r'\[.*\]', result_text, re.DOTALL)
+                if match:
+                    json_str = match.group(0)
+                    core_themes = json.loads(json_str)
+                else:
+                    # JSON 형식이 아니면 쉼표로 분리 시도
+                    core_themes = [t.strip() for t in result_text.split(',')]
+            except:
+                # 파싱 실패 시 원본 텍스트를 적절히 처리하거나 기본값 사용
+                print(f"[Gemini] 핵심 테마 파싱 실패. Raw: {result_text}")
+                core_themes = theme_names[:3]
+
+            # 2. 결과 캐싱
+            self.cache.save(stock_code, 'core_themes', core_themes)
+            return core_themes
+            
+        except Exception as e:
+            print(f"[Gemini] 핵심 테마 선정 실패: {e}")
+            return []
+
+    def generate_outlook(self, stock_name, stock_info, supply_demand, technical_indicators, news_analysis, market_data=None, fundamental_data=None, theme_service=None, force_refresh=False):
         """
         종합 정보를 바탕으로 AI 전망 생성 (캐싱 적용)
+        Core + Active 테마 전략 적용
         """
         stock_code = stock_info.get('code', 'unknown')
         
@@ -293,6 +340,36 @@ class GeminiService:
             return cached_data
 
         try:
+            # --- 테마 분석 (Core + Active) ---
+            stock_sector_str = "정보 없음"
+            
+            if theme_service:
+                # 1. 전체 테마 가져오기
+                all_themes = theme_service.find_themes_by_stock(stock_code)
+                
+                # 2. 핵심 테마 선정 (AI)
+                core_themes = self.select_core_themes(stock_name, stock_code, all_themes)
+                
+                # 3. 오늘 강세 테마 (Active) 필터링
+                # 등락률이 1.0% 이상이거나, 상위 3개 테마
+                active_themes = []
+                for theme in all_themes:
+                    try:
+                        fluc = float(theme.get('theme_fluctuation', 0))
+                        if fluc >= 1.0:
+                            active_themes.append(f"{theme['theme_name']}({fluc}%)")
+                    except:
+                        pass
+                
+                # 상위 3개만 추리기
+                active_themes = active_themes[:3]
+                
+                # 프롬프트용 문자열 구성
+                stock_sector_str = f"- 핵심 테마(Identity): {', '.join(core_themes)}\n- 오늘 강세 테마(Active): {', '.join(active_themes) if active_themes else '없음 (모든 테마가 약세거나 보합)'}"
+            else:
+                # theme_service가 없는 경우 (기존 로직 호환)
+                stock_sector_str = market_data.get('sector', '정보 없음')
+
             # 기술적 지표 상세 정보 추출
             rsi = technical_indicators.get('rsi', 50)
             rsi_signal = technical_indicators.get('rsi_signal', '중립')
@@ -307,7 +384,7 @@ class GeminiService:
             market_data = market_data or {}
             market_index_status = market_data.get('market_index', '정보 없음')
             current_hot_themes = market_data.get('themes', '정보 없음')
-            stock_sector = market_data.get('sector', '정보 없음')
+            # stock_sector는 위에서 계산함
 
             # 펀더멘털 데이터 추출
             fundamental_data = fundamental_data or {}
@@ -316,22 +393,13 @@ class GeminiService:
             market_cap = fundamental_data.get('market_cap_raw', 'N/A')
             if market_cap != 'N/A':
                 try:
-                    # API가 억단위로 주는지 원단위로 주는지에 따라 다르지만, 
-                    # test_api_fields 결과 "7780" -> 삼성전자 시총 500조. 
-                    # 7780 * 100000000 = 7780억? 너무 작음.
-                    # 삼성전자 시가총액은 약 400조원. 
-                    # API 응답 "cap": "7780" -> 이게 7780조일리는 없고.
-                    # 아마 모의투자 서버라 데이터가 이상하거나, 단위가 다를 수 있음.
-                    # 일단 있는 그대로 보여주되 "API 데이터"라고 명시하거나, 
-                    # 억 단위로 가정하고 포맷팅.
-                    # 여기서는 raw 값을 그대로 쓰되 단위는 프롬프트가 알아서 판단하게 둠.
                     pass
                 except:
                     pass
 
             prompt = prompts.OUTLOOK_GENERATION_PROMPT.format(
                 stock_name=stock_name,
-                stock_sector=stock_sector,
+                stock_sector=stock_sector_str,
                 market_index_status=market_index_status,
                 current_hot_themes=current_hot_themes,
                 current_price=stock_info.get('price', 'N/A'),
@@ -355,20 +423,12 @@ class GeminiService:
                 roe=fundamental_data.get('roe', 'N/A'),
                 operating_profit=self._format_large_number(fundamental_data.get('operating_profit_raw', '0'))
             )
-
-            
-            # 디버깅: 프롬프트 확인
-            # 디버깅: 프롬프트 전체 출력
-            # 디버깅: 프롬프트 확인 (필요시 주석 해제)
-            # print(f"\n{'='*50}\n[Debug] Generated Prompt:\n{prompt}\n{'='*50}\n")
-
             
             result_text = self._call_gemini_api(prompt)
             
             if not result_text:
                 raise Exception("API 응답 없음")
             
-            # 응답 파싱
             # 응답 파싱
             recommendation = "중립"
             confidence = 50

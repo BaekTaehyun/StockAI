@@ -277,7 +277,8 @@ def get_config():
     return jsonify({
         'success': True,
         'data': {
-            'sentiment_refresh_minutes': getattr(config, 'SENTIMENT_REFRESH_MINUTES', 5)
+            'sentiment_refresh_minutes': getattr(config, 'SENTIMENT_REFRESH_MINUTES', 5),
+            'sentiment_update_delay_seconds': getattr(config, 'SENTIMENT_UPDATE_DELAY_SECONDS', 15)
         }
     })
 

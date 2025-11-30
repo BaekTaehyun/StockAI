@@ -21,6 +21,29 @@
 const API_BASE = '';
 
 const API = {
+    // 설정 로드
+    async fetchConfig() {
+        try {
+            const response = await fetch(`${API_BASE}/api/config`);
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    window.SENTIMENT_REFRESH_MINUTES = result.data.sentiment_refresh_minutes;
+                    window.SENTIMENT_UPDATE_DELAY_SECONDS = result.data.sentiment_update_delay_seconds;
+
+                    // 갱신 주기 계산 (밀리초)
+                    window.SENTIMENT_REFRESH_INTERVAL = window.SENTIMENT_REFRESH_MINUTES * 60 * 1000;
+                    console.log(`⚙️ 설정 로드 완료: 감성 갱신 주기 ${window.SENTIMENT_REFRESH_MINUTES}분, 카드 갱신 간격 ${window.SENTIMENT_UPDATE_DELAY_SECONDS}초`);
+                }
+                return result;
+            }
+            return { success: false, message: '설정 로드 실패' };
+        } catch (error) {
+            console.error('설정 로드 실패:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
     // 계좌 요약 정보 로드
     async fetchAccountSummary() {
         try {

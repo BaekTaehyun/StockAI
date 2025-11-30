@@ -1,541 +1,414 @@
-/* Modal */
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(5px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background: var(--bg-card);
-    padding: 0;
-    border-radius: 24px;
-    border: 1px solid var(--border);
-    max-width: 800px;
-    width: 95%;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    position: relative;
-}
-
-.close {
-    position: absolute;
-    top: 2rem;
-    right: 3rem;
-    font-size: 2rem;
-    font-weight: bold;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: color 0.3s ease;
-    z-index: 1002;
-}
-
-.close:hover {
-    color: var(--danger);
-}
-
-.modal-content h2 {
-    flex-shrink: 0;
-    background: var(--bg-card);
-    padding: 2rem 3rem 1rem 3rem;
-    margin: 0;
-    border-bottom: 2px solid var(--border);
-}
-
-/* Analysis Tabs */
-.analysis-tabs {
-    flex-shrink: 0;
-    display: flex;
-    gap: 1rem;
-    padding: 1rem 3rem;
-    border-bottom: 2px solid var(--border);
-    background: var(--bg-card);
-}
-
-.analysis-tabs .tab {
-    padding: 0.75rem 1.5rem;
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border-bottom: 3px solid transparent;
-}
-
-.analysis-tabs .tab.active {
-    color: var(--accent-1);
-    border-bottom-color: var(--accent-1);
-}
-
-.analysis-tabs .tab:hover {
-    color: var(--text-primary);
-}
-
-/* Modal Body - Scrollable area */
-#modalBody {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 0 1.5rem 1.5rem 1.5rem;
-}
-
-/* Tab Content */
-.tab-content {
-    padding: 1.5rem 0;
-}
-
-.tab-content.hidden {
-    display: none;
-}
-
-/* Analysis Sections */
-.analysis-section {
-    margin-bottom: 2rem;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 12px;
-    border: 1px solid var(--border);
-}
-
-.analysis-section h3 {
-    font-size: 1.2rem;
-    margin-bottom: 1rem;
-    color: var(--accent-1);
-}
-
-/* Info Grid */
-.info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-.info-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.info-item .label {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-}
-
-.info-item .value {
-    font-size: 1.3rem;
-    font-weight: 700;
-}
-
-.info-item .value.positive {
-    color: var(--success);
-}
-
-.info-item .value.negative {
-    color: var(--danger);
-}
-
-/* Outlook Card */
-.outlook-card {
-    padding: 1rem;
-    border-radius: 12px;
-    border: 2px solid;
-}
-
-.outlook-card.buy {
-    background: rgba(16, 185, 129, 0.1);
-    border-color: var(--success);
-}
-
-.outlook-card.sell {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: var(--danger);
-}
-
-.outlook-card.neutral {
-    background: rgba(245, 158, 11, 0.1);
-    border-color: var(--warning);
-}
-
-.outlook-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.recommendation {
-    font-size: 1.5rem;
-    font-weight: 700;
-}
-
-.confidence {
-    font-size: 1rem;
-    color: var(--text-secondary);
-}
-
-.reasoning {
-    line-height: 1.6;
-    color: var(--text-primary);
-}
-
-/* Supply Demand */
-.supply-summary {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 1rem;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-}
-
-.supply-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 1rem;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 8px;
-}
-
-.supply-item.positive {
-    background: rgba(16, 185, 129, 0.1);
-}
-
-.supply-item.negative {
-    background: rgba(239, 68, 68, 0.1);
-}
-
-.supply-item .label {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-}
-
-.supply-item .value {
-    font-size: 1.1rem;
-    font-weight: 700;
-}
-
-.supply-item.positive .value {
-    color: var(--success);
-}
-
-.supply-item.negative .value {
-    color: var(--danger);
-}
-
-.supply-summary .trend {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding-top: 1rem;
-    margin-top: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-    font-weight: 500;
-}
-
-.supply-detail {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.detail-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 8px;
-}
-
-.detail-row.total {
-    background: rgba(99, 102, 241, 0.1);
-    font-weight: 700;
-    border: 1px solid var(--accent-1);
-}
-
-.trend-box {
-    padding: 1rem;
-    background: rgba(99, 102, 241, 0.1);
-    border-radius: 8px;
-    text-align: center;
-    color: var(--accent-1);
-    font-weight: 600;
-}/* ================================================================
-
-   d$??ۊ???}1???- d$ ?I ?P ??
-
-   ================================================================ */
-
-
-
-/* ?1u?ۊ??{1O? (768px ?/) */
-
-@media (max-width: 768px) {
-
-    .modal {
-
-        padding: 0 !important;
-
-    }
-
-
-
-    .modal-content {
-
-        width: 100% !important;
-
-        height: 100vh !important;
-
-        max-width: 100% !important;
-
-        max-height: 100vh !important;
-
-        margin: 0 !important;
-
-        border-radius: 0 !important;
-
-        display: flex !important;
-
-        flex-direction: column !important;
-
-    }
-
-
-
-    /* ?{1: 5% - ??*/
-
-    .modal-content h2 {
-
-        flex: 0 0 auto !important;
-
-        max-height: 5vh !important;
-
-        min-height: 40px !important;
-
-        padding: 0.5rem 1rem !important;
-
-        font-size: 1rem !important;
-
-        margin: 0 !important;
-
-        border-bottom: 1px solid var(--border) !important;
-
-        display: flex !important;
-
-        align-items: center !important;
-
-        line-height: 1.2 !important;
-
-        overflow: hidden !important;
-
-    }
-
-
-
-    .close {
-
-        position: absolute !important;
-
-        top: 0.25rem !important;
-
-        right: 0.5rem !important;
-
-        font-size: 1.5rem !important;
-
-        padding: 0.25rem 0.5rem !important;
-
-        line-height: 1 !important;
-
-        z-index: 1000 !important;
-
-    }
-
-
-
-    /* ?? 5% - ??*/
-
-    .analysis-tabs {
-
-        flex: 0 0 auto !important;
-
-        max-height: 5vh !important;
-
-        min-height: 40px !important;
-
-        padding: 0.25rem 0.5rem !important;
-
-        border-bottom: 1px solid var(--border) !important;
-
-        display: flex !important;
-
-        align-items: center !important;
-
-        gap: 0.25rem !important;
-
-        overflow-x: auto !important;
-
-        overflow-y: hidden !important;
-
-        white-space: nowrap !important;
-
-    }
-
-
-
-    .analysis-tabs .tab {
-
-        padding: 0.35rem 0.6rem !important;
-
-        font-size: 0.8rem !important;
-
-        white-space: nowrap !important;
-
-        flex-shrink: 0 !important;
-
-        min-height: auto !important;
-
-        line-height: 1 !important;
-
-    }
-
-
-
-    /* B&: 90% - ???*/
-
-    #modalBody { padding: 0 !important; 
-
-        flex: 1 1 auto !important;
-
-        overflow-y: auto !important;
-
-        overflow-x: hidden !important;
-
-        -webkit-overflow-scrolling: touch !important;
-
-        height: auto !important;
-
-    }
-
-
-
-    .tab-content {
-
-        padding: 0.75rem !important;
-
-        height: 100% !important;
-
-    }
-
-
-
-    #loadingSpinner {
-
-        flex: 1 1 auto !important;
-
-        display: flex !important;
-
-        flex-direction: column !important;
-
-        justify-content: center !important;
-
-        align-items: center !important;
-
-    }
-
-
-
-    /* rn? d$????*/
-
-    .analysis-section h3 {
-
-        font-size: 1rem !important;
-
-    }
-
-
-
-    .info-grid,
-
-    .supply-summary {
-
-        gap: 0.75rem !important;
-
-    }
-
-}
-
-
-
-/* ?{1O? (480px ?/) - pu? ??*/
-
-@media (max-width: 480px) {
-
-    .modal-content h2 {
-
-        padding: 0.4rem 0.75rem !important;
-
-        font-size: 0.95rem !important;
-
-    }
-
-
-
-    .close {
-
-        top: 0.2rem !important;
-
-        right: 0.4rem !important;
-
-        font-size: 1.4rem !important;
-
-    }
-
-
-
-    .analysis-tabs {
-
-        padding: 0.2rem 0.5rem !important;
-
-    }
-
-
-
-    .analysis-tabs .tab {
-
-        padding: 0.3rem 0.5rem !important;
-
-        font-size: 0.75rem !important;
-
-    }
-
-
-
-    .tab-content {
-
-        padding: 0.5rem !important;
-
-    }
-
-}
-
-/* ================================================================
-
-   d$??ۊ???}1???- d$ 5/5/90 nI
-
-   ================================================================ */
-
-
-
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--bg-card);
+    padding: 0;
+    border-radius: 24px;
+    border: 1px solid var(--border);
+    max-width: 800px;
+    width: 95%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.close {
+    position: absolute;
+    top: 2rem;
+    right: 3rem;
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.3s ease;
+    z-index: 1002;
+}
+
+.close:hover {
+    color: var(--danger);
+}
+
+.modal-content h2 {
+    flex-shrink: 0;
+    background: var(--bg-card);
+    padding: 2rem 3rem 1rem 3rem;
+    margin: 0;
+    border-bottom: 2px solid var(--border);
+}
+
+/* Analysis Tabs */
+.analysis-tabs {
+    flex-shrink: 0;
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 3rem;
+    border-bottom: 2px solid var(--border);
+    background: var(--bg-card);
+}
+
+.analysis-tabs .tab {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-bottom: 3px solid transparent;
+}
+
+.analysis-tabs .tab.active {
+    color: var(--accent-1);
+    border-bottom-color: var(--accent-1);
+}
+
+.analysis-tabs .tab:hover {
+    color: var(--text-primary);
+}
+
+/* Modal Body - Scrollable area */
+#modalBody {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 1.5rem 1.5rem 1.5rem;
+}
+
+/* Tab Content */
+.tab-content {
+    padding: 1.5rem 0;
+}
+
+.tab-content.hidden {
+    display: none;
+}
+
+/* Analysis Sections */
+.analysis-section {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+.analysis-section h3 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    color: var(--accent-1);
+}
+
+/* Info Grid */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.info-item .label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.info-item .value {
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.info-item .value.positive {
+    color: var(--success);
+}
+
+.info-item .value.negative {
+    color: var(--danger);
+}
+
+/* Outlook Card */
+.outlook-card {
+    padding: 1rem;
+    border-radius: 12px;
+    border: 2px solid;
+}
+
+.outlook-card.buy {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--success);
+}
+
+.outlook-card.sell {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--danger);
+}
+
+.outlook-card.neutral {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: var(--warning);
+}
+
+.outlook-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.recommendation {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.confidence {
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+.reasoning {
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+/* Supply Demand */
+.supply-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+.supply-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.supply-item.positive {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.supply-item.negative {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.supply-item .label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.supply-item .value {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.supply-item.positive .value {
+    color: var(--success);
+}
+
+.supply-item.negative .value {
+    color: var(--danger);
+}
+
+.supply-summary .trend {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.supply-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+}
+
+.detail-row.total {
+    background: rgba(99, 102, 241, 0.1);
+    font-weight: 700;
+    border: 1px solid var(--accent-1);
+}
+
+.trend-box {
+    padding: 1rem;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 8px;
+    text-align: center;
+    color: var(--accent-1);
+    font-weight: 600;
+}
+
+/* ================================================================
+   모바일 반응형 스타일 (768px 이하)
+   ================================================================ */
+
+@media (max-width: 768px) {
+    .modal {
+        padding: 0 !important;
+    }
+
+    .modal-content {
+        width: 100% !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        /* iOS dynamic viewport height */
+        max-width: 100% !important;
+        max-height: 100vh !important;
+        max-height: 100dvh !important;
+        /* iOS dynamic viewport height */
+        margin: 0 !important;
+        border-radius: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+
+        /* Safe area handling for notched phones */
+        padding-top: env(safe-area-inset-top) !important;
+        padding-bottom: env(safe-area-inset-bottom) !important;
+    }
+
+    /* 헤더 높이 고정 */
+    .modal-content h2 {
+        flex: 0 0 auto !important;
+        max-height: 5vh !important;
+        min-height: 40px !important;
+        padding: 0.5rem 1rem !important;
+        font-size: 1rem !important;
+        margin: 0 !important;
+        border-bottom: 1px solid var(--border) !important;
+        display: flex !important;
+        align-items: center !important;
+        line-height: 1.2 !important;
+        overflow: hidden !important;
+    }
+
+    .close {
+        position: absolute !important;
+        top: 0.25rem !important;
+        right: 0.5rem !important;
+        font-size: 1.5rem !important;
+        padding: 0.25rem 0.5rem !important;
+        line-height: 1 !important;
+        z-index: 1000 !important;
+    }
+
+    /* 탭 영역 고정 */
+    .analysis-tabs {
+        flex: 0 0 auto !important;
+        max-height: 5vh !important;
+        min-height: 40px !important;
+        padding: 0.25rem 0.5rem !important;
+        border-bottom: 1px solid var(--border) !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.25rem !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        white-space: nowrap !important;
+    }
+
+    .analysis-tabs .tab {
+        padding: 0.35rem 0.6rem !important;
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+        min-height: auto !important;
+        line-height: 1 !important;
+    }
+
+    /* 본문 영역: 나머지 공간 모두 차지 */
+    #modalBody {
+        padding: 0 !important;
+        flex: 1 1 auto !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        height: auto !important;
+    }
+
+    .tab-content {
+        padding: 0.75rem !important;
+        height: 100% !important;
+    }
+
+    #loadingSpinner {
+        flex: 1 1 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+
+    /* 폰트 크기 조정 */
+    .analysis-section h3 {
+        font-size: 1rem !important;
+    }
+
+    .info-grid,
+    .supply-summary {
+        gap: 0.75rem !important;
+    }
+}
+
+/* 초소형 화면 (480px 이하) - 추가 조정 */
+@media (max-width: 480px) {
+    .modal-content h2 {
+        padding: 0.4rem 0.75rem !important;
+        font-size: 0.95rem !important;
+    }
+
+    .close {
+        top: 0.2rem !important;
+        right: 0.4rem !important;
+        font-size: 1.4rem !important;
+    }
+
+    .analysis-tabs {
+        padding: 0.2rem 0.5rem !important;
+    }
+
+    .analysis-tabs .tab {
+        padding: 0.3rem 0.5rem !important;
+        font-size: 0.75rem !important;
+    }
+
+    .tab-content {
+        padding: 0.5rem !important;
+    }
+}

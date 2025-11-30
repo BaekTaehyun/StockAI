@@ -158,7 +158,9 @@ async function updateAllSentiments(holdings) {
         if (code) {
             // 7초 딜레이 추가 (첫 번째 종목은 즉시 실행)
             if (i > 0) {
-                await new Promise(resolve => setTimeout(resolve, 60000)); // 1분 간격
+                // 설정된 딜레이 사용 (기본값 15초)
+                const delay = (window.SENTIMENT_UPDATE_DELAY_SECONDS || 15) * 1000;
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
             await updateSingleSentiment(code);
         }

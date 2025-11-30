@@ -27,3 +27,4 @@ GOOGLE_SEARCH_CX = ""
 NEWS_SEARCH_DAYS = 3  # 최근 며칠 뉴스 참고
 AI_MODEL = "gemini-2.0-flash"  # 빠르고 저렴한 모델
 SENTIMENT_REFRESH_MINUTES = 30  # 감성 정보 갱신 주기 (분)
+SENTIMENT_UPDATE_DELAY_SECONDS = 7  # 카드별 갱신 간격 (초)
