@@ -78,7 +78,7 @@ class MKScraper:
                     else:
                         stable_count = 0
                     
-                    if stable_count >= 6: # 3초 동안 변화 없으면 완료로 간주
+                    if stable_count >= 3: # 1.5초 동안 변화 없으면 완료로 간주
                         break
                         
                     previous_text = current_text

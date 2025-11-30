@@ -108,42 +108,54 @@ class GeminiService:
             mk_report = ""
             google_news = ""
 
-            # --- 1단계: MK AI 검색 (기업 리포트용) ---
-            try:
-                from mk_scraper import MKScraper
-                scraper = MKScraper(headless=True)
-                print(f"[Gemini] MK AI 검색 시도: {stock_name}")
-                mk_result = scraper.get_ai_answer(stock_name)
-                scraper.close()
+            # --- 병렬 실행: MK AI 검색 + 구글 검색 ---
+            import concurrent.futures
+            
+            def fetch_mk_report():
+                try:
+                    from mk_scraper import MKScraper
+                    scraper = MKScraper(headless=True)
+                    print(f"[Gemini] MK AI 검색 시도: {stock_name}")
+                    mk_result = scraper.get_ai_answer(stock_name)
+                    scraper.close()
 
-                if mk_result:
-                    print(f"[Gemini] MK AI 검색 성공 (길이: {len(mk_result)})")
-                    mk_report = f"[MK AI 분석 리포트]\n{mk_result}"
-                else:
-                    print("[Gemini] MK AI 검색 결과 없음")
-                    mk_report = "MK AI 분석 정보를 가져올 수 없습니다."
-            except Exception as e:
-                print(f"[Gemini] MK AI 검색 중 오류 발생: {e}")
-                mk_report = "MK AI 분석 중 오류가 발생했습니다."
+                    if mk_result:
+                        print(f"[Gemini] MK AI 검색 성공 (길이: {len(mk_result)})")
+                        return f"[MK AI 분석 리포트]\n{mk_result}"
+                    else:
+                        print("[Gemini] MK AI 검색 결과 없음")
+                        return "MK AI 분석 정보를 가져올 수 없습니다."
+                except Exception as e:
+                    print(f"[Gemini] MK AI 검색 중 오류 발생: {e}")
+                    return "MK AI 분석 중 오류가 발생했습니다."
 
-            # --- 2단계: 구글 검색 (최신 뉴스용) ---
-            try:
-                print(f"[Gemini] 구글 뉴스 검색 시도: {stock_name}")
-                search_query = f"{stock_name} 주식 뉴스"
-                search_results = self.search_news(search_query)
+            def fetch_google_news():
+                try:
+                    print(f"[Gemini] 구글 뉴스 검색 시도: {stock_name}")
+                    search_query = f"{stock_name} 주식 뉴스"
+                    search_results = self.search_news(search_query)
+                    
+                    if search_results:
+                        news_text = "검색된 최신 뉴스:\n"
+                        for item in search_results:
+                            title = item.get('title', '')
+                            snippet = item.get('snippet', '')
+                            link = item.get('link', '')
+                            news_text += f"- [{title}] {snippet} ({link})\n"
+                        return news_text
+                    else:
+                        return "(최신 뉴스 검색 실패)"
+                except Exception as e:
+                    print(f"[Gemini] 구글 검색 실패: {e}")
+                    return "(구글 검색 오류)"
+
+            # ThreadPoolExecutor를 사용하여 병렬 실행
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                future_mk = executor.submit(fetch_mk_report)
+                future_google = executor.submit(fetch_google_news)
                 
-                if search_results:
-                    google_news = "검색된 최신 뉴스:\n"
-                    for item in search_results:
-                        title = item.get('title', '')
-                        snippet = item.get('snippet', '')
-                        link = item.get('link', '')
-                        google_news += f"- [{title}] {snippet} ({link})\n"
-                else:
-                    google_news = "(최신 뉴스 검색 실패)"
-            except Exception as e:
-                print(f"[Gemini] 구글 검색 실패: {e}")
-                google_news = "(구글 검색 오류)"
+                mk_report = future_mk.result()
+                google_news = future_google.result()
 
             # --- 3단계: AI 분석 ---
             # 기업 리포트 데이터 구성 (기본 정보 + MK 리포트)

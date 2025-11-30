@@ -130,9 +130,9 @@ const API = {
                 console.log(`🔄 강제 갱신 요청: ${code}`);
             }
 
-            // 타임아웃 설정 (30초)
+            // 타임아웃 설정 (90초)
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const timeoutId = setTimeout(() => controller.abort(), 90000);
 
             let response;
             try {
@@ -141,7 +141,7 @@ const API = {
             } catch (fetchError) {
                 clearTimeout(timeoutId);
                 if (fetchError.name === 'AbortError') {
-                    console.error('⏱️ 요청 시간 초과 (30초)');
+                    console.error('⏱️ 요청 시간 초과 (90초)');
                     return {
                         success: false,
                         message: '서버 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.'
