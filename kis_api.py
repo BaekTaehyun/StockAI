@@ -317,9 +317,10 @@ class KiwoomApi:
             if data: print(f"[Chart Error] API Error: {data.get('return_msg')}")
             return None
 
-    def get_investor_trading(self, code):
+    def get_investor_trading(self, code, date=None):
         """
         투자자별 매매동향 조회 (Kiwoom ka10059)
+        date: YYYYMMDD string (optional, default: today)
         """
         code = self._clean_code(code)
         url = f"{self.base_url}/api/dostk/stkinfo"
@@ -329,45 +330,75 @@ class KiwoomApi:
             "api-id": "ka10059"
         }
         
-        today_date = datetime.datetime.now().strftime("%Y%m%d")
+        today_date = date or datetime.datetime.now().strftime("%Y%m%d")
         
-        # 1. 매도 데이터 조회
-        sell_body = {
-            "stk_cd": code, "dt": today_date, "amt_qty_tp": "1", "trde_tp": "3", "unit_tp": "1"
-        }
-        
-        foreign_sell = 0
-        institution_sell = 0
-        
-        data_sell = self._send_request(url, headers, sell_body)
-        if data_sell and data_sell.get('return_code') == 0:
-            output = data_sell.get('stk_invsr_orgn', [])
-            if output:
-                sell_data = output[0]
-                foreign_sell = abs(int(sell_data.get('frgnr_invsr', 0)))
-                institution_sell = abs(int(sell_data.get('orgn', 0)))
-
-        # 2. 매수 데이터 조회
+        # 1. 매수 데이터 조회 (trde_tp="1")
         buy_body = {
-            "stk_cd": code, "dt": today_date, "amt_qty_tp": "1", "trde_tp": "2", "unit_tp": "1"
+            "stk_cd": code, "dt": today_date, "amt_qty_tp": "1", "trde_tp": "1", "unit_tp": "1"
         }
         
         foreign_buy = 0
         institution_buy = 0
+        individual_buy = 0
         
         data_buy = self._send_request(url, headers, buy_body)
         if data_buy and data_buy.get('return_code') == 0:
             output = data_buy.get('stk_invsr_orgn', [])
             if output:
                 buy_data = output[0]
-                foreign_buy = abs(int(buy_data.get('frgnr_invsr', 0)))
-                institution_buy = abs(int(buy_data.get('orgn', 0)))
+                foreign_buy = int(buy_data.get('frgnr_invsr', 0))
+                institution_buy = int(buy_data.get('orgn', 0))
+                individual_buy = int(buy_data.get('prsn_invsr', 0)) # prsn_invsr 추정
+
+        # 2. 매도 데이터 조회 (trde_tp="2") - 음수로 반환됨
+        sell_body = {
+            "stk_cd": code, "dt": today_date, "amt_qty_tp": "1", "trde_tp": "2", "unit_tp": "1"
+        }
         
+        foreign_sell = 0
+        institution_sell = 0
+        individual_sell = 0
+        
+        data_sell = self._send_request(url, headers, sell_body)
+        if data_sell and data_sell.get('return_code') == 0:
+            output = data_sell.get('stk_invsr_orgn', [])
+            if output:
+                sell_data = output[0]
+                # 음수로 오므로 절대값 처리
+                foreign_sell = abs(int(sell_data.get('frgnr_invsr', 0)))
+                institution_sell = abs(int(sell_data.get('orgn', 0)))
+                individual_sell = abs(int(sell_data.get('prsn_invsr', 0)))
+
+        # 3. 순매수(Net) 데이터 조회 (trde_tp="3")
+        net_body = {
+            "stk_cd": code, "dt": today_date, "amt_qty_tp": "1", "trde_tp": "3", "unit_tp": "1"
+        }
+        
+        foreign_net = 0
+        institution_net = 0
+        individual_net = 0
+        
+        data_net = self._send_request(url, headers, net_body)
+        if data_net and data_net.get('return_code') == 0:
+            output = data_net.get('stk_invsr_orgn', [])
+            if output:
+                net_data = output[0]
+                foreign_net = int(net_data.get('frgnr_invsr', 0))
+                institution_net = int(net_data.get('orgn', 0))
+                individual_net = int(net_data.get('prsn_invsr', 0))
+        
+        # 만약 Net 데이터가 0이면 계산값 사용 (fallback)
+        if foreign_net == 0 and foreign_buy != 0:
+            foreign_net = foreign_buy - foreign_sell
+        if institution_net == 0 and institution_buy != 0:
+            institution_net = institution_buy - institution_sell
+            
         return {
             'foreign_buy': foreign_buy, 'foreign_sell': foreign_sell,
-            'foreign_net': foreign_buy - foreign_sell,
+            'foreign_net': foreign_net,
             'institution_buy': institution_buy, 'institution_sell': institution_sell,
-            'institution_net': institution_buy - institution_sell
+            'institution_net': institution_net,
+            'individual_net': individual_net # 추가
         }
 
     def get_market_index(self, market_code):
