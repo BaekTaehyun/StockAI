@@ -65,6 +65,17 @@ Object.assign(window.UI, {
 
             // 변동 비율에 색상 적용 (CSS 우선순위를 위해 setProperty 사용)
             changeElem.style.setProperty('color', textColor, 'important');
+
+            // 시장 지수 카드에 역동적인 스타일 적용
+            const indexCard = priceElem.closest('.index-card');
+            if (indexCard) {
+                const isUp = rateNum >= 0;
+                const bgColor = isUp ? 'rgba(255, 100, 100, 0.05)' : 'rgba(100, 100, 255, 0.05)';
+                const borderColor = isUp ? '#e53e3e' : '#3b82f6';
+
+                indexCard.style.background = bgColor;
+                indexCard.style.borderLeft = `4px solid ${borderColor}`;
+            }
         }
         // Note: Market indices don't have technical analysis data
         // Charts.renderTechnical is only for individual stock analysis

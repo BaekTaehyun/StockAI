@@ -494,7 +494,7 @@ class GeminiService:
                 'confidence': confidence,
                 'trading_scenario': trading_scenario.strip(),
                 'price_strategy': price_strategy,
-                'reasoning': detailed_analysis.strip() if detailed_analysis.strip() else result_text[:500],
+                'reasoning': detailed_analysis.strip() if detailed_analysis.strip() else result_text,
                 'raw_response': result_text,
                 '_cache_info': {'cached': False, 'reason': 'new_data', 'age_seconds': 0}
             }
