@@ -39,13 +39,27 @@ Object.assign(window.UI, {
         plElement.textContent = formatCurrency(data.total_pl);
         rateElement.textContent = formatPercent(data.profit_rate);
 
-        // 수익/손실에 따라 클래스 변경
+        // 수익/손실에 따라 클래스 및 역동적인 스타일 적용
         plCard.classList.remove('positive', 'negative');
-        if (data.total_pl >= 0) {
+        const isProfit = data.total_pl >= 0;
+
+        if (isProfit) {
             plCard.classList.add('positive');
         } else {
             plCard.classList.add('negative');
         }
+
+        // 카드에 적용된 역동적인 스타일과 동일하게 배경색과 테두리 적용
+        const bgColor = isProfit ? 'rgba(255, 100, 100, 0.05)' : 'rgba(100, 100, 255, 0.05)';
+        const borderColor = isProfit ? '#e53e3e' : '#3b82f6';
+        const textColor = isProfit ? '#e53e3e' : '#3b82f6';
+
+        plCard.style.background = bgColor;
+        plCard.style.borderLeft = `4px solid ${borderColor}`;
+
+        // 금액과 수익률 텍스트 색상 적용
+        plElement.style.color = textColor;
+        rateElement.style.color = textColor;
 
         // 보유 종목 수
         document.getElementById('holdingsCount').textContent = `${data.holdings_count}개`;

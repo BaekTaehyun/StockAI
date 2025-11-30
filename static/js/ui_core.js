@@ -60,13 +60,11 @@ Object.assign(window.UI, {
 
             changeElem.textContent = `${sign}${cleanChange} (${sign}${cleanRate}%)`;
 
-            if (rateNum > 0) {
-                changeElem.style.color = 'var(--success)';
-            } else if (rateNum < 0) {
-                changeElem.style.color = 'var(--danger)';
-            } else {
-                changeElem.style.color = 'var(--text-secondary)';
-            }
+            // 등락에 따른 색상 결정 (지수 값은 흰색 유지, 비율에만 색상 적용)
+            const textColor = rateNum > 0 ? '#e53e3e' : (rateNum < 0 ? '#3b82f6' : 'var(--text-secondary)');
+
+            // 변동 비율에 색상 적용 (CSS 우선순위를 위해 setProperty 사용)
+            changeElem.style.setProperty('color', textColor, 'important');
         }
         // Note: Market indices don't have technical analysis data
         // Charts.renderTechnical is only for individual stock analysis
