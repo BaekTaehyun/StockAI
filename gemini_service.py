@@ -96,7 +96,7 @@ class GeminiService:
 
     def search_and_analyze_news(self, stock_name, stock_code, current_price=None, change_rate=None, force_refresh=False):
         """
-        종목 뉴스를 검색하고 AI로 분석 (캐싱 적용)
+        종목 뉴스를 검색하고 AI로 분석 (MK AI 검색 + 구글 검색 동시 활용)
         """
         # 1. 캐시 확인
         cached_data, cache_info = self.cache.load(stock_code, 'news', force_refresh)
@@ -105,26 +105,60 @@ class GeminiService:
             return cached_data
 
         try:
-            search_query = f"{stock_name} 주식 뉴스"
-            search_results = self.search_news(search_query)
-            
-            news_context = ""
-            if search_results:
-                news_context = "검색된 최신 뉴스:\n"
-                for item in search_results:
-                    title = item.get('title', '')
-                    snippet = item.get('snippet', '')
-                    link = item.get('link', '')
-                    news_context += f"- [{title}] {snippet} ({link})\n"
-            else:
-                news_context = "(최신 뉴스 검색 실패 또는 설정되지 않음. 일반적인 지식에 기반하여 분석하세요.)"
+            mk_report = ""
+            google_news = ""
 
-            prompt = prompts.NEWS_ANALYSIS_PROMPT.format(
-                stock_name=stock_name,
-                stock_code=stock_code,
-                price_info=f"- 현재가: {current_price}원" if current_price else "",
-                change_info=f"- 등락률: {change_rate}%" if change_rate else "",
-                news_context=news_context
+            # --- 1단계: MK AI 검색 (기업 리포트용) ---
+            try:
+                from mk_scraper import MKScraper
+                scraper = MKScraper(headless=True)
+                print(f"[Gemini] MK AI 검색 시도: {stock_name}")
+                mk_result = scraper.get_ai_answer(stock_name)
+                scraper.close()
+
+                if mk_result:
+                    print(f"[Gemini] MK AI 검색 성공 (길이: {len(mk_result)})")
+                    mk_report = f"[MK AI 분석 리포트]\n{mk_result}"
+                else:
+                    print("[Gemini] MK AI 검색 결과 없음")
+                    mk_report = "MK AI 분석 정보를 가져올 수 없습니다."
+            except Exception as e:
+                print(f"[Gemini] MK AI 검색 중 오류 발생: {e}")
+                mk_report = "MK AI 분석 중 오류가 발생했습니다."
+
+            # --- 2단계: 구글 검색 (최신 뉴스용) ---
+            try:
+                print(f"[Gemini] 구글 뉴스 검색 시도: {stock_name}")
+                search_query = f"{stock_name} 주식 뉴스"
+                search_results = self.search_news(search_query)
+                
+                if search_results:
+                    google_news = "검색된 최신 뉴스:\n"
+                    for item in search_results:
+                        title = item.get('title', '')
+                        snippet = item.get('snippet', '')
+                        link = item.get('link', '')
+                        google_news += f"- [{title}] {snippet} ({link})\n"
+                else:
+                    google_news = "(최신 뉴스 검색 실패)"
+            except Exception as e:
+                print(f"[Gemini] 구글 검색 실패: {e}")
+                google_news = "(구글 검색 오류)"
+
+            # --- 3단계: AI 분석 ---
+            # 기업 리포트 데이터 구성 (기본 정보 + MK 리포트)
+            company_report = f"""
+            [기본 정보]
+            - 종목명: {stock_name} ({stock_code})
+            - 현재가: {current_price}원
+            - 등락률: {change_rate}%
+
+            {mk_report}
+            """
+            
+            prompt = prompts.INVESTMENT_ANALYSIS_PROMPT.format(
+                company_report=company_report,
+                news_context=google_news
             )
             
             result_text = self._call_gemini_api(prompt)
@@ -132,7 +166,7 @@ class GeminiService:
             if not result_text:
                 raise Exception("API 응답 없음")
             
-            # 응답 파싱
+            # 응답 파싱 (새로운 프롬프트 포맷에 맞춤)
             news_summary = ""
             reason = ""
             sentiment = "중립"
@@ -142,28 +176,32 @@ class GeminiService:
             
             for line in lines:
                 line = line.strip()
-                if "주요 뉴스" in line or line.startswith("1."):
+                # 섹션 감지
+                if "핵심 이슈" in line or line.startswith("1.") or "#### 1." in line:
                     current_section = "news"
-                    news_summary = line.split(":", 1)[-1].strip() if ":" in line else ""
-                elif "등락 원인" in line or line.startswith("2."):
+                elif "주가 변동" in line or line.startswith("2.") or "#### 2." in line:
                     current_section = "reason"
-                    reason = line.split(":", 1)[-1].strip() if ":" in line else ""
-                elif "뉴스 분위기" in line or "분위기" in line or line.startswith("3."):
-                    sentiment_line = line.split(":", 1)[-1].strip() if ":" in line else line
-                    if "긍정" in sentiment_line:
-                        sentiment = "긍정"
-                    elif "부정" in sentiment_line:
-                        sentiment = "부정"
-                    else:
-                        sentiment = "중립"
-                elif current_section == "news" and line:
-                    news_summary += " " + line
-                elif current_section == "reason" and line:
-                    reason += " " + line
+                elif "종합 투자 판단" in line or line.startswith("3.") or "#### 3." in line:
+                    current_section = "sentiment"
+                
+                # 내용 추출
+                elif current_section == "news" and line.startswith("-"):
+                    news_summary += line + "\n"
+                elif current_section == "reason" and line.startswith("-"):
+                    reason += line + "\n"
+                elif current_section == "sentiment":
+                    if "단기적 관점" in line:
+                        if "긍정" in line: sentiment = "긍정"
+                        elif "부정" in line: sentiment = "부정"
+                        else: sentiment = "중립"
             
+            # 파싱 결과가 비어있으면 원본 텍스트 일부 사용
+            if not news_summary: news_summary = result_text[:300] + "..."
+            if not reason: reason = "상세 분석 내용을 참고하세요."
+
             result = {
-                'news_summary': news_summary.strip() if news_summary else result_text[:200],
-                'reason': reason.strip() if reason else "분석 정보 없음",
+                'news_summary': news_summary.strip(),
+                'reason': reason.strip(),
                 'sentiment': sentiment,
                 'raw_response': result_text,
                 '_cache_info': {'cached': False, 'reason': 'new_data', 'age_seconds': 0}
