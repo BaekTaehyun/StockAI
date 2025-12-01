@@ -181,6 +181,22 @@ const API = {
         });
     },
 
+    // 수동으로 캐시 설정 (스트리밍 완료 후 저장용)
+    setManualCache(code, data) {
+        const now = Date.now();
+        // L1 저장
+        this.memoryCache[code] = { data, timestamp: now };
+
+        // L2 저장
+        try {
+            const storageKey = `${this.STORAGE_KEY_PREFIX}${code}`;
+            localStorage.setItem(storageKey, JSON.stringify({ data, timestamp: now }));
+            console.log(`💾 수동 캐시 저장 완료: ${code}`);
+        } catch (e) {
+            console.warn('L2 Save Error:', e);
+        }
+    },
+
     // 실제 분석 요청 실행 (내부 함수)
     async _executeAnalysisRequest(request) {
         const { code, forceRefresh, lightweight } = request;
@@ -191,8 +207,7 @@ const API = {
         const cacheKey = lightweight ? `${code}_light` : code;
 
         // 1. 캐시 확인 (강제 갱신이 아닐 경우)
-        // lightweight=false 요청 시 lightweight=true 캐시는 사용하지 않음
-        if (!forceRefresh && !(!lightweight && this.memoryCache[`${code}_light`])) {
+        if (!forceRefresh) {
             // L1 확인 (메모리)
             if (this.memoryCache[cacheKey]) {
                 const { data, timestamp } = this.memoryCache[cacheKey];

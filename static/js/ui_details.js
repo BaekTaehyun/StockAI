@@ -509,6 +509,25 @@ Object.assign(window.UI, {
 
             // 2. 캐시 미스 - 스트리밍 방식으로 데이터 수신
             console.log('🌐 캐시 미스, 스트리밍 시작:', code);
+
+            // 2-1. 경량 캐시라도 있으면 먼저 표시 (사용자 경험 향상)
+            const lightCache = API.getCachedAnalysis(code, true);
+            if (lightCache && lightCache.success && lightCache.data && lightCache.data.stock_info) {
+                console.log('⚡ 경량 캐시 발견, 초기 데이터로 표시:', code);
+                this.renderBasicInfoOnly(
+                    {
+                        price: lightCache.data.stock_info.current_price,
+                        change: lightCache.data.stock_info.change,
+                        rate: lightCache.data.stock_info.change_rate
+                    },
+                    lightCache.data.supply_demand
+                );
+            } else {
+                if (lightCache && lightCache.success && !lightCache.data.stock_info) {
+                    console.warn('⚠️ 경량 캐시 데이터 불완전 (stock_info 누락):', lightCache);
+                }
+            }
+
             let allData = {}; // 전체 데이터 누적
 
             API.fetchFullAnalysisStreaming(
@@ -558,6 +577,25 @@ Object.assign(window.UI, {
                             news_analysis: allData.news_analysis,
                             supply_demand: allData.supply
                         });
+                    }
+
+                    // 캐시 저장 (다음 번 로딩 속도 향상)
+                    // 스트리밍으로 받은 데이터를 캐시 구조에 맞게 재구성
+                    const cacheData = {
+                        stock_info: {
+                            code: code,
+                            current_price: allData.price?.price,
+                            change: allData.price?.change,
+                            change_rate: allData.price?.rate
+                        },
+                        supply_demand: allData.supply,
+                        news_analysis: allData.news_analysis,
+                        outlook: allData.outlook,
+                        technical: allData.technical
+                    };
+
+                    if (allData.outlook && allData.news_analysis) {
+                        API.setManualCache(code, cacheData);
                     }
 
                     // UI 최종 정리
