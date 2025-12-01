@@ -338,7 +338,7 @@ class StockAnalysisService:
                 else:
                     trend = "혼조세"
                 
-                return {
+                result = {
                     'foreign_buy': investor_data.get('foreign_buy', 0),
                     'foreign_sell': investor_data.get('foreign_sell', 0),
                     'foreign_net': foreign_net,
@@ -347,6 +347,13 @@ class StockAnalysisService:
                     'institution_net': institution_net,
                     'trend': trend
                 }
+                
+                # 캐시 업데이트 (카드와 디테일 창 데이터 일관성 유지)
+                normalized_code = code.lstrip('A') if code and code.startswith('A') else code
+                supply_cache_key = f"supply_{normalized_code}"
+                self._set_cached_data(supply_cache_key, result, ttl=60)
+                
+                return result
             else:
                 return self._get_default_supply_demand()
                 

@@ -330,7 +330,31 @@ class KiwoomApi:
             "api-id": "ka10059"
         }
         
-        today_date = date or datetime.datetime.now().strftime("%Y%m%d")
+        # Determine target date (handle weekends and pre-market)
+        if date:
+            today_date = date
+        else:
+            now = datetime.datetime.now()
+            weekday = now.weekday() # Mon=0, Sun=6
+            current_time = now.time()
+            market_start_time = datetime.time(9, 0) # 09:00
+            
+            # Default to today
+            target_date = now
+            
+            if weekday == 5: # Saturday -> Friday
+                target_date = now - datetime.timedelta(days=1)
+            elif weekday == 6: # Sunday -> Friday
+                target_date = now - datetime.timedelta(days=2)
+            elif current_time < market_start_time: # Weekday before 9am
+                if weekday == 0: # Monday morning -> Friday
+                    target_date = now - datetime.timedelta(days=3)
+                else: # Other weekday mornings -> Yesterday
+                    target_date = now - datetime.timedelta(days=1)
+            
+            today_date = target_date.strftime("%Y%m%d")
+            
+        # print(f"[Debug] get_investor_trading date: {today_date} (Weekday: {now.weekday()})")
         
         # 1. 매수 데이터 조회 (trde_tp="1")
         buy_body = {
