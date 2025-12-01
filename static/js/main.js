@@ -73,13 +73,13 @@ document.addEventListener('DOMContentLoaded', () => {
     loadMarketIndices();
     loadWatchlist();
 
-    // 1초마다 자동 새로고침 (실시간)
+    // 10초마다 자동 새로고침 (리소스 절약)
     setInterval(() => {
         loadAccountSummary();
         loadHoldings();
         loadMarketIndices();
         loadWatchlist();
-    }, 2000);
+    }, 10000);
 });
 
 // 데이터 로드 함수들 (UI와 API 연결)
@@ -89,9 +89,20 @@ async function checkAuth() {
 }
 
 async function loadAccountSummary() {
+    console.log('🔄 [계좌요약] API 호출 중...');
     const result = await API.fetchAccountSummary();
+    console.log('📊 [계좌요약] API 응답:', result);
+
     if (result.success) {
+        console.log('✅ [계좌요약] 데이터 수신:', {
+            매입금액: result.data.total_purchase,
+            평가금액: result.data.total_eval,
+            평가손익: result.data.total_pl,
+            보유종목: result.data.holdings_count
+        });
         UI.updateAccountSummary(result.data);
+    } else {
+        console.error('❌ [계좌요약] API 실패:', result.message);
     }
 }
 

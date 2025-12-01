@@ -90,6 +90,49 @@ const API = {
     activeRequests: 0,
     MAX_CONCURRENT_REQUESTS: 2, // 동시 요청 최대 2개로 제한
 
+    // 캐시 직접 확인 함수 (API 호출 없이, 큐 대기 없이 즉시 반환)
+    getCachedAnalysis(code, lightweight = false) {
+        const now = Date.now();
+        const cacheKey = lightweight ? `${code}_light` : code;
+
+        // 1. L1 캐시 확인 (메모리)
+        if (this.memoryCache[cacheKey]) {
+            const cached = this.memoryCache[cacheKey];
+            if (now - cached.timestamp < this.MEMORY_TTL) {
+                console.log(`💾 L1 캐시 히트 (메모리): ${code}`);
+                return {
+                    success: true,
+                    data: cached.data,
+                    source: 'memory'
+                };
+            }
+        }
+
+        // 2. L2 캐시 확인 (LocalStorage)
+        try {
+            const storageKey = `${this.STORAGE_KEY_PREFIX}${cacheKey}`;
+            const stored = localStorage.getItem(storageKey);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (now - parsed.timestamp < this.STORAGE_TTL) {
+                    console.log(`💿 L2 캐시 히트 (스토리지): ${code}`);
+                    // L1 캐시 복구
+                    this.memoryCache[cacheKey] = { data: parsed.data, timestamp: parsed.timestamp };
+                    return {
+                        success: true,
+                        data: parsed.data,
+                        source: 'localStorage'
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('LocalStorage 읽기 실패:', e);
+        }
+
+        // 캐시 미스
+        return null;
+    },
+
     // 요청 큐 처리 함수
     processQueue() {
         // 대기 중인 요청이 있고 여유가 있으면 처리

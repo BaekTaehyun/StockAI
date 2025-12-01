@@ -344,13 +344,28 @@ Object.assign(window.UI, {
         body.style.display = 'block';
 
         // 초기 데이터(주가 정보) 렌더링 및 로딩 상태 표시
-        this.renderInitialOverview(stock);
+        // 캐시 확인
+        const cached = API.getCachedAnalysis(stock.stk_cd);
+        if (cached && cached.success) {
+            console.log('💾 캐시 히트! 즉시 표시 (openStockModal):', stock.stk_cd);
 
-        // 기본 탭 활성화
-        this.switchTab('overview');
+            // 전역 로딩 스피너 숨김
+            if (loading) loading.style.display = 'none';
+            tabs.style.display = 'flex';
+            body.style.display = 'block';
 
-        // 데이터 로드
-        this.loadStockAnalysis(stock.stk_cd);
+            this.renderFullAnalysis(cached.data);
+            this.switchTab('overview');
+        } else {
+            // 캐시 없음: 로딩 상태 표시 후 데이터 로드
+            this.renderInitialOverview(stock);
+
+            // 기본 탭 활성화
+            this.switchTab('overview');
+
+            // 데이터 로드
+            this.loadStockAnalysis(stock.stk_cd);
+        }
     },
 
     // 초기 개요 렌더링 (주가 정보 즉시 표시 + 로딩 인디케이터)
@@ -415,6 +430,50 @@ Object.assign(window.UI, {
         document.getElementById('newsContent').innerHTML = '<div style="padding: 3rem; text-align: center; color: var(--text-secondary);">데이터를 불러오는 중입니다...</div>';
     },
 
+    // 전체 분석 데이터 렌더링 (캐시 히트 시 사용)
+    renderFullAnalysis(data) {
+        const code = data.stock_info?.code || data.code; // 코드 확인
+
+        // 기본 정보
+        if (data.stock_info && data.supply_demand) {
+            this.renderBasicInfoOnly(
+                {
+                    price: data.stock_info.current_price,
+                    change: data.stock_info.change,
+                    rate: data.stock_info.change_rate
+                },
+                data.supply_demand
+            );
+        }
+
+        // 전체 종합 탭
+        this.renderOverview(data);
+
+        // 수급 탭
+        if (data.supply_demand) {
+            this.renderSupplyDemand(data.supply_demand);
+        }
+
+        // 뉴스 탭
+        if (data.news_analysis) {
+            this.renderNews(data.news_analysis);
+        }
+
+        // 기술적 분석 탭
+        if (data.technical && typeof Charts !== 'undefined' && Charts.renderTechnical) {
+            Charts.renderTechnical(data.technical, data.stock_info, data.fundamental_data);
+        }
+
+        // 리본 캐시 동기화
+        if (window.updateSentimentFromAnalysis && data.outlook && data.news_analysis && code) {
+            window.updateSentimentFromAnalysis(code, {
+                outlook: data.outlook,
+                news_analysis: data.news_analysis,
+                supply_demand: data.supply_demand
+            });
+        }
+    },
+
     // 종목 상세 분석 데이터 로드
     async loadStockAnalysis(code) {
         const loading = document.getElementById('loadingSpinner');
@@ -432,55 +491,12 @@ Object.assign(window.UI, {
             this.currentAnalysisController = new AbortController();
 
             // 1. 먼저 캐시 확인 (빠른 응답)
-            const cachedResult = await API.fetchFullAnalysis(code, false, false, true, this.currentAnalysisController);
+            const cached = API.getCachedAnalysis(code);
 
-            // 캐시 히트 여부 확인
-            const cacheInfo = cachedResult?.data?.outlook?._cache_info;
-            const isCacheHit = cacheInfo?.source === 'memory' || cacheInfo?.source === 'localStorage';
-
-            if (isCacheHit) {
-                console.log('💾 캐시 히트! 즉시 표시:', code);
+            if (cached && cached.success) {
+                console.log('💾 캐시 히트! (loadStockAnalysis):', code);
                 // 캐시된 데이터로 전체 UI 한 번에 업데이트
-                const data = cachedResult.data;
-
-                // 기본 정보
-                if (data.stock_info && data.supply_demand) {
-                    this.renderBasicInfoOnly(
-                        {
-                            price: data.stock_info.current_price,
-                            change: data.stock_info.change,
-                            rate: data.stock_info.change_rate
-                        },
-                        data.supply_demand
-                    );
-                }
-
-                // 전체 종합 탭
-                this.renderOverview(data);
-
-                // 수급 탭
-                if (data.supply_demand) {
-                    this.renderSupplyDemand(data.supply_demand);
-                }
-
-                // 뉴스 탭
-                if (data.news_analysis) {
-                    this.renderNews(data.news_analysis);
-                }
-
-                // 기술적 분석 탭
-                if (data.technical && typeof Charts !== 'undefined' && Charts.renderTechnical) {
-                    Charts.renderTechnical(data.technical, data.stock_info, data.fundamental_data);
-                }
-
-                // 리본 캐시 동기화
-                if (window.updateSentimentFromAnalysis && data.outlook && data.news_analysis) {
-                    window.updateSentimentFromAnalysis(code, {
-                        outlook: data.outlook,
-                        news_analysis: data.news_analysis,
-                        supply_demand: data.supply_demand
-                    });
-                }
+                this.renderFullAnalysis(cached.data);
 
                 // 로딩 상태 해제
                 if (loading) loading.style.display = 'none';
