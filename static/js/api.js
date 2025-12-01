@@ -112,13 +112,14 @@ const API = {
     },
 
     // 종합 분석 데이터 로드 (큐 시스템 적용)
-    async fetchFullAnalysis(code, forceRefresh = false, lightweight = false, highPriority = false) {
+    async fetchFullAnalysis(code, forceRefresh = false, lightweight = false, highPriority = false, abortController = null) {
         return new Promise((resolve, reject) => {
             const request = {
                 code,
                 forceRefresh,
                 lightweight,
                 highPriority,
+                abortController,
                 resolve,
                 reject,
                 timestamp: Date.now()
@@ -200,21 +201,24 @@ const API = {
                 console.log(`⚡ 경량 모드 요청: ${code}`);
             }
 
-            // 타임아웃 설정 (90초)
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 90000);
+            // AbortController 처리 (외부에서 전달된 것 우선 사용)
+            const controller = abortController || new AbortController();
+            const timeoutId = abortController ? null : setTimeout(() => controller.abort(), 90000);
 
             let response;
             try {
                 response = await fetch(url, { signal: controller.signal });
-                clearTimeout(timeoutId);
+                if (timeoutId) clearTimeout(timeoutId);
             } catch (fetchError) {
-                clearTimeout(timeoutId);
+                if (timeoutId) clearTimeout(timeoutId);
                 if (fetchError.name === 'AbortError') {
-                    console.error('⏱️ 요청 시간 초과 (90초)');
+                    const message = abortController
+                        ? '요청이 취소되었습니다.'
+                        : '서버 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.';
+                    console.error(abortController ? '❌ 요청 취소됨' : '⏱️ 요청 시간 초과 (90초)');
                     return {
                         success: false,
-                        message: '서버 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.'
+                        message
                     };
                 }
                 throw fetchError;

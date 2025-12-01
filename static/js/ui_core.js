@@ -107,6 +107,13 @@ Object.assign(window.UI, {
     },
 
     closeModal() {
+        // 진행 중인 분석 요청 취소
+        if (this.currentAnalysisController) {
+            this.currentAnalysisController.abort();
+            this.currentAnalysisController = null;
+            console.log('⏹️ 모달 닫기 - 분석 요청 취소');
+        }
+
         document.getElementById('stockModal').style.display = 'none';
     },
 

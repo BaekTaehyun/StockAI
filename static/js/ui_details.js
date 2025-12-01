@@ -21,6 +21,9 @@
 window.UI = window.UI || {};
 
 Object.assign(window.UI, {
+    // 현재 진행 중인 분석 요청 컨트롤러
+    currentAnalysisController: null,
+
     // 계좌 요약 업데이트
     updateAccountSummary(data) {
         if (!data) {
@@ -419,7 +422,16 @@ Object.assign(window.UI, {
         const body = document.getElementById('modalBody');
 
         try {
-            const result = await API.fetchFullAnalysis(code, false, false, true);
+            // 이전 요청 취소
+            if (this.currentAnalysisController) {
+                this.currentAnalysisController.abort();
+                console.log('⏹️ 이전 분석 요청 취소');
+            }
+
+            // 새 AbortController 생성
+            this.currentAnalysisController = new AbortController();
+
+            const result = await API.fetchFullAnalysis(code, false, false, true, this.currentAnalysisController);
             // forceRefresh=false, lightweight=false (전체 분석 필요), highPriority=true (사용자 요청)
 
             if (result.success && result.data) {
