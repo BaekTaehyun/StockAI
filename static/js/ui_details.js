@@ -431,7 +431,68 @@ Object.assign(window.UI, {
             // 새 AbortController 생성
             this.currentAnalysisController = new AbortController();
 
-            // 스트리밍 방식으로 데이터 수신
+            // 1. 먼저 캐시 확인 (빠른 응답)
+            const cachedResult = await API.fetchFullAnalysis(code, false, false, true, this.currentAnalysisController);
+
+            // 캐시 히트 여부 확인
+            const cacheInfo = cachedResult?.data?.outlook?._cache_info;
+            const isCacheHit = cacheInfo?.source === 'memory' || cacheInfo?.source === 'localStorage';
+
+            if (isCacheHit) {
+                console.log('💾 캐시 히트! 즉시 표시:', code);
+                // 캐시된 데이터로 전체 UI 한 번에 업데이트
+                const data = cachedResult.data;
+
+                // 기본 정보
+                if (data.stock_info && data.supply_demand) {
+                    this.renderBasicInfoOnly(
+                        {
+                            price: data.stock_info.current_price,
+                            change: data.stock_info.change,
+                            rate: data.stock_info.change_rate
+                        },
+                        data.supply_demand
+                    );
+                }
+
+                // 전체 종합 탭
+                this.renderOverview(data);
+
+                // 수급 탭
+                if (data.supply_demand) {
+                    this.renderSupplyDemand(data.supply_demand);
+                }
+
+                // 뉴스 탭
+                if (data.news_analysis) {
+                    this.renderNews(data.news_analysis);
+                }
+
+                // 기술적 분석 탭
+                if (data.technical && typeof Charts !== 'undefined' && Charts.renderTechnical) {
+                    Charts.renderTechnical(data.technical, data.stock_info, data.fundamental_data);
+                }
+
+                // 리본 캐시 동기화
+                if (window.updateSentimentFromAnalysis && data.outlook && data.news_analysis) {
+                    window.updateSentimentFromAnalysis(code, {
+                        outlook: data.outlook,
+                        news_analysis: data.news_analysis,
+                        supply_demand: data.supply_demand
+                    });
+                }
+
+                // 로딩 상태 해제
+                if (loading) loading.style.display = 'none';
+                tabs.style.display = 'flex';
+                body.style.display = 'block';
+                this.switchTab('overview');
+
+                return; // 캐시로 처리 완료, 스트리밍 필요 없음
+            }
+
+            // 2. 캐시 미스 - 스트리밍 방식으로 데이터 수신
+            console.log('🌐 캐시 미스, 스트리밍 시작:', code);
             let allData = {}; // 전체 데이터 누적
 
             API.fetchFullAnalysisStreaming(
