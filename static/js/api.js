@@ -207,24 +207,6 @@ const API = {
 
             let response;
             try {
-                response = await fetch(url, { signal: controller.signal });
-                if (timeoutId) clearTimeout(timeoutId);
-            } catch (fetchError) {
-                if (timeoutId) clearTimeout(timeoutId);
-                if (fetchError.name === 'AbortError') {
-                    const message = abortController
-                        ? '요청이 취소되었습니다.'
-                        : '서버 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.';
-                    console.error(abortController ? '❌ 요청 취소됨' : '⏱️ 요청 시간 초과 (90초)');
-                    return {
-                        success: false,
-                        message
-                    };
-                }
-                throw fetchError;
-            }
-
-            if (!response.ok) {
                 console.error(`HTTP Error: ${response.status}`);
                 return {
                     success: false,
