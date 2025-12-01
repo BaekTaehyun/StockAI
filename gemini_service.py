@@ -129,33 +129,32 @@ class GeminiService:
                     print(f"[Gemini] MK AI 검색 중 오류 발생: {e}")
                     return "MK AI 분석 중 오류가 발생했습니다."
 
-            def fetch_google_news():
+            def fetch_naver_news():
                 try:
-                    print(f"[Gemini] 구글 뉴스 검색 시도: {stock_name}")
-                    search_query = f"{stock_name} 주식 뉴스"
-                    search_results = self.search_news(search_query)
+                    from naver_news_crawler import NaverNewsCrawler
+                    crawler = NaverNewsCrawler()
+                    print(f"[Gemini] 네이버 금융 뉴스 검색 시도: {stock_name} ({stock_code})")
+                    news_list = crawler.get_news(stock_code)
                     
-                    if search_results:
-                        news_text = "검색된 최신 뉴스:\n"
-                        for item in search_results:
-                            title = item.get('title', '')
-                            snippet = item.get('snippet', '')
-                            link = item.get('link', '')
-                            news_text += f"- [{title}] {snippet} ({link})\n"
+                    if news_list:
+                        news_text = "네이버 금융 최신 뉴스 (AI 선별):\n"
+                        # 최대 7개 정도만 사용
+                        for news in news_list[:7]:
+                            news_text += f"- [{news['source']}] {news['headline']} ({news['date']})\n"
                         return news_text
                     else:
                         return "(최신 뉴스 검색 실패)"
                 except Exception as e:
-                    print(f"[Gemini] 구글 검색 실패: {e}")
-                    return "(구글 검색 오류)"
+                    print(f"[Gemini] 네이버 뉴스 검색 실패: {e}")
+                    return "(뉴스 검색 오류)"
 
             # ThreadPoolExecutor를 사용하여 병렬 실행
             with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
                 future_mk = executor.submit(fetch_mk_report)
-                future_google = executor.submit(fetch_google_news)
+                future_news = executor.submit(fetch_naver_news)
                 
                 mk_report = future_mk.result()
-                google_news = future_google.result()
+                news_context = future_news.result()
 
             # --- 3단계: AI 분석 ---
             # 기업 리포트 데이터 구성 (기본 정보 + MK 리포트)
@@ -170,7 +169,7 @@ class GeminiService:
             
             prompt = prompts.INVESTMENT_ANALYSIS_PROMPT.format(
                 company_report=company_report,
-                news_context=google_news
+                news_context=news_context
             )
             
             result_text = self._call_gemini_api(prompt)
