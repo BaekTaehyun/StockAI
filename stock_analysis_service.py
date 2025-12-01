@@ -66,34 +66,17 @@ class StockAnalysisService:
             normalized_code = code.lstrip('A') if code and code.startswith('A') else code
             # print(f"[Debug] Stock code normalization: {code} → {normalized_code}")
             
-            # 1. 현재가 정보 조회 (캐싱 적용)
-            price_cache_key = f"price_{normalized_code}"
-            price_info = None
-            
-            if not force_refresh:
-                price_info = self._get_cached_data(price_cache_key)
-                
-            if not price_info:
-                price_info = self.kiwoom.get_current_price(normalized_code)
-                if price_info:
-                    self._set_cached_data(price_cache_key, price_info, ttl=60) # 60초 캐시
+            # 1. 현재가 정보 조회 (실시간 데이터이므로 캐싱 안 함)
+            price_info = self.kiwoom.get_current_price(normalized_code)
             
             if not price_info:
                 return {'success': False, 'message': '주가 정보 조회 실패'}
             
             stock_name = stock_name or price_info.get('name', '알 수 없음')
             
-            # 2. 수급 데이터 조회 (캐싱 적용)
-            supply_cache_key = f"supply_{normalized_code}"
-            supply_demand = None
-            
-            if not force_refresh:
-                supply_demand = self._get_cached_data(supply_cache_key)
-                
-            if not supply_demand:
-                supply_demand = self.get_supply_demand_data(normalized_code)
-                if supply_demand:
-                    self._set_cached_data(supply_cache_key, supply_demand, ttl=60) # 60초 캐시
+            # 2. 수급 데이터 조회 (get_supply_demand_data 자체 캐싱 사용)
+            # get_supply_demand_data가 내부적으로 캐싱을 관리하므로 여기서는 중복 캐싱하지 않음
+            supply_demand = self.get_supply_demand_data(normalized_code)
             
             # 3. 기술적 지표 계산 (일봉 데이터 필요, 캐싱 적용)
             # 일봉 데이터는 양이 많으므로 데이터 자체를 캐싱
@@ -338,7 +321,8 @@ class StockAnalysisService:
                 else:
                     trend = "혼조세"
                 
-                result = {
+                # 수급 정보는 REST API 실시간 데이터이므로 캐싱하지 않음
+                return {
                     'foreign_buy': investor_data.get('foreign_buy', 0),
                     'foreign_sell': investor_data.get('foreign_sell', 0),
                     'foreign_net': foreign_net,
@@ -347,13 +331,6 @@ class StockAnalysisService:
                     'institution_net': institution_net,
                     'trend': trend
                 }
-                
-                # 캐시 업데이트 (카드와 디테일 창 데이터 일관성 유지)
-                normalized_code = code.lstrip('A') if code and code.startswith('A') else code
-                supply_cache_key = f"supply_{normalized_code}"
-                self._set_cached_data(supply_cache_key, result, ttl=60)
-                
-                return result
             else:
                 return self._get_default_supply_demand()
                 

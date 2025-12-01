@@ -95,15 +95,35 @@ Object.assign(window.UI, {
         const isUp = changeRate >= 0;
         const priceColor = isUp ? '#e53e3e' : '#3b82f6';
 
-        // 수급 트렌드 로직 (쌍끌이 등)
+        // 수급 트렌드 로직 (카드와 동일하게)
         const fNet = safeSupply.foreign_net;
         const iNet = safeSupply.institution_net;
-        let trendBadge = safeSupply.trend;
+        let trendBadge = '';
 
         if (fNet > 0 && iNet > 0) {
             trendBadge = '<span class="badge-supply buy">쌍끌이 매수 🚀</span>';
         } else if (fNet < 0 && iNet < 0) {
             trendBadge = '<span class="badge-supply sell">양매도 📉</span>';
+        } else if (fNet > 0 && iNet < 0) {
+            trendBadge = `<div style="display: flex; flex-direction: column; gap: 4px;">
+                <span class="badge-supply buy" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">외인 매수</span>
+                <span class="badge-supply sell" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">기관 매도</span>
+            </div>`;
+        } else if (fNet < 0 && iNet > 0) {
+            trendBadge = `<div style="display: flex; flex-direction: column; gap: 4px;">
+                <span class="badge-supply sell" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">외인 매도</span>
+                <span class="badge-supply buy" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">기관 매수</span>
+            </div>`;
+        } else if (fNet > 0) {
+            trendBadge = '<span class="badge-supply buy">외인 매수중 📈</span>';
+        } else if (fNet < 0) {
+            trendBadge = '<span class="badge-supply sell">외인 매도중 📉</span>';
+        } else if (iNet > 0) {
+            trendBadge = '<span class="badge-supply buy">기관 매수중 🏢</span>';
+        } else if (iNet < 0) {
+            trendBadge = '<span class="badge-supply sell">기관 매도중 📉</span>';
+        } else {
+            trendBadge = '<span class="badge-supply neutral">수급 보합</span>';
         }
 
         try {
