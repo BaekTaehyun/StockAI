@@ -272,8 +272,9 @@ def get_full_analysis(code):
         # 서비스의 kiwoom 인스턴스를 현재 토큰으로 동기화
         analysis_service.kiwoom = kiwoom
         
-        # 강제 갱신 여부 확인 (쿼리 파라미터 refresh=true)
+        # 쿼리 파라미터 확인
         force_refresh = request.args.get('refresh', '').lower() == 'true'
+        lightweight = request.args.get('lightweight', '').lower() == 'true'
         
         # 글로벌 마켓 데이터 가져오기
         global_market = get_global_market_data()
@@ -281,7 +282,8 @@ def get_full_analysis(code):
         result = analysis_service.get_full_analysis(
             normalized_code, 
             force_refresh=force_refresh,
-            global_market_data=global_market
+            global_market_data=global_market,
+            lightweight=lightweight
         )
         
         if result.get('success'):

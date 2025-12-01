@@ -23,46 +23,70 @@ window.UI = window.UI || {};
 Object.assign(window.UI, {
     // 계좌 요약 업데이트
     updateAccountSummary(data) {
-        if (!data) return;
+        if (!data) {
+            console.warn('⚠️ [계좌요약 UI] 데이터가 없습니다');
+            return;
+        }
+
+        console.log('🎨 [계좌요약 UI] DOM 업데이트 시작:', data);
 
         // 총 매입금액
-        document.getElementById('totalPurchase').textContent = formatCurrency(data.total_purchase);
+        const totalPurchaseEl = document.getElementById('totalPurchase');
+        if (totalPurchaseEl) {
+            totalPurchaseEl.textContent = formatCurrency(data.total_purchase);
+            console.log('  ✓ 총 매입금액:', totalPurchaseEl.textContent);
+        }
 
         // 총 평가금액
-        document.getElementById('totalEval').textContent = formatCurrency(data.total_eval);
+        const totalEvalEl = document.getElementById('totalEval');
+        if (totalEvalEl) {
+            totalEvalEl.textContent = formatCurrency(data.total_eval);
+            console.log('  ✓ 총 평가금액:', totalEvalEl.textContent);
+        }
 
         // 총 평가손익
         const plElement = document.getElementById('totalPL');
         const rateElement = document.getElementById('profitRate');
-        const plCard = plElement.closest('.summary-card');
+        const plCard = plElement ? plElement.closest('.summary-card') : null;
 
-        plElement.textContent = formatCurrency(data.total_pl);
-        rateElement.textContent = formatPercent(data.profit_rate);
+        if (plElement && rateElement) {
+            plElement.textContent = formatCurrency(data.total_pl);
+            rateElement.textContent = formatPercent(data.profit_rate);
+            console.log('  ✓ 총 평가손익:', plElement.textContent, rateElement.textContent);
 
-        // 수익/손실에 따라 클래스 및 역동적인 스타일 적용
-        plCard.classList.remove('positive', 'negative');
-        const isProfit = data.total_pl >= 0;
+            // 수익/손실에 따라 클래스 및 역동적인 스타일 적용
+            if (plCard) {
+                plCard.classList.remove('positive', 'negative');
+                const isProfit = data.total_pl >= 0;
 
-        if (isProfit) {
-            plCard.classList.add('positive');
-        } else {
-            plCard.classList.add('negative');
+                if (isProfit) {
+                    plCard.classList.add('positive');
+                } else {
+                    plCard.classList.add('negative');
+                }
+
+                // 카드에 적용된 역동적인 스타일과 동일하게 배경색과 테두리 적용
+                const bgColor = isProfit ? 'rgba(255, 100, 100, 0.05)' : 'rgba(100, 100, 255, 0.05)';
+                const borderColor = isProfit ? '#e53e3e' : '#3b82f6';
+                const textColor = isProfit ? '#e53e3e' : '#3b82f6';
+
+                plCard.style.background = bgColor;
+                plCard.style.borderLeft = `4px solid ${borderColor}`;
+
+                // 금액과 수익률 텍스트 색상 적용
+                plElement.style.color = textColor;
+                rateElement.style.color = textColor;
+            }
         }
 
-        // 카드에 적용된 역동적인 스타일과 동일하게 배경색과 테두리 적용
-        const bgColor = isProfit ? 'rgba(255, 100, 100, 0.05)' : 'rgba(100, 100, 255, 0.05)';
-        const borderColor = isProfit ? '#e53e3e' : '#3b82f6';
-        const textColor = isProfit ? '#e53e3e' : '#3b82f6';
-
-        plCard.style.background = bgColor;
-        plCard.style.borderLeft = `4px solid ${borderColor}`;
-
-        // 금액과 수익률 텍스트 색상 적용
-        plElement.style.color = textColor;
-        rateElement.style.color = textColor;
-
         // 보유 종목 수
-        document.getElementById('holdingsCount').textContent = `${data.holdings_count}개`;
+        const holdingsCountEl = document.getElementById('holdingsCount');
+        if (holdingsCountEl) {
+            holdingsCountEl.textContent = `${data.holdings_count}개`;
+            console.log('  ✓ 보유 종목:', holdingsCountEl.textContent);
+        }
+
+        console.log('✅ [계좌요약 UI] DOM 업데이트 완료');
     },
 
     // 종합 탭 렌더링
@@ -395,7 +419,8 @@ Object.assign(window.UI, {
         const body = document.getElementById('modalBody');
 
         try {
-            const result = await API.fetchFullAnalysis(code, false); // 캐시 우선 사용
+            const result = await API.fetchFullAnalysis(code, false, false, true);
+            // forceRefresh=false, lightweight=false (전체 분석 필요), highPriority=true (사용자 요청)
 
             if (result.success && result.data) {
                 const data = result.data;

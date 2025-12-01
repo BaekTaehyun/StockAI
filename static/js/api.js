@@ -85,34 +85,91 @@ const API = {
     STORAGE_KEY_PREFIX: 'stock_analysis_',
     STORAGE_TTL: 60 * 60 * 1000,
 
-    // 종합 분석 데이터 로드 (강제 갱신 지원)
-    async fetchFullAnalysis(code, forceRefresh = false) {
+    // 요청 큐 시스템 (동시 요청 제한)
+    requestQueue: [],
+    activeRequests: 0,
+    MAX_CONCURRENT_REQUESTS: 2, // 동시 요청 최대 2개로 제한
+
+    // 요청 큐 처리 함수
+    processQueue() {
+        // 대기 중인 요청이 있고 여유가 있으면 처리
+        while (this.requestQueue.length > 0 && this.activeRequests < this.MAX_CONCURRENT_REQUESTS) {
+            const request = this.requestQueue.shift();
+            this.activeRequests++;
+
+            this._executeAnalysisRequest(request)
+                .then(result => {
+                    request.resolve(result);
+                })
+                .catch(error => {
+                    request.reject(error);
+                })
+                .finally(() => {
+                    this.activeRequests--;
+                    this.processQueue(); // 다음 요청 처리
+                });
+        }
+    },
+
+    // 종합 분석 데이터 로드 (큐 시스템 적용)
+    async fetchFullAnalysis(code, forceRefresh = false, lightweight = false, highPriority = false) {
+        return new Promise((resolve, reject) => {
+            const request = {
+                code,
+                forceRefresh,
+                lightweight,
+                highPriority,
+                resolve,
+                reject,
+                timestamp: Date.now()
+            };
+
+            if (highPriority) {
+                // 우선순위 높은 요청은 큐 앞에 추가
+                this.requestQueue.unshift(request);
+                console.log(`🔥 우선 요청 추가: ${code}`);
+            } else {
+                // 일반 요청은 큐 뒤에 추가
+                this.requestQueue.push(request);
+            }
+
+            this.processQueue();
+        });
+    },
+
+    // 실제 분석 요청 실행 (내부 함수)
+    async _executeAnalysisRequest(request) {
+        const { code, forceRefresh, lightweight } = request;
         const startTime = performance.now();
         const now = Date.now();
 
+        // 캐시 키에 lightweight 여부 포함
+        const cacheKey = lightweight ? `${code}_light` : code;
+
         // 1. 캐시 확인 (강제 갱신이 아닐 경우)
-        if (!forceRefresh) {
+        // lightweight=false 요청 시 lightweight=true 캐시는 사용하지 않음
+        if (!forceRefresh && !(!lightweight && this.memoryCache[`${code}_light`])) {
             // L1 확인 (메모리)
-            if (this.memoryCache[code]) {
-                const { data, timestamp } = this.memoryCache[code];
+            if (this.memoryCache[cacheKey]) {
+                const { data, timestamp } = this.memoryCache[cacheKey];
                 if (now - timestamp < this.MEMORY_TTL) {
-                    console.log(`🚀 L1 Cache Hit (Memory): ${code}`);
+                    console.log(`🚀 L1 Cache Hit (Memory): ${code} [${lightweight ? 'light' : 'full'}]`);
                     return data;
                 } else {
-                    delete this.memoryCache[code]; // 만료됨
+                    delete this.memoryCache[cacheKey]; // 만료됨
                 }
             }
 
             // L2 확인 (LocalStorage)
             try {
-                const storageKey = `${this.STORAGE_KEY_PREFIX}${code}`;
+                const storageKey = `${this.STORAGE_KEY_PREFIX}${cacheKey}`;
                 const stored = localStorage.getItem(storageKey);
                 if (stored) {
                     const { data, timestamp } = JSON.parse(stored);
                     if (now - timestamp < this.STORAGE_TTL) {
-                        console.log(`💾 L2 Cache Hit (Storage): ${code}`);
+                        console.log(`💾 L2 Cache Hit (Storage): ${code} [${lightweight ? 'light' : 'full'}]`);
                         // L1으로 승격
-                        this.memoryCache[code] = { data, timestamp: now };
+                        this.memoryCache[cacheKey] = { data, timestamp: now };
                         return data;
                     } else {
                         localStorage.removeItem(storageKey); // 만료됨
@@ -125,9 +182,22 @@ const API = {
 
         try {
             let url = `${API_BASE}/api/analysis/full/${code}`;
+            const params = [];
             if (forceRefresh) {
-                url += '?refresh=true';
+                params.push('refresh=true');
+            }
+            if (lightweight) {
+                params.push('lightweight=true');
+            }
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            }
+
+            if (forceRefresh) {
                 console.log(`🔄 강제 갱신 요청: ${code}`);
+            }
+            if (lightweight) {
+                console.log(`⚡ 경량 모드 요청: ${code}`);
             }
 
             // 타임아웃 설정 (90초)
@@ -177,13 +247,13 @@ const API = {
                     console.log(`🔮 AI 전망: ${cacheStatus}`);
                 }
 
-                // 클라이언트 캐시에 저장
+                // 클라이언트 캐시에 저장 (lightweight 여부 구분)
                 // L1 저장
-                this.memoryCache[code] = { data, timestamp: now };
+                this.memoryCache[cacheKey] = { data, timestamp: now };
 
                 // L2 저장
                 try {
-                    const storageKey = `${this.STORAGE_KEY_PREFIX}${code}`;
+                    const storageKey = `${this.STORAGE_KEY_PREFIX}${cacheKey}`;
                     localStorage.setItem(storageKey, JSON.stringify({ data, timestamp: now }));
                 } catch (e) {
                     console.warn('L2 Save Error:', e);

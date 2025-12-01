@@ -48,7 +48,7 @@ class StockAnalysisService:
             'ttl': ttl
         }
 
-    def get_full_analysis(self, code, stock_name=None, force_refresh=False, global_market_data=None):
+    def get_full_analysis(self, code, stock_name=None, force_refresh=False, global_market_data=None, lightweight=False):
         """
         종목에 대한 종합 분석 수행
         
@@ -57,6 +57,7 @@ class StockAnalysisService:
             stock_name: 종목명 (선택, 없으면 API로 조회)
             force_refresh: 캐시 강제 갱신 여부
             global_market_data: 외부에서 주입된 글로벌 시장 데이터 (선택)
+            lightweight: True면 AI 분석을 스킵하고 기본 정보만 반환 (빠른 응답)
             
         Returns:
             종합 분석 데이터
@@ -124,23 +125,24 @@ class StockAnalysisService:
                 
             technical = TechnicalIndicators.calculate_indicators(price_data)
             
-            # 4. 뉴스 분석 (Gemini) - Optional
+            # 4. 뉴스 분석 (Gemini) - Optional, 경량 모드 시 스킵
             news_analysis = {
                 'news_summary': '뉴스 분석을 사용할 수 없습니다',
                 'reason': 'Gemini API가 설정되지 않았습니다',
                 'sentiment': '중립',
                 'raw_response': ''
             }
-            try:
-                news_analysis = self.gemini.search_and_analyze_news(
-                    stock_name=stock_name,
-                    stock_code=normalized_code,  # 정규화된 코드 사용
-                    current_price=price_info.get('price'),
-                    change_rate=price_info.get('rate'),
-                    force_refresh=force_refresh
-                )
-            except Exception as e:
-                print(f"[StockAnalysisService] 뉴스 분석 건너뜀: {e}")
+            if not lightweight:
+                try:
+                    news_analysis = self.gemini.search_and_analyze_news(
+                        stock_name=stock_name,
+                        stock_code=normalized_code,  # 정규화된 코드 사용
+                        current_price=price_info.get('price'),
+                        change_rate=price_info.get('rate'),
+                        force_refresh=force_refresh
+                    )
+                except Exception as e:
+                    print(f"[StockAnalysisService] 뉴스 분석 건너뜀: {e}")
             
             # 5. 시장 데이터 수집 (Top-Down Analysis)
             market_data = {}
@@ -202,33 +204,34 @@ class StockAnalysisService:
                     print(f"[StockAnalysisService] 펀더멘털 데이터 수집 실패: {e}")
                     fundamental_data = {}
 
-            # 7. AI 전망 생성 (Gemini) - Optional
+            # 7. AI 전망 생성 (Gemini) - Optional, 경량 모드 시 스킵
             outlook = {
                 'recommendation': '중립',
                 'confidence': 0,
                 'reasoning': 'AI 전망을 사용할 수 없습니다 (Gemini API가 설정되지 않았습니다)',
                 'raw_response': ''
             }
-            try:
-                # print(f"[Debug] AI 전망 생성 요청 - 펀더멘털 데이터: {fundamental_data}")
-                # stock_info에 정규화된 코드 전달
-                stock_info_for_outlook = {
-                    'code': normalized_code,  # 정규화된 코드 사용!
-                    'price': price_info.get('price'),
-                    'rate': price_info.get('rate')
-                }
-                outlook = self.gemini.generate_outlook(
-                    stock_name=stock_name,
-                    stock_info=stock_info_for_outlook,
-                    supply_demand=supply_demand,
-                    technical_indicators=technical,
-                    news_analysis=news_analysis,
-                    market_data=market_data,
-                    fundamental_data=fundamental_data,
-                    force_refresh=force_refresh
-                )
-            except Exception as e:
-                print(f"[StockAnalysisService] AI 전망 건너뜀: {e}")
+            if not lightweight:
+                try:
+                    # print(f"[Debug] AI 전망 생성 요청 - 펀더멘털 데이터: {fundamental_data}")
+                    # stock_info에 정규화된 코드 전달
+                    stock_info_for_outlook = {
+                        'code': normalized_code,  # 정규화된 코드 사용!
+                        'price': price_info.get('price'),
+                        'rate': price_info.get('rate')
+                    }
+                    outlook = self.gemini.generate_outlook(
+                        stock_name=stock_name,
+                        stock_info=stock_info_for_outlook,
+                        supply_demand=supply_demand,
+                        technical_indicators=technical,
+                        news_analysis=news_analysis,
+                        market_data=market_data,
+                        fundamental_data=fundamental_data,
+                        force_refresh=force_refresh
+                    )
+                except Exception as e:
+                    print(f"[StockAnalysisService] AI 전망 건너뜀: {e}")
             
             # 종합 결과 반환 (정규화된 코드 사용)
             return {

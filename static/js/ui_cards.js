@@ -41,7 +41,7 @@ Object.assign(window.UI, {
         });
 
         // 카드 업데이트 또는 생성
-        holdings.forEach(stock => {
+        holdings.forEach((stock, index) => {
             const stockCode = stock.stk_cd || '';
             const existingCard = grid.querySelector(`[data-code="${stockCode}"]`);
 
@@ -52,12 +52,11 @@ Object.assign(window.UI, {
                 // 수급 정보 업데이트 (스로틀링 적용)
                 this.updateSupplyInfo(existingCard, stockCode);
             } else {
-                // 새 카드 생성
                 const card = this.createHoldingCard(stock);
                 grid.appendChild(card);
 
-                // 새 카드에만 전략 정보 로드
-                setTimeout(() => this.loadStrategyInfo(null, stockCode), 100);
+                // 순차적으로 100ms씩 지연하여 요청 (경량 모드)
+                setTimeout(() => this.loadStrategyInfo(null, stockCode, true), index * 100);
             }
         });
     },
@@ -322,8 +321,9 @@ Object.assign(window.UI, {
         if (!supplyElem || !strategyElem) return;
 
         try {
-            // 여기서는 강제 갱신 없이 로드
-            const result = await API.fetchFullAnalysis(code, false);
+            // 경량 모드로 로드 (초기 로딩 최적화)
+            const result = await API.fetchFullAnalysis(code, false, true, false);
+            // lightweight=true, forceRefresh=false, highPriority=false
 
             if (result.success && result.data) {
                 const data = result.data;
@@ -396,15 +396,16 @@ Object.assign(window.UI, {
         }
     },
 
-    // 전략 정보 로드 (보유종목용)
-    async loadStrategyInfo(cardElement, code) {
+    // 전략 정보 로드 (보유종목용) - 경량 모드 지원
+    async loadStrategyInfo(cardElement, code, lightweight = false) {
         const strategyElem = document.getElementById(`strategy-${code}`);
         const supplyElem = document.getElementById(`supply-${code}`);
 
         if (!strategyElem) return;
 
         try {
-            const result = await API.fetchFullAnalysis(code, false);
+            const result = await API.fetchFullAnalysis(code, false, lightweight, false);
+            // lightweight: 초기 로딩 시 true, forceRefresh: false, highPriority: false
 
             if (result.success && result.data) {
                 const data = result.data;
