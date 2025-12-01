@@ -65,7 +65,10 @@ class GeminiService:
             return None
 
     def search_news(self, query):
-        """Google Custom Search API를 사용한 뉴스 검색"""
+        """
+        [Deprecated] Google Custom Search API를 사용한 뉴스 검색
+        - 현재는 NaverNewsCrawler로 대체되어 사용되지 않음 (2025-12-01)
+        """
         if not config.GOOGLE_SEARCH_API_KEY:
             print("[Search] API Key not configured.")
             return None
