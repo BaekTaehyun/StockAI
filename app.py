@@ -9,7 +9,7 @@ Flask 기반 웹 서버로 다음 기능을 제공합니다:
 - 시장 지수 (KOSPI/KOSDAQ) 모니터링
 ================================================================
 """
-from flask import Flask, jsonify, render_template, request, session, redirect, url_for
+from flask import Flask, jsonify, render_template, request, session, redirect, url_for, Response, stream_with_context
 from flask_cors import CORS
 from kis_api import KiwoomApi
 from data_fetcher import DataFetcher
@@ -17,6 +17,7 @@ from theme_service import ThemeService
 from finviz_market_crawler import FinvizMarketFetcher
 from datetime import timedelta, datetime
 import config
+import json
 
 app = Flask(__name__)
 CORS(app)  # CORS 활성화 (프론트엔드 연동)
@@ -296,6 +297,74 @@ def get_full_analysis(code):
             'success': False,
             'message': str(e)
         }), 500
+
+
+@app.route('/api/analysis/stream/<code>')
+def stream_full_analysis(code):
+    """종합 분석을 스트리밍으로 전송 (Server-Sent Events)"""
+    def generate():
+        try:
+            from stock_analysis_service import StockAnalysisService
+            from technical_indicators import TechnicalIndicators
+           
+            normalized_code = code.lstrip('A') if code.startswith('A') else code
+            
+            if not kiwoom.access_token:
+                kiwoom.get_access_token()
+            
+            analysis_service = StockAnalysisService()
+            analysis_service.kiwoom = kiwoom
+            
+            # 1단계: 기본 정보 즉시 전송
+            price_info = kiwoom.get_current_price(normalized_code)
+            supply_demand = analysis_service.get_supply_demand_data(normalized_code)
+            
+            yield f"data: {json.dumps({'type': 'basic', 'data': {'price': price_info, 'supply': supply_demand}})}\n\n"
+            
+            # 2단계: 차트 & 기술적 지표
+            chart_data = kiwoom.get_daily_chart_data(normalized_code, days=120)
+            technical = TechnicalIndicators.calculate_indicators(chart_data)
+            
+            yield f"data: {json.dumps({'type': 'technical', 'data': technical})}\n\n"
+            
+            # 3-4단계: 전체 분석 (뉴스 + AI 전망)
+            global_market = get_global_market_data()
+            result = analysis_service.get_full_analysis(
+                normalized_code,
+                force_refresh=False,
+                global_market_data=global_market,
+                lightweight=False
+            )
+            
+            if result.get('success'):
+                # 3단계: 뉴스 분석
+                yield f"data: {json.dumps({'type': 'news', 'data': result['data']['news_analysis']})}\n\n"
+                
+                # 4단계: AI 전망
+                yield f"data: {json.dumps({'type': 'outlook', 'data': result['data']['outlook']})}\n\n"
+                
+                # 완료
+                yield f"data: {json.dumps({'type': 'complete'})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'error', 'message': result.get('message', '분석 실패')})}\n\n"
+                
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+    
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no'
+        }
+    )
+
+
+
+
+
+
 
 @app.route('/api/analysis/supply-demand/<code>')
 def get_supply_demand(code):

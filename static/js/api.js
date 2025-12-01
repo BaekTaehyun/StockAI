@@ -327,5 +327,8 @@ const API = {
             console.error('삭제 오류:', error);
             return { success: false, message: error.message };
         }
-    }
+    },
+    // 스트리밍 분석 (Server-Sent Events)  ← 여기부터 새로 추가
+
+
 };
