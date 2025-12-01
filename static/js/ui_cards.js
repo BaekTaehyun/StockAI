@@ -48,6 +48,9 @@ Object.assign(window.UI, {
             if (existingCard) {
                 // 기존 카드 데이터만 업데이트 (수급/전략 섹션은 건드리지 않음)
                 this.updateHoldingCardData(existingCard, stock);
+
+                // 수급 정보 업데이트 (스로틀링 적용)
+                this.updateSupplyInfo(existingCard, stockCode);
             } else {
                 // 새 카드 생성
                 const card = this.createHoldingCard(stock);
@@ -209,9 +212,17 @@ Object.assign(window.UI, {
         });
 
         stocks.forEach(item => {
-            if (item.data && !existingCodes.includes(item.code)) {
-                const card = this.createWatchlistCard(item.code, item.data);
-                grid.appendChild(card);
+            if (item.data) {
+                if (!existingCodes.includes(item.code)) {
+                    const card = this.createWatchlistCard(item.code, item.data);
+                    grid.appendChild(card);
+                } else {
+                    // 기존 카드 업데이트 시에도 수급 정보 갱신 시도
+                    const card = grid.querySelector(`[data-code="${item.code}"]`);
+                    if (card) {
+                        this.updateSupplyInfo(card, item.code);
+                    }
+                }
             }
         });
 
@@ -463,6 +474,62 @@ Object.assign(window.UI, {
             console.error(`전략 정보 로드 실패 (${code}):`, error);
             if (supplyElem) supplyElem.innerHTML = '<span style="color: #888;">-</span>';
             strategyElem.innerHTML = '<span style="color: #888;">-</span>';
+        }
+    },
+
+    // 수급 정보 업데이트 (스로틀링 적용)
+    async updateSupplyInfo(cardElement, code) {
+        const now = Date.now();
+        const lastUpdate = parseInt(cardElement.getAttribute('data-last-supply-update') || '0');
+        const throttleTime = 60 * 1000; // 60초
+
+        if (now - lastUpdate < throttleTime) {
+            return; // 스로틀링
+        }
+
+        const supplyElem = document.getElementById(`supply-${code}`);
+        if (!supplyElem) return;
+
+        try {
+            const result = await API.fetchSupplyDemand(code);
+            if (result.success && result.data) {
+                const data = result.data;
+                const foreigner = data.foreign_net || 0;
+                const institution = data.institution_net || 0;
+
+                let badge = '';
+                if (foreigner > 0 && institution > 0) {
+                    badge = '<span class="badge-supply buy">쌍끌이 매수 🚀</span>';
+                } else if (foreigner < 0 && institution < 0) {
+                    badge = '<span class="badge-supply sell">양매도 📉</span>';
+                } else if (foreigner > 0 && institution < 0) {
+                    badge = `<div style="display: flex; flex-direction: column; gap: 4px;">
+                        <span class="badge-supply buy" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">외인 매수</span>
+                        <span class="badge-supply sell" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">기관 매도</span>
+                    </div>`;
+                } else if (foreigner < 0 && institution > 0) {
+                    badge = `<div style="display: flex; flex-direction: column; gap: 4px;">
+                        <span class="badge-supply sell" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">외인 매도</span>
+                        <span class="badge-supply buy" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">기관 매수</span>
+                    </div>`;
+                } else if (foreigner > 0) {
+                    badge = '<span class="badge-supply buy">외인 매수중 📈</span>';
+                } else if (foreigner < 0) {
+                    badge = '<span class="badge-supply sell">외인 매도중 📉</span>';
+                } else if (institution > 0) {
+                    badge = '<span class="badge-supply buy">기관 매수중 🏢</span>';
+                } else if (institution < 0) {
+                    badge = '<span class="badge-supply sell">기관 매도중 📉</span>';
+                } else {
+                    badge = '<span class="badge-supply neutral">수급 보합</span>';
+                }
+                supplyElem.innerHTML = badge;
+
+                // 업데이트 시간 기록
+                cardElement.setAttribute('data-last-supply-update', now.toString());
+            }
+        } catch (error) {
+            console.error(`수급 정보 업데이트 실패 (${code}):`, error);
         }
     }
 });

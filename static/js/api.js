@@ -221,6 +221,17 @@ const API = {
         }
     },
 
+    // 수급 정보 (단일 종목)
+    async fetchSupplyDemand(code) {
+        try {
+            const response = await fetch(`${API_BASE}/api/analysis/supply-demand/${code}`);
+            return await response.json();
+        } catch (error) {
+            console.error('수급 정보 로드 실패:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
     // 관심종목 가격 로드
     async fetchWatchlistPrices() {
         try {
