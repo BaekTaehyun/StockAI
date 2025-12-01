@@ -81,9 +81,9 @@ const API = {
     memoryCache: {},
     MEMORY_TTL: 10 * 60 * 1000,
 
-    // L2 캐시 (LocalStorage) - 60분
+    // L2 캐시 (LocalStorage) - 30분
     STORAGE_KEY_PREFIX: 'stock_analysis_',
-    STORAGE_TTL: 60 * 60 * 1000,
+    STORAGE_TTL: 30 * 60 * 1000,
 
     // 요청 큐 시스템 (동시 요청 제한)
     requestQueue: [],
