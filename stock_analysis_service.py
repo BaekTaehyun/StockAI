@@ -125,27 +125,51 @@ class StockAnalysisService:
                 
             technical = TechnicalIndicators.calculate_indicators(price_data)
             
-            # 4. 뉴스 분석 (Gemini) - Optional, 경량 모드 시 스킵
+            # 4-5. 뉴스 분석과 시장 데이터 수집을 병렬로 처리 (성능 개선)
             news_analysis = {
                 'news_summary': '뉴스 분석을 사용할 수 없습니다',
                 'reason': 'Gemini API가 설정되지 않았습니다',
                 'sentiment': '중립',
                 'raw_response': ''
             }
-            if not lightweight:
-                try:
-                    news_analysis = self.gemini.search_and_analyze_news(
-                        stock_name=stock_name,
-                        stock_code=normalized_code,  # 정규화된 코드 사용
-                        current_price=price_info.get('price'),
-                        change_rate=price_info.get('rate'),
-                        force_refresh=force_refresh
-                    )
-                except Exception as e:
-                    print(f"[StockAnalysisService] 뉴스 분석 건너뜀: {e}")
-            
-            # 5. 시장 데이터 수집 (Top-Down Analysis)
             market_data = {}
+            
+            if not lightweight:
+                # 병렬 처리: 뉴스 분석 + 테마 조회
+                import concurrent.futures
+                
+                def fetch_news():
+                    try:
+                        return self.gemini.search_and_analyze_news(
+                            stock_name=stock_name,
+                            stock_code=normalized_code,
+                            current_price=price_info.get('price'),
+                            change_rate=price_info.get('rate'),
+                            force_refresh=force_refresh
+                        )
+                    except Exception as e:
+                        print(f"[StockAnalysisService] 뉴스 분석 건너뜀: {e}")
+                        return news_analysis  # 기본값 반환
+                
+                def fetch_market_themes():
+                    try:
+                        return self.gemini.fetch_market_themes(force_refresh=force_refresh)
+                    except Exception as e:
+                        print(f"[StockAnalysisService] 테마 조회 건너뜀: {e}")
+                        return '정보 없음'
+                
+                # ThreadPoolExecutor로 병렬 실행
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                    news_future = executor.submit(fetch_news)
+                    themes_future = executor.submit(fetch_market_themes)
+                    
+                    # 결과 대기
+                    news_analysis = news_future.result()
+                    market_themes = themes_future.result()
+            else:
+                market_themes = '정보 없음'  # 경량 모드
+            
+            # 시장 데이터 구성
             try:
                 # 5-1. 시장 지수 (KOSPI/KOSDAQ) - 캐싱 적용
                 market_index_key = "market_index"
@@ -164,8 +188,8 @@ class StockAnalysisService:
                     market_data['us_indices'] = global_market_data.get('indices', '정보 없음')
                     market_data['us_themes'] = global_market_data.get('themes', '정보 없음')
                 
-                # 5-2. 주도 테마 (Gemini Search)
-                market_data['themes'] = self.gemini.fetch_market_themes(force_refresh=force_refresh)
+                # 5-2. 주도 테마 (병렬로 가져온 데이터 사용)
+                market_data['themes'] = market_themes
                 
                 # 5-3. 종목 테마 (Theme Service - REST API 캐시 사용)
                 themes_found = self.theme_service.find_themes_by_stock(stock_name)
