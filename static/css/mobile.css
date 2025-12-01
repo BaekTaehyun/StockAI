@@ -138,6 +138,11 @@
         /* 기존 flex 해제 */
     }
 
+    /* US Market 카드만 전체 너비 사용 */
+    .index-card.full-width {
+        grid-column: 1 / -1 !important;
+    }
+
     /* 카드 패딩 축소 */
     .index-card,
     .summary-card {
