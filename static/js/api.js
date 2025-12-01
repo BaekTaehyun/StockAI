@@ -202,16 +202,36 @@ const API = {
             }
 
             // AbortController 처리 (외부에서 전달된 것 우선 사용)
-            const controller = abortController || new AbortController();
-            const timeoutId = abortController ? null : setTimeout(() => controller.abort(), 90000);
+            const controller = request.abortController || new AbortController();
+            const timeoutId = request.abortController ? null : setTimeout(() => controller.abort(), 90000);
 
             let response;
             try {
-                console.error(`HTTP Error: ${response.status}`);
-                return {
-                    success: false,
-                    message: `서버 오류 (${response.status}). 잠시 후 다시 시도해주세요.`
-                };
+                response = await fetch(url, { signal: controller.signal });
+
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+
+                if (!response.ok) {
+                    console.error(`HTTP Error: ${response.status}`);
+                    return {
+                        success: false,
+                        message: `서버 오류 (${response.status}). 잠시 후 다시 시도해주세요.`
+                    };
+                }
+            } catch (error) {
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+
+                // AbortError는 정상적인 취소이므로 에러로 처리하지 않음
+                if (error.name === 'AbortError') {
+                    console.log(`⏹️ 요청 취소됨: ${code}`);
+                    return { success: false, message: '요청이 취소되었습니다' };
+                }
+
+                throw error; // 다른 에러는 외부 catch로 전달
             }
 
             const data = await response.json();
@@ -329,6 +349,56 @@ const API = {
         }
     },
     // 스트리밍 분석 (Server-Sent Events)  ← 여기부터 새로 추가
+    async fetchFullAnalysisStreaming(code, onProgress, onComplete, onError) {
+        try {
+            const response = await fetch(`${API_BASE}/api/analysis/stream/${code}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
 
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
 
+                buffer += decoder.decode(value);
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    // 빈 줄 무시
+                    if (!line.trim()) continue;
+
+                    // SSE 형식: "data: {...}" 에서 "data: " 제거
+                    if (line.startsWith('data: ')) {
+                        const jsonStr = line.substring(6); // "data: " 제거
+                        const data = JSON.parse(jsonStr);
+
+                        if (data.type === 'basic') {
+                            onProgress('basic', {
+                                price: data.data.price,
+                                supply: data.data.supply
+                            });
+                        } else if (data.type === 'technical') {
+                            onProgress('technical', data.data);
+                        } else if (data.type === 'news') {
+                            onProgress('news', data.data);
+                        } else if (data.type === 'outlook') {
+                            onProgress('outlook', data.data);
+                        } else if (data.type === 'complete') {
+                            onComplete();
+                            return;
+                        } else if (data.type === 'error') {
+                            onError(data.message);
+                            return;
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            onError(error.message);
+        }
+    }
 };

@@ -322,7 +322,7 @@ def stream_full_analysis(code):
             yield f"data: {json.dumps({'type': 'basic', 'data': {'price': price_info, 'supply': supply_demand}})}\n\n"
             
             # 2단계: 차트 & 기술적 지표
-            chart_data = kiwoom.get_daily_chart_data(normalized_code, days=120)
+            chart_data = kiwoom.get_daily_chart_data(normalized_code)
             technical = TechnicalIndicators.calculate_indicators(chart_data)
             
             yield f"data: {json.dumps({'type': 'technical', 'data': technical})}\n\n"

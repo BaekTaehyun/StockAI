@@ -431,39 +431,71 @@ Object.assign(window.UI, {
             // 새 AbortController 생성
             this.currentAnalysisController = new AbortController();
 
-            const result = await API.fetchFullAnalysis(code, false, false, true, this.currentAnalysisController);
-            // forceRefresh=false, lightweight=false (전체 분석 필요), highPriority=true (사용자 요청)
+            // 스트리밍 방식으로 데이터 수신
+            let allData = {}; // 전체 데이터 누적
 
-            if (result.success && result.data) {
-                const data = result.data;
+            API.fetchFullAnalysisStreaming(
+                code,
+                // onProgress: 단계별 데이터 수신 시 호출됨
+                (type, data) => {
+                    console.log(`📥 [${type}] 데이터 수신`, data);
 
-                // 각 탭 렌더링
-                this.renderOverview(data);
-                this.renderSupplyDemand(data.supply_demand);
-                this.renderNews(data.news_analysis);
+                    if (type === 'basic') {
+                        // 1단계: 기본 정보 (주가 + 수급) - 즉시 표시
+                        allData.price = data.price;
+                        allData.supply = data.supply;
+                        this.renderBasicInfoOnly(data.price, data.supply);
+                    }
+                    else if (type === 'technical') {
+                        // 2단계: 기술적 지표
+                        allData.technical = data;
+                        if (typeof Charts !== 'undefined' && Charts.renderTechnical) {
+                            Charts.renderTechnical(data);
+                        }
+                    }
+                    else if (type === 'news') {
+                        // 3단계: 뉴스 분석
+                        allData.news_analysis = data;
+                        this.renderNews(data);  // 뉴스 탭 업데이트
+                        this.updateOverviewWithNews(data);  // 종합 탭 뉴스 섹션 업데이트
+                    }
+                    else if (type === 'outlook') {
+                        // 4단계: AI 전망
+                        allData.outlook = data;
+                        this.updateOverviewWithOutlook(data);
+                    }
+                },
+                // onComplete: 모든 단계 완료
+                (completedData) => {
+                    console.log('✅ 스트리밍 분석 완료');
 
-                // 리본 및 전역 캐시 동기화 (중요: 상세 분석이 최신이면 리본도 업데이트)
-                if (window.updateSentimentFromAnalysis) {
-                    window.updateSentimentFromAnalysis(code, data);
+                    // 수급 탭 렌더링
+                    if (allData.supply) {
+                        this.renderSupplyDemand(allData.supply);
+                    }
+
+                    // 리본 캐시 동기화
+                    if (window.updateSentimentFromAnalysis && allData.outlook && allData.news_analysis) {
+                        window.updateSentimentFromAnalysis(code, {
+                            outlook: allData.outlook,
+                            news_analysis: allData.news_analysis,
+                            supply_demand: allData.supply
+                        });
+                    }
+
+                    // UI 최종 정리
+                    if (loading) loading.style.display = 'none';
+                    tabs.style.display = 'flex';
+                    body.style.display = 'block';
+                    this.switchTab('overview');
+                },
+                // onError: 오류 처리
+                (error) => {
+                    console.error('❌ 스트리밍 분석 오류:', error);
+                    this.showErrorInModal(error, code);
                 }
+            );
 
-                // 기술적 분석 렌더링 (Charts.js 사용)
-                if (typeof Charts !== 'undefined' && Charts.renderTechnical) {
-                    Charts.renderTechnical(data.technical, data.stock_info, data.fundamental_data);
-                }
-
-                // UI 표시 업데이트 (이미 표시되어 있지만, 로딩 스피너가 있다면 확실히 숨김)
-                if (loading) loading.style.display = 'none';
-                tabs.style.display = 'flex';
-                body.style.display = 'block';
-
-                // 기본 탭 활성화
-                this.switchTab('overview');
-            } else {
-                // 에러 메시지를 모달에 표시
-                const errorMessage = result.message || '데이터를 불러오는데 실패했습니다.';
-                this.showErrorInModal(errorMessage, code);
-            }
         } catch (error) {
             console.error('상세 분석 로드 실패:', error);
             // 네트워크 오류 등의 경우
@@ -473,6 +505,136 @@ Object.assign(window.UI, {
             this.showErrorInModal(errorMsg, code);
         }
     },
+    // 기본 정보만 먼저 렌더링 (주가 + 수급)
+    renderBasicInfoOnly(priceInfo, supplyDemand) {
+        if (!priceInfo) return;
+        const changeRate = parseFloat(priceInfo.rate) || 0;
+        const isUp = changeRate >= 0;
+        const priceColor = isUp ? '#e53e3e' : '#3b82f6';
+        // 수급 트렌드 뱃지
+        let trendBadge = '';
+        if (supplyDemand) {
+            const fNet = supplyDemand.foreign_net || 0;
+            const iNet = supplyDemand.institution_net || 0;
+            if (fNet > 0 && iNet > 0) {
+                trendBadge = '<span class="badge-supply buy">쌍끌이 매수 🚀</span>';
+            } else if (fNet < 0 && iNet < 0) {
+                trendBadge = '<span class="badge-supply sell">양매도 📉</span>';
+            } else if (fNet > 0) {
+                trendBadge = '<span class="badge-supply buy">외인 매수중 📈</span>';
+            } else if (fNet < 0) {
+                trendBadge = '<span class="badge-supply sell">외인 매도중 📉</span>';
+            } else if (iNet > 0) {
+                trendBadge = '<span class="badge-supply buy">기관 매수중 🏢</span>';
+            } else if (iNet < 0) {
+                trendBadge = '<span class="badge-supply sell">기관 매도중 📉</span>';
+            } else {
+                trendBadge = '<span class="badge-supply neutral">수급 보합</span>';
+            }
+        }
+        const html = `
+            <div class="analysis-section">
+                <h3>주가 정보</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="label">현재가</span>
+                        <span class="value" style="color: ${priceColor};">${formatCurrency(priceInfo.price)}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">전일대비</span>
+                        <span class="value ${changeRate >= 0 ? 'positive' : 'negative'}">
+                            ${formatCurrency(priceInfo.change)} (${priceInfo.rate}%)
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="analysis-section">
+                <h3>수급 현황</h3>
+                <div class="supply-summary">
+                    ${supplyDemand ? `
+                        <div class="supply-item ${supplyDemand.foreign_net >= 0 ? 'positive' : 'negative'}">
+                            <span class="label">외국인</span>
+                            <span class="value">${formatNumber(supplyDemand.foreign_net)}주</span>
+                        </div>
+                        <div class="supply-item ${supplyDemand.institution_net >= 0 ? 'positive' : 'negative'}">
+                            <span class="label">기관</span>
+                            <span class="value">${formatNumber(supplyDemand.institution_net)}주</span>
+                        </div>
+                        <div class="trend">${trendBadge}</div>
+                    ` : '<span style="color: var(--text-secondary);">수급 정보 로딩중...</span>'}
+                </div>
+            </div>
+            <div class="analysis-section">
+                <h3>AI 투자 의견</h3>
+                <div class="outlook-card neutral" style="min-height: 120px; display: flex; align-items: center; justify-content: center;">
+                    <div style="text-align: center;">
+                        <div class="spinner" style="width: 24px; height: 24px; border-width: 3px; margin: 0 auto 0.5rem;"></div>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">AI 분석 중...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="analysis-section">
+                <h3>뉴스 요약</h3>
+                <div class="news-summary" style="display: flex; justify-content: center; padding: 1rem;">
+                    <span style="color: var(--text-secondary); font-size: 0.9rem;">뉴스 분석 중...</span>
+                </div>
+            </div>
+        `;
+        document.getElementById('overviewContent').innerHTML = html;
+    },
+
+    // AI 전망 부분만 업데이트 (기존 내용 유지)
+    updateOverviewWithOutlook(outlook) {
+        if (!outlook) return;
+        const recommendationClass =
+            outlook.recommendation === '매수' ? 'buy' :
+                outlook.recommendation === '매도' ? 'sell' : 'neutral';
+        const outlookHtml = `
+            <div class="outlook-card ${recommendationClass}">
+                <div class="outlook-header">
+                    <span class="recommendation">${outlook.recommendation}</span>
+                    <span class="confidence">신뢰도 ${outlook.confidence}%</span>
+                </div>
+                <div class="trading-scenario" style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">매매 시나리오</h4>
+                    <div style="font-family: inherit; color: var(--text-secondary); line-height: 1.6;">${formatAIText(outlook.trading_scenario || '시나리오 정보 없음')}</div>
+                </div>
+                <div class="reasoning" style="margin-top: 1rem; line-height: 1.6; color: var(--text-secondary);">${formatAIText(outlook.reasoning)}</div>
+            </div>
+        `;
+        // AI 투자 의견 섹션만 선택적으로 업데이트
+        const overviewContent = document.getElementById('overviewContent');
+        const sections = overviewContent.querySelectorAll('.analysis-section');
+
+        // 세 번째 섹션이 AI 투자 의견
+        if (sections.length >= 3) {
+            sections[2].innerHTML = `<h3>AI 투자 의견</h3>${outlookHtml}`;
+        }
+    },
+
+    // 뉴스 요약 부분만 업데이트 (기존 내용 유지)
+    updateOverviewWithNews(newsData) {
+        if (!newsData) return;
+
+        const newsHtml = `
+            <div class="news-summary">
+                <div class="sentiment ${newsData.sentiment}">${newsData.sentiment}</div>
+                <div class="news-box">
+                    ${formatNewsText(newsData.reason)}
+                </div>
+            </div>
+        `;
+
+        // 뉴스 요약 섹션만 선택적으로 업데이트
+        const overviewContent = document.getElementById('overviewContent');
+        const sections = overviewContent.querySelectorAll('.analysis-section');
+
+        // 네 번째 섹션이 뉴스 요약
+        if (sections.length >= 4) {
+            sections[3].innerHTML = `<h3>뉴스 요약</h3>${newsHtml}`;
+        }
+    },
+
 
     // 모달에 에러 메시지 표시
     showErrorInModal(message, code) {
