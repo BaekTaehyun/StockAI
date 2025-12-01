@@ -14,7 +14,8 @@ from flask_cors import CORS
 from kis_api import KiwoomApi
 from data_fetcher import DataFetcher
 from theme_service import ThemeService
-from datetime import timedelta
+from finviz_market_crawler import FinvizMarketFetcher
+from datetime import timedelta, datetime
 import config
 
 app = Flask(__name__)
@@ -32,6 +33,46 @@ data_fetcher = DataFetcher()
 
 # 테마 서비스 인스턴스 생성
 theme_service = ThemeService()
+
+# 글로벌 마켓 데이터 페처 생성
+market_fetcher = FinvizMarketFetcher()
+global_market_cache = {
+    'data': None,
+    'last_updated': None
+}
+
+def update_global_market_data():
+    """글로벌 마켓 데이터 강제 갱신 (스케줄러용)"""
+    global global_market_cache
+    now = datetime.now()
+    
+    print(f"[Market] Updating global market data at {now}...")
+    try:
+        indices = market_fetcher.get_market_indices()
+        themes = market_fetcher.get_strong_themes()
+        
+        data = {
+            'indices': indices,
+            'themes': themes
+        }
+        
+        global_market_cache['data'] = data
+        global_market_cache['last_updated'] = now
+        print(f"[Market] Update complete.")
+        return True
+    except Exception as e:
+        print(f"[Market] Update failed: {e}")
+        return False
+
+def get_global_market_data():
+    """글로벌 마켓 데이터 조회 (캐시 반환)"""
+    global global_market_cache
+    
+    # 데이터가 없으면 최초 1회 실행
+    if global_market_cache['data'] is None:
+        update_global_market_data()
+        
+    return global_market_cache['data']
 
 @app.after_request
 def add_header(response):
@@ -83,7 +124,8 @@ def logout():
 @app.route('/')
 def index():
     """메인 대시보드 페이지"""
-    return render_template('index.html')
+    market_data = get_global_market_data()
+    return render_template('index.html', market_data=market_data)
 
 @app.route('/api/auth', methods=['POST'])
 def authenticate():
@@ -233,7 +275,14 @@ def get_full_analysis(code):
         # 강제 갱신 여부 확인 (쿼리 파라미터 refresh=true)
         force_refresh = request.args.get('refresh', '').lower() == 'true'
         
-        result = analysis_service.get_full_analysis(normalized_code, force_refresh=force_refresh)
+        # 글로벌 마켓 데이터 가져오기
+        global_market = get_global_market_data()
+        
+        result = analysis_service.get_full_analysis(
+            normalized_code, 
+            force_refresh=force_refresh,
+            global_market_data=global_market
+        )
         
         if result.get('success'):
             return jsonify(result)
@@ -493,20 +542,57 @@ if __name__ == '__main__':
         cache_info = theme_service.get_cache_info()
         print(f"[ThemeService] ✓ 기존 캐시 사용: {cache_info.get('theme_count')}개 테마")
     
-    # 3. 스케줄러 초기화 (매일 오전 9시 테마 캐시 갱신)
-    from apscheduler.schedulers.background import BackgroundScheduler
+# 3. 스케줄러 초기화 (매일 오전 9시 테마 캐시 갱신)
+from apscheduler.schedulers.background import BackgroundScheduler
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(
+    func=theme_service.update_cache,
+    trigger='cron',
+    hour=9,
+    minute=0,
+    id='daily_theme_update',
+    replace_existing=True
+)
+
+# 4. 글로벌 마켓 데이터 갱신 스케줄러 (매일 07:00, 19:00)
+scheduler.add_job(
+    func=update_global_market_data,
+    trigger='cron',
+    hour='7,19',
+    minute=0,
+    id='market_data_update',
+    replace_existing=True
+)
+
+if __name__ == '__main__':
+    print("=== 서버 시작 중 ===")
     
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(
-        func=theme_service.update_cache,
-        trigger='cron',
-        hour=9,
-        minute=0,
-        id='daily_theme_update',
-        replace_existing=True
-    )
+    # 1. 토큰 사전 발급
+    if kiwoom.get_access_token():
+        print("[OK] 인증 완료!")
+    
+    # 2. 테마 캐시 초기화 (서버 시작 전 필수)
+    print("\n[ThemeService] 테마 캐시 초기화 중...")
+    if not theme_service.is_cache_valid():
+        print("[ThemeService] 캐시가 없거나 만료됨. 새로 생성합니다...")
+        if theme_service.update_cache():
+            cache_info = theme_service.get_cache_info()
+            print(f"[ThemeService] ✓ 캐시 생성 완료: {cache_info.get('theme_count')}개 테마")
+        else:
+            print("[ThemeService] ✗ 캐시 생성 실패 - 서비스 제한 모드로 시작")
+    else:
+        cache_info = theme_service.get_cache_info()
+        print(f"[ThemeService] ✓ 기존 캐시 사용: {cache_info.get('theme_count')}개 테마")
+    
+    # 서버 시작 시 마켓 데이터가 없으면 초기화
+    if global_market_cache['data'] is None:
+        print("[Market] 초기 데이터 로딩 중...")
+        update_global_market_data()
+        
     scheduler.start()
     print("[Scheduler] ✓ 매일 오전 9시 자동 갱신 예약 완료")
+    print("[Scheduler] ✓ 매일 07:00, 19:00 글로벌 마켓 데이터 갱신 예약 완료")
     
     print("\n서버 주소: http://localhost:5000")
     print("브라우저에서 위 주소로 접속하세요!\n")

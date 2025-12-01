@@ -48,7 +48,7 @@ class StockAnalysisService:
             'ttl': ttl
         }
 
-    def get_full_analysis(self, code, stock_name=None, force_refresh=False):
+    def get_full_analysis(self, code, stock_name=None, force_refresh=False, global_market_data=None):
         """
         종목에 대한 종합 분석 수행
         
@@ -56,6 +56,7 @@ class StockAnalysisService:
             code: 종목코드
             stock_name: 종목명 (선택, 없으면 API로 조회)
             force_refresh: 캐시 강제 갱신 여부
+            global_market_data: 외부에서 주입된 글로벌 시장 데이터 (선택)
             
         Returns:
             종합 분석 데이터
@@ -172,6 +173,11 @@ class StockAnalysisService:
                     self._set_cached_data(market_index_key, market_index_str, ttl=60)
                 
                 market_data['market_index'] = market_index_str
+                
+                # 글로벌 시장 데이터 병합 (US Indices, Themes)
+                if global_market_data:
+                    market_data['us_indices'] = global_market_data.get('indices', '정보 없음')
+                    market_data['us_themes'] = global_market_data.get('themes', '정보 없음')
                 
                 # 5-2. 주도 테마 (Gemini Search)
                 market_data['themes'] = self.gemini.fetch_market_themes(force_refresh=force_refresh)

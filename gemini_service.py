@@ -432,7 +432,19 @@ class GeminiService:
             
             # 시장 데이터 추출
             market_data = market_data or {}
-            market_index_status = market_data.get('market_index', '정보 없음')
+            market_index_status = market_data.get('market_index', '정보 없음') # 국내 지수
+            
+            # 글로벌 시장 데이터 (US)
+            us_indices = market_data.get('us_indices', '정보 없음')
+            us_themes = market_data.get('us_themes', '정보 없음')
+            
+            # 국내외 시장 상황 통합
+            market_context_str = f"""
+            - 국내 지수: {market_index_status}
+            - 미국 지수: {us_indices}
+            - 미국 강세 테마: {us_themes}
+            """
+            
             current_hot_themes = market_data.get('themes', '정보 없음')
             # stock_sector는 위에서 계산함
 
@@ -450,7 +462,7 @@ class GeminiService:
             prompt = prompts.OUTLOOK_GENERATION_PROMPT.format(
                 stock_name=stock_name,
                 stock_sector=stock_sector_str,
-                market_index_status=market_index_status,
+                market_context=market_context_str, # 통합된 시장 상황 전달
                 current_hot_themes=current_hot_themes,
                 current_price=stock_info.get('price', 'N/A'),
                 change_rate=stock_info.get('rate', 'N/A'),

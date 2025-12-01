@@ -82,7 +82,9 @@ OUTLOOK_GENERATION_PROMPT = """
 {stock_sector}
 
 1. 시장 및 테마 환경 (가장 중요):
-   - 시장 지수(Market): {market_index_status} (예: 코스피 -1% 하락장 등)
+   - 시장 상황(Market Context):
+     {market_context}
+     (미국 시장의 흐름이 한국 시장에 미치는 영향을 고려하세요. 예: 나스닥 급등 -> 기술주/반도체 긍정적)
    - 오늘 주도 테마: {current_hot_themes}
    - **테마 분석 포인트:** 
      - 핵심 테마가 강세라면 기업의 펀더멘털이 주목받는 것입니다.

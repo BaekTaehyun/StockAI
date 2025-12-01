@@ -49,6 +49,21 @@
             </div>
         </section>
 
+        <!-- 글로벌 시장 지수 (서버 사이드 렌더링) -->
+        {% if market_data %}
+        <section class="market-indices global-indices" style="margin-top: 1rem;">
+            <div class="index-card full-width">
+                <h3>🇺🇸 US Market</h3>
+                <div class="global-index-row">
+                    <span class="global-indices-text">{{ market_data.indices }}</span>
+                </div>
+                <div class="global-themes-row" style="margin-top: 0.5rem; font-size: 0.9rem; color: #aaa;">
+                    <strong>🔥 Hot Themes:</strong> {{ market_data.themes }}
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
         <!-- 계좌 요약 -->
         <section class="account-summary">
             <div class="summary-card">
