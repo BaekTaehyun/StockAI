@@ -7,6 +7,7 @@ import datetime
 
 import prompts
 from gemini_cache import GeminiCache
+from exchange_rate_fetcher import ExchangeRateFetcher
 
 class GeminiService:
     """Google Gemini SDK를 사용한 AI 분석 서비스"""
@@ -17,6 +18,9 @@ class GeminiService:
         
         # 캐시 관리자 초기화
         self.cache = GeminiCache()
+        
+        # 환율 정보 페처 초기화
+        self.exchange_rate_fetcher = ExchangeRateFetcher()
     
 
 
@@ -350,11 +354,16 @@ class GeminiService:
                         events_str += f"- {str(evt)}\n"
             else:
                 events_str = str(us_events)
+            
+            # 환율 정보 가져오기
+            exchange_rate_data = self.exchange_rate_fetcher.get_usd_krw_rate()
+            exchange_rate_str = f"{exchange_rate_data['rate']:,.2f}원 ({exchange_rate_data['status_text']})" if exchange_rate_data['success'] else "데이터 없음"
 
             prompt = prompts.KOREA_MARKET_IMPACT_PROMPT.format(
                 us_indices=us_indices,
                 us_hot_themes=us_themes,
-                us_key_events=events_str
+                us_key_events=events_str,
+                usd_krw_exchange_rate=exchange_rate_str
             )
             
             result_text = self._call_gemini_api(prompt)
@@ -547,6 +556,10 @@ class GeminiService:
             
             current_hot_themes = market_data.get('themes', '정보 없음')
             # stock_sector는 위에서 계산함
+            
+            # 환율 정보 가져오기
+            exchange_rate_data = self.exchange_rate_fetcher.get_usd_krw_rate()
+            exchange_rate_str = f"{exchange_rate_data['rate']:,.2f}원 ({exchange_rate_data['status_text']})" if exchange_rate_data['success'] else "데이터 없음"
 
             # 펀더멘털 데이터 추출
             fundamental_data = fundamental_data or {}
@@ -564,6 +577,7 @@ class GeminiService:
                 stock_sector=stock_sector_str,
                 market_context=market_context_str, # 통합된 시장 상황 전달
                 current_hot_themes=current_hot_themes,
+                usd_krw_exchange_rate=exchange_rate_str,
                 current_price=stock_info.get('price', 'N/A'),
                 change_rate=stock_info.get('rate', 'N/A'),
                 foreign_net=supply_demand.get('foreign_net', 'N/A'),

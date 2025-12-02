@@ -133,6 +133,7 @@ async function loadMarketIndices() {
         const data = result.data;
         UI.updateMarketIndex('kospi', data.kospi);
         UI.updateMarketIndex('kosdaq', data.kosdaq);
+        UI.updateMarketIndex('usdkrw', data.usdkrw);
     }
 }
 
