@@ -549,6 +549,11 @@ Object.assign(window.UI, {
                             Charts.renderTechnical(data);
                         }
                     }
+                    else if (type === 'market_impact') {
+                        // 1.5단계: 글로벌 시장 영향
+                        allData.market_impact = data;
+                        this.renderMarketImpact(data);
+                    }
                     else if (type === 'news') {
                         // 3단계: 뉴스 분석
                         allData.news_analysis = data;
@@ -568,6 +573,11 @@ Object.assign(window.UI, {
                     // 수급 탭 렌더링
                     if (allData.supply) {
                         this.renderSupplyDemand(allData.supply);
+                    }
+
+                    // 시장 영향 렌더링 (혹시 누락되었을 경우)
+                    if (allData.market_impact) {
+                        this.renderMarketImpact(allData.market_impact);
                     }
 
                     // 리본 캐시 동기화
@@ -591,7 +601,8 @@ Object.assign(window.UI, {
                         supply_demand: allData.supply,
                         news_analysis: allData.news_analysis,
                         outlook: allData.outlook,
-                        technical: allData.technical
+                        technical: allData.technical,
+                        market_impact: allData.market_impact // 캐시에도 저장
                     };
 
                     if (allData.outlook && allData.news_analysis) {
@@ -747,6 +758,85 @@ Object.assign(window.UI, {
         // 네 번째 섹션이 뉴스 요약
         if (sections.length >= 4) {
             sections[3].innerHTML = `<h3>뉴스 요약</h3>${newsHtml}`;
+        }
+    },
+
+    // 한국 증시 영향 분석 렌더링 (New)
+    renderMarketImpact(data) {
+        if (!data || !data.market_outlook) return;
+
+        const outlook = data.market_outlook;
+        const supply = data.foreigner_supply_forecast;
+        const strategy = data.sector_strategy;
+        const insight = data.actionable_insight;
+
+        // 감성 색상 결정
+        const sentimentClass =
+            outlook.sentiment.includes('긍정') ? 'buy' :
+                outlook.sentiment.includes('부정') ? 'sell' : 'neutral';
+
+        const html = `
+            <div class="analysis-section market-impact-section" style="border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02);">
+                <h3 style="display: flex; align-items: center; gap: 0.5rem;">
+                    🇺🇸 미국장 영향 분석 (Korea Impact)
+                    <span class="badge-supply ${sentimentClass}" style="font-size: 0.8rem; padding: 2px 8px;">${outlook.sentiment}</span>
+                </h3>
+                
+                <div class="impact-grid" style="display: grid; gap: 1rem; margin-top: 1rem;">
+                    <!-- 1. 시장 전망 -->
+                    <div class="impact-card">
+                        <h4 style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">📉 시장 예상</h4>
+                        <p style="font-weight: bold; color: var(--text-primary); margin-bottom: 0.3rem;">${outlook.predicted_movement}</p>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">${outlook.reason}</p>
+                    </div>
+
+                    <!-- 2. 외국인 수급 -->
+                    <div class="impact-card">
+                        <h4 style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">👽 외국인 수급</h4>
+                        <p style="font-weight: bold; color: var(--text-primary); margin-bottom: 0.3rem;">${supply.direction}</p>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">${supply.logic}</p>
+                    </div>
+
+                    <!-- 3. 섹터 전략 -->
+                    <div class="impact-card">
+                        <h4 style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">🎯 섹터 전략</h4>
+                        <div style="display: flex; gap: 1rem; font-size: 0.85rem;">
+                            <div style="flex: 1;">
+                                <span style="color: #e53e3e;">▲ 호재:</span> ${strategy.positive_sectors.join(', ')}
+                            </div>
+                            <div style="flex: 1;">
+                                <span style="color: #3b82f6;">▼ 악재:</span> ${strategy.negative_sectors.join(', ')}
+                            </div>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">💡 ${strategy.coupling_note}</p>
+                    </div>
+
+                    <!-- 4. 행동 가이드 -->
+                    <div class="impact-card" style="background: rgba(var(--accent-rgb), 0.1); border-left: 3px solid var(--accent);">
+                        <h4 style="color: var(--accent); font-size: 0.9rem; margin-bottom: 0.3rem;">⚡ Actionable Insight</h4>
+                        <p style="font-size: 0.9rem; color: var(--text-primary);">${insight}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 종합 탭의 맨 위에 추가하거나, 적절한 위치에 삽입
+        // 여기서는 "주가 정보" 섹션 바로 다음(두 번째 위치)에 삽입
+        const overviewContent = document.getElementById('overviewContent');
+
+        // 이미 렌더링된 섹션이 있는지 확인
+        const existingSection = overviewContent.querySelector('.market-impact-section');
+        if (existingSection) {
+            existingSection.outerHTML = html;
+        } else {
+            // 주가 정보 섹션 찾기
+            const firstSection = overviewContent.querySelector('.analysis-section');
+            if (firstSection) {
+                firstSection.insertAdjacentHTML('afterend', html);
+            } else {
+                // 섹션이 없으면 그냥 맨 위에 추가
+                overviewContent.insertAdjacentHTML('afterbegin', html);
+            }
         }
     },
 

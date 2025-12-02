@@ -37,6 +37,10 @@ theme_service = ThemeService()
 
 # 글로벌 마켓 데이터 페처 생성
 market_fetcher = FinvizMarketFetcher()
+# Gemini 서비스 인스턴스 생성 (시장 분석용)
+from gemini_service import GeminiService
+gemini_service = GeminiService()
+
 global_market_cache = {
     'data': None,
     'last_updated': None
@@ -49,12 +53,27 @@ def update_global_market_data():
     
     print(f"[Market] Updating global market data at {now}...")
     try:
+        # 1. 지수 및 테마
         indices = market_fetcher.get_market_indices()
         themes = market_fetcher.get_strong_themes()
         
+        # 2. 시장 핵심 이벤트 (뉴스 헤드라인 -> AI 분석)
+        headlines = market_fetcher.get_market_headlines()
+        market_events = gemini_service.analyze_market_events(headlines, force_refresh=True)
+        
+        # 3. 한국 증시 영향 분석 (New)
+        korea_impact = gemini_service.analyze_korea_market_impact(
+            us_indices=indices,
+            us_themes=themes,
+            us_events=market_events.get('events', []),
+            force_refresh=True
+        )
+
         data = {
             'indices': indices,
-            'themes': themes
+            'themes': themes,
+            'events': market_events.get('events', []),
+            'korea_impact': korea_impact
         }
         
         global_market_cache['data'] = data
@@ -321,6 +340,11 @@ def stream_full_analysis(code):
             
             yield f"data: {json.dumps({'type': 'basic', 'data': {'price': price_info, 'supply': supply_demand}})}\n\n"
             
+            # 1.5단계: 글로벌 시장 영향 (Korea Market Impact) - New
+            global_market = get_global_market_data()
+            korea_impact = global_market.get('korea_impact', {})
+            yield f"data: {json.dumps({'type': 'market_impact', 'data': korea_impact})}\n\n"
+
             # 2단계: 차트 & 기술적 지표
             chart_data = kiwoom.get_daily_chart_data(normalized_code)
             technical = TechnicalIndicators.calculate_indicators(chart_data)
@@ -328,7 +352,7 @@ def stream_full_analysis(code):
             yield f"data: {json.dumps({'type': 'technical', 'data': technical})}\n\n"
             
             # 3-4단계: 전체 분석 (뉴스 + AI 전망)
-            global_market = get_global_market_data()
+            # global_market은 이미 위에서 가져옴
             result = analysis_service.get_full_analysis(
                 normalized_code,
                 force_refresh=False,
@@ -480,6 +504,24 @@ def get_market_indices():
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/market/global')
+def get_global_market():
+    """글로벌 마켓 전체 데이터 조회 (상세 모달용)"""
+    try:
+        data = get_global_market_data()
+        
+        # 데이터 복사 및 last_updated 추가
+        response_data = data.copy() if data else {}
+        if global_market_cache.get('last_updated'):
+            response_data['last_updated'] = global_market_cache['last_updated'].isoformat()
+            
+        return jsonify({
+            'success': True,
+            'data': response_data
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 # ================================================================
 # 관심종목 API

@@ -285,6 +285,104 @@ class GeminiService:
             print(f"[Gemini] 테마 검색 실패: {e}")
             return "테마 정보 확인 불가"
 
+    def analyze_market_events(self, headlines, force_refresh=False):
+        """
+        시장 뉴스 헤드라인을 바탕으로 3대 핵심 이벤트를 분석 (캐싱 적용)
+        """
+        # 1. 캐시 확인
+        cached_data, _ = self.cache.load('MARKET', 'events', force_refresh)
+        if cached_data:
+            return cached_data
+
+        try:
+            headlines_str = "\n".join([f"- {h}" for h in headlines])
+            
+            prompt = prompts.MARKET_EVENT_ANALYSIS_PROMPT.format(
+                headlines_list=headlines_str
+            )
+            
+            result_text = self._call_gemini_api(prompt)
+            
+            if not result_text:
+                return {'events': []}
+            
+            # JSON 파싱
+            import re
+            try:
+                # JSON 블록 추출 시도
+                match = re.search(r'\{.*\}', result_text, re.DOTALL)
+                if match:
+                    json_str = match.group(0)
+                    result = json.loads(json_str)
+                else:
+                    # 전체가 JSON일 수 있음
+                    result = json.loads(result_text)
+            except Exception as e:
+                print(f"[Gemini] 시장 이벤트 파싱 실패: {e}")
+                # 파싱 실패 시 텍스트라도 반환하도록 구조화
+                result = {'events': [], 'raw_text': result_text}
+
+            # 2. 결과 캐싱
+            self.cache.save('MARKET', 'events', result)
+            return result
+
+        except Exception as e:
+            print(f"[Gemini] 시장 이벤트 분석 실패: {e}")
+            return {'events': []}
+
+    def analyze_korea_market_impact(self, us_indices, us_themes, us_events, force_refresh=False):
+        """
+        미국 시장 데이터를 바탕으로 한국 증시 영향을 분석 (캐싱 적용)
+        """
+        # 1. 캐시 확인
+        cached_data, _ = self.cache.load('MARKET', 'korea_impact', force_refresh)
+        if cached_data:
+            return cached_data
+
+        try:
+            # 이벤트 리스트를 문자열로 변환
+            events_str = ""
+            if isinstance(us_events, list):
+                for evt in us_events:
+                    if isinstance(evt, dict):
+                        events_str += f"- {evt.get('title')}: {evt.get('reason')}\n"
+                    else:
+                        events_str += f"- {str(evt)}\n"
+            else:
+                events_str = str(us_events)
+
+            prompt = prompts.KOREA_MARKET_IMPACT_PROMPT.format(
+                us_indices=us_indices,
+                us_hot_themes=us_themes,
+                us_key_events=events_str
+            )
+            
+            result_text = self._call_gemini_api(prompt)
+            
+            if not result_text:
+                return {}
+            
+            # JSON 파싱
+            import re
+            try:
+                match = re.search(r'\{.*\}', result_text, re.DOTALL)
+                if match:
+                    json_str = match.group(0)
+                    result = json.loads(json_str)
+                else:
+                    result = json.loads(result_text)
+            except Exception as e:
+                print(f"[Gemini] 한국 증시 영향 파싱 실패: {e}")
+                result = {'raw_text': result_text}
+
+            # 2. 결과 캐싱
+            self.cache.save('MARKET', 'korea_impact', result)
+            return result
+
+        except Exception as e:
+            print(f"[Gemini] 한국 증시 영향 분석 실패: {e}")
+            return {}
+
     def fetch_stock_sector(self, stock_name, stock_code, force_refresh=False):
         """
         특정 종목의 섹터/테마 정보를 검색하고 AI로 추출 (캐싱 적용)

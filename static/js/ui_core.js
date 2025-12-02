@@ -117,6 +117,107 @@ Object.assign(window.UI, {
         document.getElementById('stockModal').style.display = 'none';
     },
 
+    // 글로벌 마켓 모달 열기
+    async openMarketModal() {
+        const modal = document.getElementById('marketModal');
+        const modalBody = document.getElementById('marketModalBody');
+
+        modal.style.display = 'block';
+        modalBody.innerHTML = '<div class="loading-spinner"></div><div style="text-align:center; margin-top:10px;">글로벌 마켓 데이터 분석 중...</div>';
+
+        try {
+            // API 호출
+            const result = await API.fetchGlobalMarket();
+
+            if (result.success && result.data) {
+                this.renderMarketModal(result.data);
+            } else {
+                modalBody.innerHTML = `<div class="error-message">데이터 로드 실패: ${result.message || '알 수 없는 오류'}</div>`;
+            }
+        } catch (error) {
+            console.error('Market Modal Error:', error);
+            modalBody.innerHTML = `<div class="error-message">오류 발생: ${error.message}</div>`;
+        }
+    },
+
+    // 글로벌 마켓 모달 닫기
+    closeMarketModal() {
+        document.getElementById('marketModal').style.display = 'none';
+    },
+
+    // 글로벌 마켓 데이터 렌더링
+    renderMarketModal(data) {
+        const modalBody = document.getElementById('marketModalBody');
+        const koreaImpact = data.korea_impact;
+
+        if (!koreaImpact || !koreaImpact.market_outlook) {
+            modalBody.innerHTML = '<div class="error-message">분석 데이터가 없습니다.</div>';
+            return;
+        }
+
+        // ui_details.js의 renderMarketImpact 로직을 재사용하거나 유사하게 구현
+        // 여기서는 독립적으로 구현하여 의존성 최소화
+        const outlook = koreaImpact.market_outlook;
+        const supply = koreaImpact.foreigner_supply_forecast;
+        const strategy = koreaImpact.sector_strategy;
+        const insight = koreaImpact.actionable_insight;
+
+        const sentimentClass =
+            outlook.sentiment.includes('긍정') ? 'buy' :
+                outlook.sentiment.includes('부정') ? 'sell' : 'neutral';
+
+        const html = `
+            <div class="analysis-section market-impact-section" style="border: none; background: transparent; padding: 0;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                    <span class="badge-supply ${sentimentClass}" style="font-size: 1rem; padding: 4px 12px;">${outlook.sentiment}</span>
+                    <span style="color: var(--text-secondary); font-size: 0.9rem;">${data.last_updated ? new Date(data.last_updated).toLocaleString() : ''} 기준</span>
+                </div>
+                
+                <div class="impact-grid" style="display: grid; gap: 1rem;">
+                    <!-- 1. 시장 전망 -->
+                    <div class="impact-card">
+                        <h4 style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">📉 시장 예상</h4>
+                        <p style="font-weight: bold; color: var(--text-primary); margin-bottom: 0.3rem; font-size: 1.1rem;">${outlook.predicted_movement}</p>
+                        <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">${outlook.reason}</p>
+                    </div>
+
+                    <!-- 2. 외국인 수급 -->
+                    <div class="impact-card">
+                        <h4 style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">👽 외국인 수급</h4>
+                        <p style="font-weight: bold; color: var(--text-primary); margin-bottom: 0.3rem;">${supply.direction}</p>
+                        <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">${supply.logic}</p>
+                    </div>
+
+                    <!-- 3. 섹터 전략 -->
+                    <div class="impact-card">
+                        <h4 style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">🎯 섹터 전략</h4>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.9rem;">
+                            <div>
+                                <span style="color: #e53e3e; font-weight: bold;">▲ 호재 섹터:</span> 
+                                <span style="color: var(--text-primary);">${strategy.positive_sectors.join(', ')}</span>
+                            </div>
+                            <div>
+                                <span style="color: #3b82f6; font-weight: bold;">▼ 악재 섹터:</span> 
+                                <span style="color: var(--text-primary);">${strategy.negative_sectors.join(', ')}</span>
+                            </div>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.8rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+                            💡 ${strategy.coupling_note}
+                        </p>
+                    </div>
+
+                    <!-- 4. 행동 가이드 -->
+                    <div class="impact-card" style="background: rgba(var(--accent-rgb), 0.1); border-left: 4px solid var(--accent);">
+                        <h4 style="color: var(--accent); font-size: 1rem; margin-bottom: 0.5rem;">⚡ Actionable Insight</h4>
+                        <p style="font-size: 1rem; color: var(--text-primary); line-height: 1.6;">${insight}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modalBody.innerHTML = html;
+    },
+
     // 종목 검색 필터
     filterHoldings() {
         const searchText = document.getElementById('searchInput').value.toLowerCase();

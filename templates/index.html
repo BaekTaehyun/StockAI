@@ -52,8 +52,8 @@
         <!-- 글로벌 시장 지수 (서버 사이드 렌더링) -->
         {% if market_data %}
         <section class="market-indices global-indices" style="margin-top: 1rem;">
-            <div class="index-card full-width">
-                <h3>🇺🇸 US Market</h3>
+            <div class="index-card full-width" onclick="UI.openMarketModal()" style="cursor: pointer;">
+                <h3>🇺🇸 US Market (Click for Details)</h3>
                 <div class="global-index-row">
                     <span class="global-indices-text">{{ market_data.indices }}</span>
                 </div>
@@ -131,8 +131,6 @@
                 <span class="close" onclick="closeModal()">&times;</span>
                 <h2 id="modalTitle">종목 상세</h2>
 
-                <!-- 로딩 스피너 제거됨 -->
-
                 <!-- 탭 네비게이션 -->
                 <div class="analysis-tabs" id="analysisTabs" style="display: none;">
                     <button class="tab active" data-tab="overview" onclick="switchTab('overview')">종합</button>
@@ -162,6 +160,17 @@
                     <div class="tab-content hidden" id="technical">
                         <div id="technicalContent"></div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 글로벌 마켓 상세 모달 (New) -->
+        <div class="modal" id="marketModal" style="display: none;">
+            <div class="modal-content">
+                <span class="close" onclick="UI.closeMarketModal()">&times;</span>
+                <h2>🇺🇸 US Market & Korea Impact</h2>
+                <div id="marketModalBody" style="margin-top: 1rem;">
+                    <!-- 동적으로 채워짐 -->
                 </div>
             </div>
         </div>

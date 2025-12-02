@@ -149,6 +149,35 @@ class FinvizMarketFetcher:
         except Exception as e:
             return f"테마 데이터 수집 실패: {str(e)}"
 
+    def get_market_headlines(self):
+        """
+        Finviz News 탭에서 최신 주요 뉴스 헤드라인 20개를 가져옵니다.
+        (이 데이터를 LLM에게 주어 시장 이벤트를 요약하게 합니다.)
+        """
+        url = f"{self.base_url}/news.ashx"
+        
+        try:
+            response = requests.get(url, headers=HEADERS)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            headlines = []
+            
+            # Finviz News 페이지의 뉴스 링크들은 보통 'nn-tab-link' 클래스를 가집니다.
+            # (HTML 구조 변경 가능성 있음, 변경 시 클래스명 확인 필요)
+            news_links = soup.select('a.nn-tab-link')
+            
+            # 너무 많으면 토큰 낭비니 최신 15~20개만 가져옵니다.
+            for link in news_links[:20]:
+                title = link.get_text(strip=True)
+                # 너무 짧은 제목은 제외
+                if len(title) > 10:
+                    headlines.append(title)
+            
+            return headlines
+
+        except Exception as e:
+            return [f"뉴스 수집 실패: {str(e)}"]
+
 # ==========================================
 # 실행 테스트
 # ==========================================
@@ -162,3 +191,8 @@ if __name__ == "__main__":
     print("\n>>> 2. 오늘의 강세 테마 (Hot Themes)")
     themes = fetcher.get_strong_themes()
     print(themes)
+
+    print("\n>>> 3. 시장 뉴스 헤드라인 (Market Headlines)")
+    headlines = fetcher.get_market_headlines()
+    for i, h in enumerate(headlines[:5]):
+        print(f"{i+1}. {h}")

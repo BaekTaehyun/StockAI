@@ -66,6 +66,17 @@ const API = {
         }
     },
 
+    // 글로벌 마켓 데이터 조회 (상세 모달용)
+    async fetchGlobalMarket() {
+        try {
+            const response = await fetch(`${API_BASE}/api/market/global`);
+            return await response.json();
+        } catch (error) {
+            console.error('글로벌 마켓 데이터 로드 실패:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
     // 시장 지수 로드
     async fetchMarketIndices() {
         try {

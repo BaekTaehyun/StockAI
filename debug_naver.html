@@ -1,0 +1,815 @@
+<html lang="ko">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=euc-kr">
+<title>네이버페이 증권</title>
+
+<link rel="stylesheet" type="text/css" href="https://ssl.pstatic.net/imgstock/static.pc/20251125174112/css/newstock.css">
+<link rel="stylesheet" type="text/css" href="https://ssl.pstatic.net/imgstock/static.pc/20251125174112/css/common.css">
+<link rel="stylesheet" type="text/css" href="https://ssl.pstatic.net/imgstock/static.pc/20251125174112/css/layout.css">
+<link rel="stylesheet" type="text/css" href="https://ssl.pstatic.net/imgstock/static.pc/20251125174112/css/main.css">
+<link rel="stylesheet" type="text/css" href="https://ssl.pstatic.net/imgstock/static.pc/20251125174112/css/newstock2.css">
+<link rel="stylesheet" type="text/css" href="https://ssl.pstatic.net/imgstock/static.pc/20251125174112/css/newstock3.css">
+<link rel="stylesheet" type="text/css" href="https://ssl.pstatic.net/imgstock/static.pc/20251125174112/css/world.css">
+</head>
+<body>
+<script type="text/javascript" src="https://ssl.pstatic.net/imgstock/static.pc/20251125174112/js/jindo.min.ns.1.5.3.euckr.js"></script>
+<script language="JavaScript">
+var nsc="finance.stockend";
+
+function mouseOver(obj){
+  obj.style.backgroundColor="#f6f4e5";
+}
+function mouseOut(obj){
+  obj.style.backgroundColor="#ffffff";
+}
+function showPannel(layerId){
+	var layer = jindo.$(layerId);
+	layer.style.display='block';
+	
+	if (layerId == "summary_lyr") {
+		var layerHeight = jindo.$Element(layer).height();
+		jindo.$Element("summary_ifr").height(layerHeight);
+	}
+}
+function hidePannel(layerId){
+	var layer = jindo.$(layerId);
+	layer.style.display='none';
+}
+function togglePannel(layerId) {
+	var elTargetLayer = jindo.$Element(jindo.$$.getSingle("#" + layerId));
+	
+	if (elTargetLayer != null) {
+		if (elTargetLayer.visible()) {
+			hidePannel(layerId);
+		} else {
+			showPannel(layerId);
+		}
+	}
+}
+function toggleList(classId, clusterId) {
+	var up = true;
+	var sm = 'entity_id.basic';
+	if (classId.text == '접기') {
+		if (sm == 'title_entity_id.basic') {
+			clickcr(this,'stn.ntitclustclose','','',event);
+		} else {
+			clickcr(this,'stn.nbdyclustclose','','',event);
+		}
+		jindo.$Element(classId).html('관련뉴스 <em>' + classId.getAttribute("data-count") + '</em>건 더보기<span class="ico_down"></span>');
+		up = false;
+	} else {
+		clickcr(this,'stn.ntitclustclose','','',event);
+		if (sm == 'title_entity_id.basic') {
+			clickcr(this,'stn.ntitclustmore','','',event);
+		} else {
+			clickcr(this,'stn.nbdyclustmore','','',event);
+		}
+		jindo.$Element(classId).html('접기<span class="ico_up"></span>');
+	}
+
+	var height = 0;
+	if (document.querySelector("._clusterId"+clusterId)) {
+		height = document.querySelector("._clusterId"+clusterId).offsetHeight - 46;
+	}
+
+	jindo.$ElementList(jindo.$$(".hide_news", classId.parentElement.parentElement.parentElement)).toggleClass('none');
+
+	if (up) {
+		parentHeightResize();
+	} else {
+		parentHeightResize(document.body.offsetHeight - height);
+	}
+}
+</script>
+<script type="text/javascript" src="https://ssl.pstatic.net/imgstock/static.pc/20251125174112/js/nclktag.js"></script>
+		<div class="tb_cont _replaceNewsLink">
+			<div class="tlline2">
+				<strong><span class="red03">종목</span>뉴스</strong>
+				<div class="info_txt">종목뉴스 안내<a href="#" onclick="togglePannel('layer_section'); clickcr(this,'stn.ninfo','','',event); return false;" class="btn_info_layer"><img src="https://ssl.pstatic.net/static/nfinance/2017/10/13/btn_help2.png" alt="상세 설명"></a>
+					<div class="layer_section" id="layer_section" style="display:none">
+						<strong>네이버페이 증권 종목뉴스 안내</strong>
+						<p class="txt">
+							AI(인공지능 검색기술)을 이용한 종목 관련 뉴스입니다. <br>관련뉴스는 자동으로 묶어 보여줍니다.
+						</p>
+						<a href="#" onclick="togglePannel('layer_section'); return false;" class="btn_close"><span class="blind">닫기</span></a>
+					</div>
+				</div>
+			</div>
+			
+			<table summary="종목뉴스의 제목, 정보제공, 날짜" cellspacing="0" class="type5">
+				<caption>종목뉴스</caption>
+				<colgroup>
+					<col>
+					<col width="130px">
+					<col width="110px">
+				</colgroup>
+				<thead>
+					<tr>
+						<th scope="col">제목</th>
+						<th scope="col">정보제공</th>
+						<th scope="col">날짜</th>
+					</tr>
+				</thead>
+
+		 		<tbody>
+		 		
+		 		
+		 		
+		 		<!-- [D] tr class : 첫번째 first, 마지막 last, 연관 뉴스 relation_tit, 연관 뉴스 목록 relation_lst -->
+ 				
+ 					
+ 						
+ 							
+ 							<tr 
+ 									 class="first"
+		 							
+		 							
+		 							
+		 						 >	 						
+	 							<td class="title">
+									<a href="/item/news_read.naver?article_id=0012076855&office_id=056&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclust','','',event);" target=_top>[성공예감] 연말 산타랠리, 옵니다 (feat. 세제 개편안) - 곽상...</a>
+									
+								</td>
+								<td class="info">KBS</td>
+								<td class="date"> 2025.12.01 14:17</td>
+ 							</tr>	 					
+ 						
+
+						
+						
+						
+ 					
+					 					
+ 				
+ 					
+ 						
+ 							
+ 							<tr 
+ 									
+		 							
+		 							
+		 							 class="relation_tit"
+		 						 >	 						
+	 							<td class="title">
+									<a href="/item/news_read.naver?article_id=0002565526&office_id=016&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclust','','',event);" target=_top>쿠팡, 수천억원 과징금 위기에&hellip;이커머스&ldquo;긴급 점검&rdquo;</a>
+									
+								</td>
+								<td class="info">헤럴드경제</td>
+								<td class="date"> 2025.12.01 14:15</td>
+ 							</tr>	 					
+ 						
+
+						
+						
+						
+ 					
+ 						
+
+						
+	 						<tr class="relation_lst _clusterId0160002565526">
+								<td colspan="3">
+									<table class="type5">
+										<caption>연관기사 목록</caption>
+										<colgroup>
+											<col>
+											<col width="130px">
+											<col width="110px">
+										</colgroup>
+										<tbody>
+						
+						
+											<tr  >
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0001312312&office_id=055&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>'개인정보 유출' 쿠팡, 수천억 원 과징금 위기&hellip;이커머스 업계 &quot;긴급...</a>
+													
+												</td>
+												<td class="info">SBS</td>
+												<td class="date"> 2025.12.01 14:13</td>
+											</tr>
+						
+						
+ 					
+ 						
+
+						
+						
+											<tr  class="hide_news none">
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0001232920&office_id=215&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>쿠팡 수천억원 과징금 위기&hellip;업계 '초비상'</a>
+													
+												</td>
+												<td class="info">한국경제TV</td>
+												<td class="date"> 2025.12.01 13:44</td>
+											</tr>
+						
+						
+ 					
+ 						
+
+						
+						
+											<tr  class="hide_news none">
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0000117108&office_id=586&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>'보안투자 890억원' 쿠팡도 뚫렸다&hellip;G마켓&middot;SSG닷컴 등 잇따라 보...</a>
+													
+												</td>
+												<td class="info">시사저널</td>
+												<td class="date"> 2025.12.01 13:28</td>
+											</tr>
+						
+						
+ 					
+ 						
+
+						
+						
+											<tr  class="hide_news none">
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0002996663&office_id=029&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>[속보] &lsquo;엎친데 덮친&rsquo; 쿠팡, 수천억 과징금 위기&hellip;이커머스 업체들....</a>
+													
+												</td>
+												<td class="info">디지털타임스</td>
+												<td class="date"> 2025.12.01 12:58</td>
+											</tr>
+						
+						
+ 					
+ 						
+
+						
+						
+											<tr  class="hide_news none">
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0000574141&office_id=448&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>쿠팡 수천억원 과징금 위기&hellip;이커머스업체들 &quot;긴급 보안점검&quot;</a>
+													
+												</td>
+												<td class="info">TV조선</td>
+												<td class="date"> 2025.12.01 12:56</td>
+											</tr>
+						
+						
+ 					
+ 						
+
+						
+						
+											<tr  class="hide_news none">
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0001312281&office_id=055&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>쿠팡 수천억 과징금?&hellip;&quot;주말 반납&quot; 발등 불 떨어진 곳들</a>
+													
+												</td>
+												<td class="info">SBS</td>
+												<td class="date"> 2025.12.01 12:16</td>
+											</tr>
+						
+						
+ 					
+ 						
+
+						
+						
+											<tr  class="hide_news none">
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0000477987&office_id=374&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>쿠팡 수천억원과징금 위기&hellip;'여기'도 발등의 불났다</a>
+													
+												</td>
+												<td class="info">SBS Biz</td>
+												<td class="date"> 2025.12.01 12:10</td>
+											</tr>
+						
+						
+ 					
+ 						
+
+						
+						
+											<tr  class="hide_news none">
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0015771229&office_id=001&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>쿠팡 수천억원 과징금 위기&hellip;이커머스업체들 &quot;긴급 보안점검&quot;</a>
+													
+												</td>
+												<td class="info">연합뉴스</td>
+												<td class="date"> 2025.12.01 11:57</td>
+											</tr>
+						
+						
+										</tbody>
+									</table>
+									
+									<div class="link_area">
+										<a href="#" class="_moreBtn" onClick="toggleList(this, '0160002565526'); return false;" data-count="7">관련뉴스 <em>7</em>건 더보기<span class="ico_down"></span></a>
+									</div>																	
+									
+								</td>
+							</tr>
+						
+ 					
+					 					
+ 				
+ 					
+ 						
+ 							
+ 							<tr 
+ 									
+		 							
+		 							
+		 							 class="relation_tit"
+		 						 >	 						
+	 							<td class="title">
+									<a href="/item/news_read.naver?article_id=0006175233&office_id=018&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclust','','',event);" target=_top>셀렉트스타, 55억 시리즈B 추가 투자 유치&hellip;누적 434억 돌파</a>
+									
+								</td>
+								<td class="info">이데일리</td>
+								<td class="date"> 2025.12.01 14:14</td>
+ 							</tr>	 					
+ 						
+
+						
+						
+						
+ 					
+ 						
+
+						
+	 						<tr class="relation_lst _clusterId0180006175233">
+								<td colspan="3">
+									<table class="type5">
+										<caption>연관기사 목록</caption>
+										<colgroup>
+											<col>
+											<col width="130px">
+											<col width="110px">
+										</colgroup>
+										<tbody>
+						
+						
+											<tr  >
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0005285380&office_id=008&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>셀렉트스타, 55억 시리즈B 추가 투자유치&hellip;누적투자금 434억 달성</a>
+													
+												</td>
+												<td class="info">머니투데이</td>
+												<td class="date"> 2025.12.01 13:00</td>
+											</tr>
+						
+						
+ 					
+ 						
+
+						
+						
+											<tr  class="hide_news none">
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0002211134&office_id=138&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>셀렉트스타, 시리즈B 추가 55억 유치...총 260억원 마감</a>
+													
+												</td>
+												<td class="info">디지털데일리</td>
+												<td class="date"> 2025.12.01 11:19</td>
+											</tr>
+						
+						
+ 					
+ 						
+
+						
+						
+											<tr  class="hide_news none">
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0005598784&office_id=009&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>셀렉트스타, 시리즈B 투자 55억 추가 유치&hellip; 누적 434억 돌파</a>
+													
+												</td>
+												<td class="info">매일경제</td>
+												<td class="date"> 2025.12.01 10:51</td>
+											</tr>
+						
+						
+ 					
+ 						
+
+						
+						
+											<tr  class="hide_news none">
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0004562015&office_id=011&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>셀렉트스타, 삼성 등으로부터 55억 원 추가 투자 유치</a>
+													
+												</td>
+												<td class="info">서울경제</td>
+												<td class="date"> 2025.12.01 10:50</td>
+											</tr>
+						
+						
+										</tbody>
+									</table>
+									
+									<div class="link_area">
+										<a href="#" class="_moreBtn" onClick="toggleList(this, '0180006175233'); return false;" data-count="3">관련뉴스 <em>3</em>건 더보기<span class="ico_down"></span></a>
+									</div>																	
+									
+								</td>
+							</tr>
+						
+ 					
+					 					
+ 				
+ 					
+ 						
+ 							
+ 							<tr 
+ 									
+		 							
+		 							
+		 							
+		 						 >	 						
+	 							<td class="title">
+									<a href="/item/news_read.naver?article_id=0006175226&office_id=018&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclust','','',event);" target=_top>위츠 김응태 대표, &lsquo;제11회 중견기업인의 날&rsquo; 산업통상부 장관표창.....</a>
+									
+								</td>
+								<td class="info">이데일리</td>
+								<td class="date"> 2025.12.01 14:12</td>
+ 							</tr>	 					
+ 						
+
+						
+						
+						
+ 					
+					 					
+ 				
+ 					
+ 						
+ 							
+ 							<tr 
+ 									
+		 							
+		 							
+		 							 class="relation_tit"
+		 						 >	 						
+	 							<td class="title">
+									<a href="/item/news_read.naver?article_id=0003375788&office_id=030&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclust','','',event);" target=_top>미라콤아이앤씨, 삼성SDS 안대중 부사장 신임 대표이사 내정</a>
+									
+								</td>
+								<td class="info">전자신문</td>
+								<td class="date"> 2025.12.01 14:12</td>
+ 							</tr>	 					
+ 						
+
+						
+						
+						
+ 					
+ 						
+
+						
+	 						<tr class="relation_lst _clusterId0300003375788">
+								<td colspan="3">
+									<table class="type5">
+										<caption>연관기사 목록</caption>
+										<colgroup>
+											<col>
+											<col width="130px">
+											<col width="110px">
+										</colgroup>
+										<tbody>
+						
+						
+											<tr  >
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0001127241&office_id=366&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>미라콤아이앤씨, 신임 대표에 삼성SDS 안대중 부사장 내정</a>
+													
+												</td>
+												<td class="info">조선비즈</td>
+												<td class="date"> 2025.12.01 14:08</td>
+											</tr>
+						
+						
+										</tbody>
+									</table>
+									
+								</td>
+							</tr>
+						
+ 					
+					 					
+ 				
+ 					
+ 						
+ 							
+ 							<tr 
+ 									
+		 							
+		 							
+		 							
+		 						 >	 						
+	 							<td class="title">
+									<a href="/item/news_read.naver?article_id=0008635247&office_id=421&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclust','','',event);" target=_top>민선8기 전북, 무엇이 달라졌나&hellip;'기업하기 좋은 도시 전북' 현실로</a>
+									
+								</td>
+								<td class="info">뉴스1</td>
+								<td class="date"> 2025.12.01 14:10</td>
+ 							</tr>	 					
+ 						
+
+						
+						
+						
+ 					
+					 					
+ 				
+ 					
+ 						
+ 							
+ 							<tr 
+ 									
+		 							
+		 							
+		 							 class="relation_tit"
+		 						 >	 						
+	 							<td class="title">
+									<a href="/item/news_read.naver?article_id=0000448824&office_id=629&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclust','','',event);" target=_top>삼성, 연말 이웃사랑성금 500억 전달&hellip;올해로 27년째 나눔</a>
+									
+								</td>
+								<td class="info">더팩트</td>
+								<td class="date"> 2025.12.01 14:05</td>
+ 							</tr>	 					
+ 						
+
+						
+						
+						
+ 					
+ 						
+
+						
+	 						<tr class="relation_lst _clusterId6290000448824">
+								<td colspan="3">
+									<table class="type5">
+										<caption>연관기사 목록</caption>
+										<colgroup>
+											<col>
+											<col width="130px">
+											<col width="110px">
+										</colgroup>
+										<tbody>
+						
+						
+											<tr  >
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0001232921&office_id=215&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>삼성, 27년간 이웃돕기 동참&hellip;&quot;사회와 함께 성장&quot;</a>
+													
+												</td>
+												<td class="info">한국경제TV</td>
+												<td class="date"> 2025.12.01 13:44</td>
+											</tr>
+						
+						
+ 					
+ 						
+
+						
+						
+											<tr  class="hide_news none">
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0015771372&office_id=001&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>삼성, 이웃돕기성금 기부</a>
+													
+												</td>
+												<td class="info">연합뉴스</td>
+												<td class="date"> 2025.12.01 13:19</td>
+											</tr>
+						
+						
+ 					
+ 						
+
+						
+						
+											<tr  class="hide_news none">
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0004091258&office_id=079&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>삼성, 올해도 연말 이웃사랑성금 전달&hellip;&quot;어려운 이들에게 희망이 되길....</a>
+													
+												</td>
+												<td class="info">노컷뉴스</td>
+												<td class="date"> 2025.12.01 11:00</td>
+											</tr>
+						
+						
+										</tbody>
+									</table>
+									
+									<div class="link_area">
+										<a href="#" class="_moreBtn" onClick="toggleList(this, '6290000448824'); return false;" data-count="2">관련뉴스 <em>2</em>건 더보기<span class="ico_down"></span></a>
+									</div>																	
+									
+								</td>
+							</tr>
+						
+ 					
+					 					
+ 				
+ 					
+ 						
+ 							
+ 							<tr 
+ 									
+		 							
+		 							
+		 							 class="relation_tit"
+		 						 >	 						
+	 							<td class="title">
+									<a href="/item/news_read.naver?article_id=0004562094&office_id=011&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclust','','',event);" target=_top>한양증권 &quot;자산 규모 큰 고객일수록 회전율 낮고 수익률 높아&quot;</a>
+									
+								</td>
+								<td class="info">서울경제</td>
+								<td class="date"> 2025.12.01 14:02</td>
+ 							</tr>	 					
+ 						
+
+						
+						
+						
+ 					
+ 						
+
+						
+	 						<tr class="relation_lst _clusterId0110004562094">
+								<td colspan="3">
+									<table class="type5">
+										<caption>연관기사 목록</caption>
+										<colgroup>
+											<col>
+											<col width="130px">
+											<col width="110px">
+										</colgroup>
+										<tbody>
+						
+						
+											<tr  >
+												<td class="title">
+													<a href="/item/news_read.naver?article_id=0005285390&office_id=008&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclustsub','','',event);" target=_top><span class="ico_reply"></span>&quot;이렇게 부자 됐구나&quot; 수익률 80% 대박...10억 이상 자산가의 ...</a>
+													
+												</td>
+												<td class="info">머니투데이</td>
+												<td class="date"> 2025.12.01 13:30</td>
+											</tr>
+						
+						
+										</tbody>
+									</table>
+									
+								</td>
+							</tr>
+						
+ 					
+					 					
+ 				
+ 					
+ 						
+ 							
+ 							<tr 
+ 									
+		 							
+		 							
+		 							
+		 						 >	 						
+	 							<td class="title">
+									<a href="/item/news_read.naver?article_id=0000900536&office_id=469&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclust','','',event);" target=_top>애플도 붙잡은 TSMC '흑수 전략'의 비밀&hellip; 고객이 받는 이 'ID'...</a>
+									
+								</td>
+								<td class="info">한국일보</td>
+								<td class="date"> 2025.12.01 14:01</td>
+ 							</tr>	 					
+ 						
+
+						
+						
+						
+ 					
+					 					
+ 				
+ 					
+ 						
+ 							
+ 							<tr 
+ 									
+		 							
+		 							 class="last"
+		 							
+		 						 >	 						
+	 							<td class="title">
+									<a href="/item/news_read.naver?article_id=0015771474&office_id=001&code=005930&page=&sm=" class="tit" onClick="clickcr(this,'stn.nbdyclust','','',event);" target=_top>&quot;수하물 분실 걱정 끝&quot;&hellip;삼성전자, '스마트 태그 서비스' 개시</a>
+									
+								</td>
+								<td class="info">연합뉴스</td>
+								<td class="date"> 2025.12.01 14:00</td>
+ 							</tr>	 					
+ 						
+
+						
+						
+						
+ 					
+					 					
+ 				
+				</tbody>
+			</table>
+ 						
+			<!--- 종목뉴스 끝--->
+			<!--- 페이지 네비게이션 시작--->
+			
+			<table summary="페이지 네비게이션 리스트" class="Nnavi" align="center">
+				<caption>페이지 네비게이션</caption>
+				<tr>
+					
+						
+		                
+		                <td class="on">
+				<a href="/item/news_news.naver?code=005930&amp;page=1"  onclick=clickcr(this,'stn.npag','','',event);>1</a>
+				</td>
+<td>
+				<a href="/item/news_news.naver?code=005930&amp;page=2"  onclick=clickcr(this,'stn.npag','','',event);>2</a>
+				</td>
+<td>
+				<a href="/item/news_news.naver?code=005930&amp;page=3"  onclick=clickcr(this,'stn.npag','','',event);>3</a>
+				</td>
+<td>
+				<a href="/item/news_news.naver?code=005930&amp;page=4"  onclick=clickcr(this,'stn.npag','','',event);>4</a>
+				</td>
+<td>
+				<a href="/item/news_news.naver?code=005930&amp;page=5"  onclick=clickcr(this,'stn.npag','','',event);>5</a>
+				</td>
+<td>
+				<a href="/item/news_news.naver?code=005930&amp;page=6"  onclick=clickcr(this,'stn.npag','','',event);>6</a>
+				</td>
+<td>
+				<a href="/item/news_news.naver?code=005930&amp;page=7"  onclick=clickcr(this,'stn.npag','','',event);>7</a>
+				</td>
+<td>
+				<a href="/item/news_news.naver?code=005930&amp;page=8"  onclick=clickcr(this,'stn.npag','','',event);>8</a>
+				</td>
+<td>
+				<a href="/item/news_news.naver?code=005930&amp;page=9"  onclick=clickcr(this,'stn.npag','','',event);>9</a>
+				</td>
+<td>
+				<a href="/item/news_news.naver?code=005930&amp;page=10"  onclick=clickcr(this,'stn.npag','','',event);>10</a>
+				</td>
+
+		                <td class="pgR">
+				<a href="/item/news_news.naver?code=005930&amp;page=11"  onclick=clickcr(this,'stn.npag','','',event);>
+				다음<img src="https://ssl.pstatic.net/static/n/cmn/bu_pgarR.gif" width="3" height="5" alt="" border="0">
+				</a>
+				</td>
+
+		                <td class="pgRR">
+				<a href="/item/news_news.naver?code=005930&amp;page=200"  onclick=clickcr(this,'stn.npag','','',event);>맨뒤
+				<img src="https://ssl.pstatic.net/static/n/cmn/bu_pgarRR.gif" width="8" height="5" alt="" border="0">
+				</a>
+				</td>
+
+		            
+				</tr>
+			</table>
+			
+
+
+
+<script type="text/javascript">
+	jindo.$Fn(function(){
+		parentHeightResize();
+
+		// _replaceNewsLink class 하위의 a 태그 조회 후 redirect
+		jindo.$$("._replaceNewsLink a").forEach(function(ele){
+			var urls = ele.href.split("?");
+			if (urls[0].indexOf("/news_read.naver") > 0 || urls[0].indexOf("/newsRead.naver") > 0) {
+				var param = jindo.$S(urls[1]).parseString();
+				var oid = param.office_id ? param.office_id : param.officeId;
+				var aid = param.article_id ? param.article_id : param.articleId;
+
+				ele.target = "_blank";
+				ele.href = jindo.$S("https://n.news.naver.com/mnews/article/%s/%s").format(oid, aid);
+			}
+		});
+
+	}).attach(window, 'load');
+</script>
+<script>
+	var targetWindow = window.top;
+	var targetOrigin = location.protocol+'//'+location.host;
+
+	function parentHeightResize(height) {
+		window.scrollTo(0, 0);
+		targetWindow.postMessage({
+			"type":"syncHeight",
+			"height": (height) ? height : document.body.offsetHeight
+		}, targetOrigin);
+	}
+
+	function parentScrollTo(to) {
+		targetWindow.postMessage({
+			"type":"syncScrollTo",
+			"to": to
+		}, targetOrigin);
+	}
+
+	// iframe의 사이즈가 갱신되기 위해서 dom load되기전 300으로 먼저 수정
+	parentHeightResize(300);
+</script>
+</body>
