@@ -156,7 +156,7 @@ MARKET_EVENT_ANALYSIS_PROMPT = """
 {headlines_list}
 
 [출력 형식]
-반드시 아래 JSON 포맷으로만 답변하세요. 설명은 한국어로 번역해서 작성하세요.
+반드시 아래 JSON 포맷으로만 답변하세요. **모든 내용은 반드시 한국어로 작성해야 합니다.**
 
 {{
   "events": [

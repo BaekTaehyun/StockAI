@@ -144,9 +144,12 @@ Object.assign(window.UI, {
 
                     this.renderMarketHeadlines(data.headlines);
                 } else if (type === 'events') {
-                    // 2단계: 이벤트 분석 완료
+                    // 2단계: 이벤트 분석 완료 (한글 번역된 뉴스)
                     const loadingText = modalBody.querySelector('.loading-text');
                     if (loadingText) loadingText.textContent = '한국 증시 영향 분석 중...';
+
+                    // 영문 헤드라인을 한글 분석 결과로 교체
+                    this.renderMarketEvents(data);
                 } else if (type === 'impact') {
                     // 3단계: 최종 분석 완료
                     const loadingContainer = modalBody.querySelector('.market-loading-container');
@@ -200,6 +203,33 @@ Object.assign(window.UI, {
         container.style.display = 'block';
     },
 
+    // 시장 이벤트 렌더링 (한글 분석 결과)
+    renderMarketEvents(events) {
+        const container = document.getElementById('marketHeadlines');
+        if (!container) return;
+
+        if (!events || events.length === 0) return;
+
+        let html = `
+            <div class="headlines-section" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; margin-bottom: 1rem;">
+                <h4 style="color: var(--text-secondary); margin-bottom: 0.8rem; font-size: 0.9rem;">📰 주요 시장 뉴스 (AI 요약)</h4>
+                <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.9rem; color: var(--text-primary);">
+        `;
+
+        events.forEach(event => {
+            html += `<li style="margin-bottom: 0.8rem; padding-left: 1rem; position: relative;">
+                <span style="position: absolute; left: 0; top: 0.2rem; color: var(--accent-1);">•</span>
+                <div style="font-weight: bold; margin-bottom: 0.2rem;">${event.title}</div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">${event.reason}</div>
+            </li>`;
+        });
+
+        html += `</ul></div>`;
+
+        container.innerHTML = html;
+        container.style.display = 'block';
+    },
+
     // 분석 결과 렌더링 (Renamed from renderMarketModal)
     renderMarketAnalysis(koreaImpact) {
         const container = document.getElementById('marketAnalysis');
@@ -221,7 +251,7 @@ Object.assign(window.UI, {
                 outlook.sentiment.includes('부정') ? 'sell' : 'neutral';
 
         const html = `
-            <div class="analysis-section market-impact-section" style="border: none; background: transparent; padding: 0;">
+            <div class="analysis-section market-impact-section" style="border: none; background: transparent;">
                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
                     <span class="badge-supply ${sentimentClass}" style="font-size: 1rem; padding: 4px 12px;">${outlook.sentiment}</span>
                     <span style="color: var(--text-secondary); font-size: 0.9rem;">AI 분석 완료</span>

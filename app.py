@@ -72,6 +72,7 @@ def update_global_market_data():
         data = {
             'indices': indices,
             'themes': themes,
+            'headlines': headlines,
             'events': market_events.get('events', []),
             'korea_impact': korea_impact
         }
@@ -534,6 +535,40 @@ def stream_global_market():
     """글로벌 마켓 데이터 스트리밍 (순차 로딩용)"""
     def generate():
         try:
+            # 0. 캐시 확인
+            global global_market_cache
+            cached_data = global_market_cache.get('data')
+            last_updated = global_market_cache.get('last_updated')
+            
+            # 캐시 유효성 검사 (30분)
+            use_cache = False
+            if cached_data and last_updated:
+                if datetime.now() - last_updated < timedelta(minutes=30):
+                    use_cache = True
+                    
+            if use_cache:
+                print("[Market] Streaming from cache...")
+                # 1. 기본 데이터
+                basic_data = {
+                    'indices': cached_data.get('indices'),
+                    'themes': cached_data.get('themes'),
+                    'headlines': cached_data.get('headlines', [])
+                }
+                yield f"data: {json.dumps({'type': 'basic', 'data': basic_data})}\n\n"
+                
+                # 2. 시장 이벤트
+                yield f"data: {json.dumps({'type': 'events', 'data': cached_data.get('events', [])})}\n\n"
+                
+                # 3. 한국 증시 영향
+                yield f"data: {json.dumps({'type': 'impact', 'data': cached_data.get('korea_impact', {})})}\n\n"
+                
+                # 4. 완료
+                yield f"data: {json.dumps({'type': 'complete'})}\n\n"
+                return
+
+            # 캐시가 없거나 만료된 경우: 새로 가져오기
+            print("[Market] Fetching fresh data...")
+            
             # 1. 기본 데이터 (지수, 테마, 뉴스 헤드라인) - 빠름
             indices = market_fetcher.get_market_indices()
             themes = market_fetcher.get_strong_themes()
@@ -546,25 +581,25 @@ def stream_global_market():
             }
             yield f"data: {json.dumps({'type': 'basic', 'data': basic_data})}\n\n"
             
-            # 2. 시장 이벤트 분석 (AI) - 느림
-            market_events = gemini_service.analyze_market_events(headlines, force_refresh=True)
+            # 2. 시장 이벤트 분석 (AI) - 느림 (force_refresh=False로 변경하여 Gemini 캐시 활용)
+            market_events = gemini_service.analyze_market_events(headlines, force_refresh=False)
             yield f"data: {json.dumps({'type': 'events', 'data': market_events.get('events', [])})}\n\n"
             
-            # 3. 한국 증시 영향 분석 (AI) - 더 느림
+            # 3. 한국 증시 영향 분석 (AI) - 더 느림 (force_refresh=False로 변경)
             korea_impact = gemini_service.analyze_korea_market_impact(
                 us_indices=indices,
                 us_themes=themes,
                 us_events=market_events.get('events', []),
-                force_refresh=True
+                force_refresh=False
             )
             yield f"data: {json.dumps({'type': 'impact', 'data': korea_impact})}\n\n"
             
             # 4. 완료 및 캐시 업데이트
             # 스트리밍으로 생성된 최신 데이터를 캐시에 저장하여 다음 요청 시 빠르게 제공
-            global global_market_cache
             data = {
                 'indices': indices,
                 'themes': themes,
+                'headlines': headlines,
                 'events': market_events.get('events', []),
                 'korea_impact': korea_impact
             }
@@ -574,6 +609,7 @@ def stream_global_market():
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
             
         except Exception as e:
+            print(f"[Market Error] {e}")
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return Response(
