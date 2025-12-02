@@ -412,3 +412,83 @@
         padding: 0.5rem !important;
     }
 }
+/* ================================================================
+   Market Impact Cards & Headlines (US Market Modal)
+   ================================================================ */
+
+/* Impact Card Styling */
+.impact-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: background 0.2s ease;
+}
+
+.impact-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.impact-card h4 {
+    margin-bottom: 0.8rem;
+    font-size: 0.95rem;
+}
+
+.impact-card p {
+    line-height: 1.7;
+    margin-bottom: 0.5rem;
+}
+
+/* Headlines Section */
+.headlines-section {
+    background: rgba(255, 255, 255, 0.04);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.headlines-section h4 {
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.headlines-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.headlines-section li {
+    margin-bottom: 0.8rem;
+    padding-left: 1.2rem;
+    position: relative;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+.headlines-section li:last-child {
+    margin-bottom: 0;
+}
+
+/* Impact Grid */
+.impact-grid {
+    display: grid;
+    gap: 1.25rem;
+}
+
+/* Market Impact Section */
+.market-impact-section {
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+.market-impact-section .badge-supply {
+    font-size: 1.05rem;
+    padding: 6px 14px;
+    font-weight: 600;
+}
