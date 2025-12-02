@@ -469,5 +469,51 @@ const API = {
         } catch (error) {
             onError(error.message);
         }
+    },
+
+    // 글로벌 마켓 데이터 스트리밍 조회
+    async fetchGlobalMarketStreaming(onProgress, onComplete, onError) {
+        try {
+            const response = await fetch(`${API_BASE}/api/market/global/stream`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // 마지막 불완전한 라인은 버퍼에 유지
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const jsonStr = line.substring(6);
+                            const data = JSON.parse(jsonStr);
+
+                            if (data.type === 'error') {
+                                onError(data.message);
+                                return;
+                            } else if (data.type === 'complete') {
+                                onComplete();
+                                return;
+                            } else {
+                                onProgress(data.type, data.data);
+                            }
+                        } catch (e) {
+                            console.error('JSON Parse Error:', e);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            onError(error.message);
+        }
     }
 };

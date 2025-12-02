@@ -345,11 +345,17 @@ def stream_full_analysis(code):
             korea_impact = global_market.get('korea_impact', {})
             yield f"data: {json.dumps({'type': 'market_impact', 'data': korea_impact})}\n\n"
 
-            # 2단계: 차트 & 기술적 지표
+            # 2단계: 차트 & 기술적 지표 & 펀더멘털
             chart_data = kiwoom.get_daily_chart_data(normalized_code)
-            technical = TechnicalIndicators.calculate_indicators(chart_data)
             
-            yield f"data: {json.dumps({'type': 'technical', 'data': technical})}\n\n"
+            # 기술적 지표 계산을 위해 날짜 오름차순 정렬 (과거 -> 현재)
+            if chart_data:
+                chart_data.sort(key=lambda x: x['date'])
+                
+            technical = TechnicalIndicators.calculate_indicators(chart_data)
+            fundamental_data = kiwoom.get_stock_fundamental_info(normalized_code)
+            
+            yield f"data: {json.dumps({'type': 'technical', 'data': {'indicators': technical, 'fundamental': fundamental_data}})}\n\n"
             
             # 3-4단계: 전체 분석 (뉴스 + AI 전망)
             # global_market은 이미 위에서 가져옴
@@ -522,6 +528,62 @@ def get_global_market():
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/market/global/stream')
+def stream_global_market():
+    """글로벌 마켓 데이터 스트리밍 (순차 로딩용)"""
+    def generate():
+        try:
+            # 1. 기본 데이터 (지수, 테마, 뉴스 헤드라인) - 빠름
+            indices = market_fetcher.get_market_indices()
+            themes = market_fetcher.get_strong_themes()
+            headlines = market_fetcher.get_market_headlines()
+            
+            basic_data = {
+                'indices': indices,
+                'themes': themes,
+                'headlines': headlines
+            }
+            yield f"data: {json.dumps({'type': 'basic', 'data': basic_data})}\n\n"
+            
+            # 2. 시장 이벤트 분석 (AI) - 느림
+            market_events = gemini_service.analyze_market_events(headlines, force_refresh=True)
+            yield f"data: {json.dumps({'type': 'events', 'data': market_events.get('events', [])})}\n\n"
+            
+            # 3. 한국 증시 영향 분석 (AI) - 더 느림
+            korea_impact = gemini_service.analyze_korea_market_impact(
+                us_indices=indices,
+                us_themes=themes,
+                us_events=market_events.get('events', []),
+                force_refresh=True
+            )
+            yield f"data: {json.dumps({'type': 'impact', 'data': korea_impact})}\n\n"
+            
+            # 4. 완료 및 캐시 업데이트
+            # 스트리밍으로 생성된 최신 데이터를 캐시에 저장하여 다음 요청 시 빠르게 제공
+            global global_market_cache
+            data = {
+                'indices': indices,
+                'themes': themes,
+                'events': market_events.get('events', []),
+                'korea_impact': korea_impact
+            }
+            global_market_cache['data'] = data
+            global_market_cache['last_updated'] = datetime.now()
+            
+            yield f"data: {json.dumps({'type': 'complete'})}\n\n"
+            
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no'
+        }
+    )
 
 # ================================================================
 # 관심종목 API

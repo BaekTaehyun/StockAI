@@ -155,7 +155,7 @@ Object.assign(window.UI, {
 
         try {
             const html = `
-                <div class="analysis-section">
+                <div id="section-price" class="analysis-section">
                     <h3>주가 정보</h3>
                     <div class="info-grid">
                         <div class="info-item">
@@ -171,7 +171,7 @@ Object.assign(window.UI, {
                     </div>
                 </div>
 
-                <div class="analysis-section">
+                <div id="section-ai" class="analysis-section">
                     <h3>AI 투자 의견</h3>
                     <div class="outlook-card ${recommendationClass}">
                         <div class="outlook-header">
@@ -186,7 +186,7 @@ Object.assign(window.UI, {
                     </div>
                 </div>
 
-                <div class="analysis-section">
+                <div id="section-supply" class="analysis-section">
                     <h3>수급 현황</h3>
                     <div class="supply-summary">
                         <div class="supply-item ${safeSupply.foreign_net >= 0 ? 'positive' : 'negative'}">
@@ -201,7 +201,7 @@ Object.assign(window.UI, {
                     </div>
                 </div>
 
-                <div class="analysis-section">
+                <div id="section-news" class="analysis-section">
                     <h3>뉴스 요약</h3>
                     <div class="news-summary">
                         <div class="sentiment ${safeNews.sentiment}">${safeNews.sentiment}</div>
@@ -371,19 +371,11 @@ Object.assign(window.UI, {
     // 초기 개요 렌더링 (주가 정보 즉시 표시 + 로딩 인디케이터)
     renderInitialOverview(stock) {
         const currentPrice = parseInt(stock.price || stock.cur_prc || 0);
-        // change, change_rate 정보가 stock 객체에 없을 수도 있음 (목록에서 넘겨받은 데이터에 따라 다름)
-        // ui_cards.js에서 넘겨주는 데이터 구조 확인 필요. 보통 price만 넘겨주는 경우가 많음.
-        // 여기서는 일단 있는 정보로 렌더링하고, 없는 정보는 '-'로 표시하거나 계산 시도
-
-        // ui_cards.js의 openStockModal 호출부를 보면: 
-        // { code, name, price: stockData.price, stk_cd: code, stk_nm: name } 형태로 넘김 (관심종목)
-        // 보유종목은 전체 stock 객체를 넘김.
-
         // 포맷팅
         const formattedPrice = formatCurrency(currentPrice);
 
         const html = `
-            <div class="analysis-section">
+            <div id="section-price" class="analysis-section">
                 <h3>주가 정보</h3>
                 <div class="info-grid">
                     <div class="info-item">
@@ -399,7 +391,7 @@ Object.assign(window.UI, {
                 </div>
             </div>
 
-            <div class="analysis-section">
+            <div id="section-ai" class="analysis-section">
                 <h3>AI 투자 의견</h3>
                 <div class="outlook-card neutral" style="min-height: 120px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
                     <div class="spinner" style="width: 24px; height: 24px; border-width: 3px; margin-bottom: 0.5rem;"></div>
@@ -408,14 +400,14 @@ Object.assign(window.UI, {
             </div>
 
 
-            <div class="analysis-section">
+            <div id="section-supply" class="analysis-section">
                 <h3>수급 현황</h3>
                 <div class="supply-summary" style="display: flex; justify-content: center; padding: 1rem;">
                     <span style="color: var(--text-secondary); font-size: 0.9rem;">분석 중...</span>
                 </div>
             </div>
 
-            <div class="analysis-section">
+            <div id="section-news" class="analysis-section">
                 <h3>뉴스 요약</h3>
                 <div class="news-summary" style="display: flex; justify-content: center; padding: 1rem;">
                     <span style="color: var(--text-secondary); font-size: 0.9rem;">분석 중...</span>
@@ -540,17 +532,10 @@ Object.assign(window.UI, {
                         // 1단계: 기본 정보 (주가 + 수급) - 즉시 표시
                         allData.price = data.price;
                         allData.supply = data.supply;
-                        this.renderBasicInfoOnly(data.price, data.supply);
-                    }
-                    else if (type === 'technical') {
-                        // 2단계: 기술적 지표
-                        allData.technical = data;
-                        if (typeof Charts !== 'undefined' && Charts.renderTechnical) {
-                            Charts.renderTechnical(data);
-                        }
+                        // market_impact는 별도 이벤트로 수신됨
                     }
                     else if (type === 'market_impact') {
-                        // 1.5단계: 글로벌 시장 영향
+                        // 1.5단계: 시장 영향 분석
                         allData.market_impact = data;
                         this.renderMarketImpact(data);
                     }
@@ -564,6 +549,27 @@ Object.assign(window.UI, {
                         // 4단계: AI 전망
                         allData.outlook = data;
                         this.updateOverviewWithOutlook(data);
+                    }
+                    else if (type === 'technical') {
+                        // 2단계: 기술적 지표 & 펀더멘털
+                        // data structure: { indicators: {...}, fundamental: {...} }
+                        // 하위 호환성: data.indicators가 없으면 data 자체가 indicators임
+                        const indicators = data.indicators || data;
+                        const fundamental = data.fundamental || {};
+
+                        allData.technical = indicators;
+                        allData.fundamental_data = fundamental;
+
+                        if (typeof Charts !== 'undefined' && Charts.renderTechnical) {
+                            // stockInfo 구성 (allData.price는 {name, code, price, change, rate} 형태)
+                            const stockInfo = {
+                                current_price: allData.price ? allData.price.price : 0,
+                                change: allData.price ? allData.price.change : 0,
+                                change_rate: allData.price ? allData.price.rate : 0
+                            };
+
+                            Charts.renderTechnical(indicators, stockInfo, fundamental);
+                        }
                     }
                 },
                 // onComplete: 모든 단계 완료
@@ -602,7 +608,8 @@ Object.assign(window.UI, {
                         news_analysis: allData.news_analysis,
                         outlook: allData.outlook,
                         technical: allData.technical,
-                        market_impact: allData.market_impact // 캐시에도 저장
+                        market_impact: allData.market_impact, // 캐시에도 저장
+                        fundamental_data: allData.fundamental_data // 펀더멘털 데이터 저장
                     };
 
                     if (allData.outlook && allData.news_analysis) {
@@ -659,7 +666,7 @@ Object.assign(window.UI, {
             }
         }
         const html = `
-            <div class="analysis-section">
+            <div id="section-price" class="analysis-section">
                 <h3>주가 정보</h3>
                 <div class="info-grid">
                     <div class="info-item">
@@ -674,7 +681,7 @@ Object.assign(window.UI, {
                     </div>
                 </div>
             </div>
-            <div class="analysis-section">
+            <div id="section-supply" class="analysis-section">
                 <h3>수급 현황</h3>
                 <div class="supply-summary">
                     ${supplyDemand ? `
@@ -690,7 +697,7 @@ Object.assign(window.UI, {
                     ` : '<span style="color: var(--text-secondary);">수급 정보 로딩중...</span>'}
                 </div>
             </div>
-            <div class="analysis-section">
+            <div id="section-ai" class="analysis-section">
                 <h3>AI 투자 의견</h3>
                 <div class="outlook-card neutral" style="min-height: 120px; display: flex; align-items: center; justify-content: center;">
                     <div style="text-align: center;">
@@ -699,7 +706,7 @@ Object.assign(window.UI, {
                     </div>
                 </div>
             </div>
-            <div class="analysis-section">
+            <div id="section-news" class="analysis-section">
                 <h3>뉴스 요약</h3>
                 <div class="news-summary" style="display: flex; justify-content: center; padding: 1rem;">
                     <span style="color: var(--text-secondary); font-size: 0.9rem;">뉴스 분석 중...</span>
@@ -728,13 +735,10 @@ Object.assign(window.UI, {
                 <div class="reasoning" style="margin-top: 1rem; line-height: 1.6; color: var(--text-secondary);">${formatAIText(outlook.reasoning)}</div>
             </div>
         `;
-        // AI 투자 의견 섹션만 선택적으로 업데이트
-        const overviewContent = document.getElementById('overviewContent');
-        const sections = overviewContent.querySelectorAll('.analysis-section');
-
-        // 세 번째 섹션이 AI 투자 의견
-        if (sections.length >= 3) {
-            sections[2].innerHTML = `<h3>AI 투자 의견</h3>${outlookHtml}`;
+        // AI 투자 의견 섹션만 선택적으로 업데이트 (ID 사용)
+        const aiSection = document.getElementById('section-ai');
+        if (aiSection) {
+            aiSection.innerHTML = `<h3>AI 투자 의견</h3>${outlookHtml}`;
         }
     },
 
@@ -751,13 +755,10 @@ Object.assign(window.UI, {
             </div>
         `;
 
-        // 뉴스 요약 섹션만 선택적으로 업데이트
-        const overviewContent = document.getElementById('overviewContent');
-        const sections = overviewContent.querySelectorAll('.analysis-section');
-
-        // 네 번째 섹션이 뉴스 요약
-        if (sections.length >= 4) {
-            sections[3].innerHTML = `<h3>뉴스 요약</h3>${newsHtml}`;
+        // 뉴스 요약 섹션만 선택적으로 업데이트 (ID 사용)
+        const newsSection = document.getElementById('section-news');
+        if (newsSection) {
+            newsSection.innerHTML = `<h3>뉴스 요약</h3>${newsHtml}`;
         }
     },
 
@@ -776,7 +777,7 @@ Object.assign(window.UI, {
                 outlook.sentiment.includes('부정') ? 'sell' : 'neutral';
 
         const html = `
-            <div class="analysis-section market-impact-section" style="border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02);">
+            <div id="section-market-impact" class="analysis-section market-impact-section" style="border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02);">
                 <h3 style="display: flex; align-items: center; gap: 0.5rem;">
                     🇺🇸 미국장 영향 분석 (Korea Impact)
                     <span class="badge-supply ${sentimentClass}" style="font-size: 0.8rem; padding: 2px 8px;">${outlook.sentiment}</span>
@@ -824,22 +825,21 @@ Object.assign(window.UI, {
         // 여기서는 "주가 정보" 섹션 바로 다음(두 번째 위치)에 삽입
         const overviewContent = document.getElementById('overviewContent');
 
-        // 이미 렌더링된 섹션이 있는지 확인
-        const existingSection = overviewContent.querySelector('.market-impact-section');
+        // 이미 렌더링된 섹션이 있는지 확인 (ID 사용)
+        const existingSection = document.getElementById('section-market-impact');
         if (existingSection) {
             existingSection.outerHTML = html;
         } else {
-            // 주가 정보 섹션 찾기
-            const firstSection = overviewContent.querySelector('.analysis-section');
-            if (firstSection) {
-                firstSection.insertAdjacentHTML('afterend', html);
+            // 주가 정보 섹션 찾기 (ID 사용)
+            const priceSection = document.getElementById('section-price');
+            if (priceSection) {
+                priceSection.insertAdjacentHTML('afterend', html);
             } else {
                 // 섹션이 없으면 그냥 맨 위에 추가
                 overviewContent.insertAdjacentHTML('afterbegin', html);
             }
         }
     },
-
 
     // 모달에 에러 메시지 표시
     showErrorInModal(message, code) {
@@ -866,6 +866,7 @@ Object.assign(window.UI, {
                     border-radius: 8px;
                     font-size: 1rem;
                     cursor: pointer;
+                    margin-right: 1rem;
                 ">닫기</button>
             </div>
         `;
@@ -886,7 +887,6 @@ Object.assign(window.UI, {
         // 강제 새로고침으로 재시도
         await this.loadStockAnalysis(code);
     },
-
 
     // 탭 전환
     switchTab(tabName) {

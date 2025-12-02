@@ -101,25 +101,9 @@ class StockAnalysisService:
                     # print(f"[Debug] First chart item sample: {daily_chart[0]}")
                     pass
 
-                for item in daily_chart:
-                    # Kiwoom API 응답 필드명 매핑
-                    # cur_prc: 현재가(종가), high_pric: 고가, low_pric: 저가, trde_qty: 거래량
-                    # stck_oprc: 시가 (필요시 추가)
-                    close_price = abs(self._safe_int(item.get('cur_prc', 0))) # 종가 (stck_clpr)
-                    high_price = abs(self._safe_int(item.get('high_pric', 0))) # 고가 (stck_hgpr)
-                    low_price = abs(self._safe_int(item.get('low_pric', 0))) # 저가 (stck_lwpr)
-                    volume = self._safe_int(item.get('trde_qty', 0)) # 거래량 (acml_vol)
-                    
-                    # 날짜 필드 확인 (stck_bsop_date or dt)
-                    date_str = item.get('stck_bsop_date', item.get('dt', ''))
-
-                    price_data.append({
-                        'date': date_str, # 일자
-                        'close': close_price, # 종가
-                        'high': high_price, # 고가
-                        'low': low_price, # 저가
-                        'volume': volume # 거래량
-                    })
+                # kis_api.py에서 이미 표준화된 키(date, close, high, low, volume)로 변환되어 반환됨
+                price_data = daily_chart
+                
                 # 날짜 오름차순 정렬 (과거 -> 현재)
                 price_data.sort(key=lambda x: x['date'])
                 

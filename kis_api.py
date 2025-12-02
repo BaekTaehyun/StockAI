@@ -309,7 +309,28 @@ class KiwoomApi:
             output = data.get('stk_dt_pole_chart_qry', data.get('output', []))
             if output:
                 print(f"[Chart] [OK] Got {len(output)} records")
-                return output
+                
+                # 키 매핑 (Raw API -> Standard)
+                mapped_output = []
+                for item in output:
+                    # KIS/Kiwoom API Key Mapping
+                    # stck_clpr: 종가, stck_oprc: 시가, stck_hgpr: 고가, stck_lwpr: 저가, acml_vol: 거래량
+                    # Fallback for other variations (cur_prc etc)
+                    
+                    try:
+                        mapped_item = {
+                            'date': item.get('stck_bsop_date', item.get('dt', '')),
+                            'close': int(item.get('stck_clpr', item.get('cur_prc', 0))),
+                            'open': int(item.get('stck_oprc', item.get('opn_prc', 0))),
+                            'high': int(item.get('stck_hgpr', item.get('high_pric', 0))),
+                            'low': int(item.get('stck_lwpr', item.get('low_pric', 0))),
+                            'volume': int(item.get('acml_vol', item.get('trde_qty', 0)))
+                        }
+                        mapped_output.append(mapped_item)
+                    except (ValueError, TypeError):
+                        continue
+                        
+                return mapped_output
             else:
                 print(f"[Chart] [FAIL] No data available for {code}")
                 return None

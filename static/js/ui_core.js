@@ -115,6 +115,7 @@ Object.assign(window.UI, {
         }
 
         document.getElementById('stockModal').style.display = 'none';
+
     },
 
     // 글로벌 마켓 모달 열기
@@ -122,22 +123,49 @@ Object.assign(window.UI, {
         const modal = document.getElementById('marketModal');
         const modalBody = document.getElementById('marketModalBody');
 
-        modal.style.display = 'block';
-        modalBody.innerHTML = '<div class="loading-spinner"></div><div style="text-align:center; margin-top:10px;">글로벌 마켓 데이터 분석 중...</div>';
+        modal.style.display = 'flex'; // Fix: Center the modal
+        modalBody.innerHTML = `
+            <div class="market-loading-container" style="text-align: center; padding: 2rem;">
+                <div class="loading-spinner"></div>
+                <div class="loading-text" style="margin-top: 1rem; color: var(--text-secondary);">글로벌 마켓 데이터 수집 중...</div>
+            </div>
+            <div id="marketHeadlines" style="display:none;"></div>
+            <div id="marketAnalysis" style="display:none;"></div>
+        `;
 
-        try {
-            // API 호출
-            const result = await API.fetchGlobalMarket();
+        // 스트리밍 데이터 처리
+        await API.fetchGlobalMarketStreaming(
+            (type, data) => {
+                // 진행 상태 업데이트
+                if (type === 'basic') {
+                    // 1단계: 헤드라인 및 기본 정보 표시
+                    const loadingText = modalBody.querySelector('.loading-text');
+                    if (loadingText) loadingText.textContent = 'AI가 시장 이벤트를 분석 중입니다...';
 
-            if (result.success && result.data) {
-                this.renderMarketModal(result.data);
-            } else {
-                modalBody.innerHTML = `<div class="error-message">데이터 로드 실패: ${result.message || '알 수 없는 오류'}</div>`;
+                    this.renderMarketHeadlines(data.headlines);
+                } else if (type === 'events') {
+                    // 2단계: 이벤트 분석 완료
+                    const loadingText = modalBody.querySelector('.loading-text');
+                    if (loadingText) loadingText.textContent = '한국 증시 영향 분석 중...';
+                } else if (type === 'impact') {
+                    // 3단계: 최종 분석 완료
+                    const loadingContainer = modalBody.querySelector('.market-loading-container');
+                    if (loadingContainer) loadingContainer.style.display = 'none';
+
+                    this.renderMarketAnalysis(data);
+                }
+            },
+            () => {
+                console.log('✅ 글로벌 마켓 분석 완료');
+            },
+            (errorMessage) => {
+                console.error('Market Modal Error:', errorMessage);
+                const loadingContainer = modalBody.querySelector('.market-loading-container');
+                if (loadingContainer) {
+                    loadingContainer.innerHTML = `<div class="error-message">오류 발생: ${errorMessage}</div>`;
+                }
             }
-        } catch (error) {
-            console.error('Market Modal Error:', error);
-            modalBody.innerHTML = `<div class="error-message">오류 발생: ${error.message}</div>`;
-        }
+        );
     },
 
     // 글로벌 마켓 모달 닫기
@@ -145,18 +173,44 @@ Object.assign(window.UI, {
         document.getElementById('marketModal').style.display = 'none';
     },
 
-    // 글로벌 마켓 데이터 렌더링
-    renderMarketModal(data) {
-        const modalBody = document.getElementById('marketModalBody');
-        const koreaImpact = data.korea_impact;
+    // 헤드라인 렌더링 (New)
+    renderMarketHeadlines(headlines) {
+        const container = document.getElementById('marketHeadlines');
+        if (!container) return;
+
+        if (!headlines || headlines.length === 0) return;
+
+        let html = `
+            <div class="headlines-section" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; margin-bottom: 1rem;">
+                <h4 style="color: var(--text-secondary); margin-bottom: 0.8rem; font-size: 0.9rem;">📰 주요 시장 뉴스</h4>
+                <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.9rem; color: var(--text-primary);">
+        `;
+
+        // 최대 5개만 표시
+        headlines.slice(0, 5).forEach(headline => {
+            html += `<li style="margin-bottom: 0.5rem; padding-left: 1rem; position: relative;">
+                <span style="position: absolute; left: 0; color: var(--accent-1);">•</span>
+                ${headline}
+            </li>`;
+        });
+
+        html += `</ul></div>`;
+
+        container.innerHTML = html;
+        container.style.display = 'block';
+    },
+
+    // 분석 결과 렌더링 (Renamed from renderMarketModal)
+    renderMarketAnalysis(koreaImpact) {
+        const container = document.getElementById('marketAnalysis');
+        if (!container) return;
 
         if (!koreaImpact || !koreaImpact.market_outlook) {
-            modalBody.innerHTML = '<div class="error-message">분석 데이터가 없습니다.</div>';
+            container.innerHTML = '<div class="error-message">분석 데이터가 없습니다.</div>';
+            container.style.display = 'block';
             return;
         }
 
-        // ui_details.js의 renderMarketImpact 로직을 재사용하거나 유사하게 구현
-        // 여기서는 독립적으로 구현하여 의존성 최소화
         const outlook = koreaImpact.market_outlook;
         const supply = koreaImpact.foreigner_supply_forecast;
         const strategy = koreaImpact.sector_strategy;
@@ -170,7 +224,7 @@ Object.assign(window.UI, {
             <div class="analysis-section market-impact-section" style="border: none; background: transparent; padding: 0;">
                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
                     <span class="badge-supply ${sentimentClass}" style="font-size: 1rem; padding: 4px 12px;">${outlook.sentiment}</span>
-                    <span style="color: var(--text-secondary); font-size: 0.9rem;">${data.last_updated ? new Date(data.last_updated).toLocaleString() : ''} 기준</span>
+                    <span style="color: var(--text-secondary); font-size: 0.9rem;">AI 분석 완료</span>
                 </div>
                 
                 <div class="impact-grid" style="display: grid; gap: 1rem;">
@@ -215,7 +269,8 @@ Object.assign(window.UI, {
             </div>
         `;
 
-        modalBody.innerHTML = html;
+        container.innerHTML = html;
+        container.style.display = 'block';
     },
 
     // 종목 검색 필터
