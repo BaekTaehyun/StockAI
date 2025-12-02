@@ -231,3 +231,6 @@ const Charts = {
         document.getElementById('technicalContent').innerHTML = html;
     }
 };
+
+// Make globally available
+window.Charts = Charts;
