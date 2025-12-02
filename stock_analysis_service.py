@@ -135,21 +135,32 @@ class StockAnalysisService:
                         print(f"[StockAnalysisService] 뉴스 분석 건너뜀: {e}")
                         return news_analysis  # 기본값 반환
                 
-                def fetch_market_themes():
-                    try:
-                        return self.gemini.fetch_market_themes(force_refresh=force_refresh)
-                    except Exception as e:
-                        print(f"[StockAnalysisService] 테마 조회 건너뜀: {e}")
-                        return '정보 없음'
-                
-                # ThreadPoolExecutor로 병렬 실행
-                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                # ThreadPoolExecutor로 병렬 실행 (뉴스 분석만)
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                     news_future = executor.submit(fetch_news)
-                    themes_future = executor.submit(fetch_market_themes)
                     
                     # 결과 대기
                     news_analysis = news_future.result()
-                    market_themes = themes_future.result()
+                    
+                # 테마 정보는 ThemeService에서 직접 조회 (빠름)
+                try:
+                    # 전체 테마 가져오기 (캐시됨)
+                    all_themes = self.theme_service.get_themes().get('themes', [])
+                    
+                    # 등락률 기준 정렬 (내림차순)
+                    sorted_themes = sorted(all_themes, key=lambda x: float(x.get('flu_rt', 0) or 0), reverse=True)
+                    
+                    # 상위 3개 추출
+                    top_themes = []
+                    for t in sorted_themes[:3]:
+                        name = t.get('thema_nm')
+                        rate = t.get('flu_rt')
+                        top_themes.append(f"{name}({rate}%)")
+                        
+                    market_themes = ", ".join(top_themes) if top_themes else "정보 없음"
+                except Exception as e:
+                    print(f"[StockAnalysisService] 테마 조회 실패: {e}")
+                    market_themes = "정보 없음"
             else:
                 market_themes = '정보 없음'  # 경량 모드
             
@@ -168,9 +179,26 @@ class StockAnalysisService:
                 market_data['market_index'] = market_index_str
                 
                 # 글로벌 시장 데이터 병합 (US Indices, Themes)
-                if global_market_data:
+                # 데이터가 있고 유효한 경우
+                if global_market_data and global_market_data.get('indices') and global_market_data.get('themes'):
                     market_data['us_indices'] = global_market_data.get('indices', '정보 없음')
                     market_data['us_themes'] = global_market_data.get('themes', '정보 없음')
+                else:
+                    # 데이터가 없거나 누락된 경우 직접 수집 시도 (Fallback)
+                    print("[StockAnalysisService] 글로벌 시장 데이터 누락됨, 직접 수집 시도...")
+                    try:
+                        from finviz_market_crawler import FinvizMarketFetcher
+                        fetcher = FinvizMarketFetcher()
+                        # 타임아웃 등 안전장치는 fetcher 내부 또는 여기서 고려 가능
+                        market_data['us_indices'] = fetcher.get_market_indices()
+                        market_data['us_themes'] = fetcher.get_strong_themes()
+                        print(f"[StockAnalysisService] 직접 수집 성공: {market_data['us_indices']}")
+                    except Exception as e:
+                        print(f"[StockAnalysisService] 직접 수집 실패: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        market_data['us_indices'] = f'정보 없음 (오류: {str(e)})'
+                        market_data['us_themes'] = f'정보 없음 (오류: {str(e)})'
                 
                 # 5-2. 주도 테마 (병렬로 가져온 데이터 사용)
                 market_data['themes'] = market_themes

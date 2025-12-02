@@ -185,37 +185,71 @@ class GeminiService:
                 raise Exception("API 응답 없음")
             
             # 응답 파싱 (새로운 프롬프트 포맷에 맞춤)
+            # 1. 초기값 설정 (파싱 실패 시 기본값)
             news_summary = ""
-            reason = ""
-            sentiment = "중립"
-            
-            lines = result_text.strip().split('\n')
-            current_section = None
-            
-            for line in lines:
-                line = line.strip()
-                # 섹션 감지
-                if "핵심 이슈" in line or line.startswith("1.") or "#### 1." in line:
-                    current_section = "news"
-                elif "주가 변동" in line or line.startswith("2.") or "#### 2." in line:
-                    current_section = "reason"
-                elif "종합 투자 판단" in line or line.startswith("3.") or "#### 3." in line:
-                    current_section = "sentiment"
+            reason = "분석 내용을 찾을 수 없습니다."
+            sentiment = "중립"  # 기본값
+
+            try:
+                # ====================================================
+                # [Step 1] Sentiment (투자의견) 추출
+                # ====================================================
+                # 패턴: "- **단기 대응**: [키워드] - 이유"
+                short_term_match = re.search(r'\*\*\s*단기 대응\s*\*\*:\s*\[(.*?)\]\s*-\s*(.*)', result_text)
                 
-                # 내용 추출
-                elif current_section == "news" and line.startswith("-"):
-                    news_summary += line + "\n"
-                elif current_section == "reason" and line.startswith("-"):
-                    reason += line + "\n"
-                elif current_section == "sentiment":
-                    if "단기적 관점" in line:
-                        if "긍정" in line: sentiment = "긍정"
-                        elif "부정" in line: sentiment = "부정"
-                        else: sentiment = "중립"
-            
-            # 파싱 결과가 비어있으면 원본 텍스트 일부 사용
-            if not news_summary: news_summary = result_text[:300] + "..."
-            if not reason: reason = "상세 분석 내용을 참고하세요."
+                if short_term_match:
+                    action_keyword = short_term_match.group(1).strip() # 예: 비중확대
+                    reason_text = short_term_match.group(2).strip()    # 예: 실적 호조로 상승 여력 있음
+                    
+                    # 1-1. Reason 설정
+                    reason = reason_text
+                    
+                    # 1-2. Sentiment 매핑 (프롬프트의 출력 옵션에 맞춤)
+                    if "비중확대" in action_keyword or "매수" in action_keyword or "긍정" in action_keyword:
+                        sentiment = "긍정"
+                    elif "차익실현" in action_keyword or "매도" in action_keyword or "비중축소" in action_keyword or "부정" in action_keyword:
+                        sentiment = "부정"
+                    else:
+                        # 홀딩, 관망, 중립 등
+                        sentiment = "중립"
+                
+                # ====================================================
+                # [Step 2] News Summary (분석 요약) 추출
+                # ====================================================
+                # 전략: "3. 애널리스트 투자의견" 전까지의 모든 불릿 포인트(-) 내용을 수집
+                
+                summary_lines = []
+                lines = result_text.split('\n')
+                is_in_analysis_section = False
+                
+                for line in lines:
+                    line = line.strip()
+                    
+                    # 섹션 1, 2 시작 감지
+                    if "이슈 팩트 체크" in line or "주가 트리거" in line:
+                        is_in_analysis_section = True
+                        continue
+                    
+                    # 섹션 3 (결론) 시작되면 요약 중단 (결론은 reason에 들어가므로)
+                    if "애널리스트 투자의견" in line:
+                        break
+                    
+                    # 불릿 포인트 내용 추출 (분석 섹션 내에서만)
+                    if is_in_analysis_section and line.startswith("-"):
+                        # 마크다운 문법 제거 (**제목**: 내용 -> 제목: 내용)
+                        clean_line = line.replace("**", "").replace("- ", "").strip()
+                        if clean_line:
+                            summary_lines.append(clean_line)
+                
+                if summary_lines:
+                    news_summary = "\n".join(summary_lines)
+                else:
+                    # 파싱 실패 시 원문 전체를 요약으로 대체 (안전장치)
+                    news_summary = result_text[:500] + "..."
+
+            except Exception as e:
+                print(f"[Gemini] 파싱 오류: {e}")
+                news_summary = result_text[:500] + "..."
 
             result = {
                 'news_summary': news_summary.strip(),
@@ -238,56 +272,7 @@ class GeminiService:
                 'raw_response': ""
             }
 
-    def fetch_market_themes(self, force_refresh=False):
-        """
-        오늘의 주식 시장 주도 테마를 검색하고 AI로 요약 (캐싱 적용)
-        """
-        # 1. 캐시 확인 (테마는 'market_themes'라는 가상의 코드로 저장)
-        cached_data, _ = self.cache.load('MARKET', 'themes', force_refresh)
-        if cached_data:
-            return cached_data
 
-        try:
-            # 검색 쿼리: "오늘 주식 시장 주도 테마", "오늘 증시 특징주"
-            search_query = "오늘 한국 주식 시장 주도 테마 특징주"
-            search_results = self.search_news(search_query)
-            
-            context = ""
-            if search_results:
-                for item in search_results:
-                    title = item.get('title', '')
-                    snippet = item.get('snippet', '')
-                    context += f"- {title}: {snippet}\n"
-            else:
-                context = "검색 결과 없음"
-
-            prompt = f"""
-            다음은 오늘 한국 주식 시장의 주요 뉴스 검색 결과입니다.
-            이 정보를 바탕으로 '오늘의 주도 테마' 3가지를 요약해주세요.
-            
-            [검색 결과]
-            {context}
-            
-            [요청사항]
-            - 가장 강한 상승세를 보인 테마 3개를 선정하세요.
-            - 각 테마별로 대표 종목이 있다면 괄호 안에 적어주세요.
-            - 답변은 쉼표(,)로 구분된 한 줄의 문자열로 작성하세요.
-            - 예시: 2차전지(에코프로), 반도체(삼성전자), 초전도체
-            """
-            
-            result_text = self._call_gemini_api(prompt)
-            if not result_text:
-                result_text = "테마 정보 없음"
-                
-            result = result_text.strip()
-            
-            # 2. 결과 캐싱
-            self.cache.save('MARKET', 'themes', result)
-            return result
-            
-        except Exception as e:
-            print(f"[Gemini] 테마 검색 실패: {e}")
-            return "테마 정보 확인 불가"
 
     def analyze_market_events(self, headlines, force_refresh=False):
         """
@@ -553,6 +538,7 @@ class GeminiService:
             - 미국 지수: {us_indices}
             - 미국 강세 테마: {us_themes}
             """
+            print(f"[Gemini] Market Context for Outlook: {market_context_str.strip()}")
             
             current_hot_themes = market_data.get('themes', '정보 없음')
             # stock_sector는 위에서 계산함
