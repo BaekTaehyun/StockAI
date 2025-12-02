@@ -291,7 +291,9 @@ class StockAnalysisService:
                         'recommendation': outlook.get('recommendation', '중립'),
                         'confidence': outlook.get('confidence', 0),
                         'reasoning': outlook.get('reasoning', ''),
+                        'key_logic': outlook.get('key_logic', ''),  # [FIX] 추가
                         'trading_scenario': outlook.get('trading_scenario', ''),
+                        'detailed_analysis': outlook.get('detailed_analysis', ''),  # [FIX] 추가
                         'price_strategy': outlook.get('price_strategy', {}),
                         'raw_response': outlook.get('raw_response', ''),
                         '_cache_info': outlook.get('_cache_info', {})

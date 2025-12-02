@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 * {
     margin: 0;
@@ -325,5 +325,125 @@ body {
 
     .section-header h2 {
         font-size: 1.1rem;
+    }
+}
+
+/* ================================================================
+   AI �����ǰ� ���� ��Ÿ��
+   ��ȣ ����: ���¸ż� > �ż� > ���Ҹż� > ���� > �ŵ�
+   ================================================================ */
+
+/* Ribbon Container (Parent must have position: relative and overflow: hidden) */
+.holding-card,
+.watchlist-card {
+    position: relative;
+    overflow: hidden;
+}
+
+/* =========================================
+   1. 리본 기본 구조 (Popular 스타일)
+   ========================================= */
+
+/* 리본을 담을 컨테이너 (이 영역 밖은 잘림) */
+.ai-ribbon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 90px;
+    /* 이 크기에 따라 리본의 노출 영역이 결정됨 */
+    height: 90px;
+    overflow: hidden;
+    /* 핵심: 상자 밖으로 나가는 리본 끝을 칼같이 잘라냄 */
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* 리본 띠 본체 */
+.ai-ribbon span {
+    position: absolute;
+    display: block;
+    width: 150px;
+    /* 대각선 길이보다 여유있게 길게 설정 */
+    padding: 6px 0;
+    /* 리본 두께 */
+
+    /* 위치 정밀 조정 (수학적으로 계산된 위치) */
+    top: 18px;
+    right: -40px;
+
+    /* 텍스트 스타일 */
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+    color: #fff;
+
+    /* 모양 설정 */
+    border-radius: 0;
+    /* 둥근 모서리 제거 (종이 띠 느낌) */
+    transform: rotate(45deg);
+
+    /* 공통 효과: 그림자 + 트랜지션 */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+
+    /* 공통 효과: 유리 질감 (뒤가 흐릿하게 비침) */
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+/* =========================================
+   2. 상태별 컬러 (전체 투명도 0.8 적용)
+   ========================================= */
+
+/* 1) 강력 매수 (Strong Buy) - 붉은색 + 펄스 애니메이션 */
+.ai-ribbon.strong-buy span {
+    background: linear-gradient(135deg, rgba(255, 71, 87, 0.85), rgba(255, 107, 129, 0.85));
+    box-shadow: 0 5px 15px rgba(255, 71, 87, 0.3);
+    animation: pulse-ribbon 2s infinite;
+    /* 강조 효과 */
+}
+
+/* 2) 매수 (Buy) - 진한 주황/빨강 */
+.ai-ribbon.buy span {
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.8), rgba(235, 77, 75, 0.8));
+}
+
+/* 3) 분할 매수 (Split Buy) - 노랑/오렌지 (요청하신 스타일) */
+.ai-ribbon.split-buy span {
+    background: linear-gradient(135deg, rgba(243, 156, 18, 0.8), rgba(241, 196, 15, 0.8));
+    /* 노란 배경이라 글자 가독성을 위해 텍스트 그림자 추가 */
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* 4) 보유 (Hold) - 회색 */
+.ai-ribbon.hold span {
+    background: linear-gradient(135deg, rgba(149, 165, 166, 0.8), rgba(127, 140, 141, 0.8));
+}
+
+/* 5) 매도 (Sell) - 파란색 */
+.ai-ribbon.sell span {
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.8), rgba(41, 128, 185, 0.8));
+}
+
+/* 6) 중립 (Neutral) - 연한 회색 */
+.ai-ribbon.neutral span {
+    background: linear-gradient(135deg, rgba(127, 140, 141, 0.8), rgba(189, 195, 199, 0.8));
+}
+
+/* =========================================
+   3. 애니메이션 키프레임 (강력 매수용)
+   ========================================= */
+@keyframes pulse-ribbon {
+
+    0%,
+    100% {
+        transform: rotate(45deg) scale(1);
+    }
+
+    50% {
+        transform: rotate(45deg) scale(1.05);
+        /* 살짝 커짐 */
     }
 }

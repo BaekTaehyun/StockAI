@@ -97,7 +97,7 @@ def get_global_market_data():
     if global_market_cache['data'] is None:
         update_global_market_data()
         
-    return global_market_cache['data']
+    return global_market_cache['data'] or {}
 
 @app.after_request
 def add_header(response):

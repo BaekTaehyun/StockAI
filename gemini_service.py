@@ -4,7 +4,7 @@ import config
 import json
 import os
 import datetime
-
+import re  
 import prompts
 from gemini_cache import GeminiCache
 from exchange_rate_fetcher import ExchangeRateFetcher
@@ -591,72 +591,148 @@ class GeminiService:
             if not result_text:
                 raise Exception("API 응답 없음")
             
-            # 응답 파싱
-            recommendation = "중립"
-            confidence = 50
-            trading_scenario = ""
-            detailed_analysis = ""
-            
+            # 1. 초기값 설정
+            parsed_data = {
+                "recommendation": "중립",
+                "confidence": 0,
+                "key_logic": "",         # 2번 핵심 논리 (추가됨)
+                "trading_scenario_raw": "", # 3번 시나리오 원문
+                "detailed_analysis": "", # 4번 상세 분석
+                "price_strategy": {      # 매매 전략 구조화
+                    "entry": "",
+                    "target": "",
+                    "stop_loss": ""
+                }
+            }
+
             lines = result_text.strip().split('\n')
             current_section = None
             
+            # 섹션별 버퍼
+            logic_buffer = []
+            scenario_buffer = []
+            analysis_buffer = []
+
             for line in lines:
                 line = line.strip()
-                if "투자의견" in line or line.startswith("1."):
-                    current_section = "recommendation"
-                    if "매수" in line:
-                        recommendation = "매수"
-                    elif "매도" in line:
-                        recommendation = "매도"
-                    else:
-                        recommendation = "중립"
-                elif "신뢰도" in line or line.startswith("2."):
-                    current_section = "confidence"
-                    import re
-                    # 콜론(:) 뒤의 숫자를 우선적으로 찾기
-                    if ":" in line:
-                        after_colon = line.split(":", 1)[1]
-                        numbers = re.findall(r'\d+', after_colon)
-                    else:
-                        numbers = re.findall(r'\d+', line)
+                if not line: continue
+
+                # ====================================================
+                # [섹션 감지 로직]
+                # ====================================================
+                if line.startswith("1.") or "투자의견" in line:
+                    current_section = "recommendation_section"
                     
-                    if numbers:
-                        confidence = min(100, max(0, int(numbers[0])))
-                elif "매매 시나리오" in line or line.startswith("3."):
-                    current_section = "scenario"
+                    # 1. 투자의견 및 신뢰도 파싱 (같은 라인에 있음)
+                    # 패턴: 1. 투자의견: [매수] (신뢰도: 80점)
+                    
+                    # A. 투자의견 추출
+                    if "강력매수" in line: parsed_data["recommendation"] = "강력매수"
+                    elif "분할매수" in line: parsed_data["recommendation"] = "분할매수"
+                    elif "매수" in line: parsed_data["recommendation"] = "매수"
+                    elif "매도" in line: parsed_data["recommendation"] = "매도"
+                    elif "관망" in line: parsed_data["recommendation"] = "관망"
+                    
+                    # B. 신뢰도 추출 (숫자 찾기)
+                    # 괄호 안의 '신뢰도: 00점'을 찾음
+                    conf_match = re.search(r'신뢰도[:\s]*(\d+)', line)
+                    if conf_match:
+                        parsed_data["confidence"] = int(conf_match.group(1))
+
+                elif line.startswith("2.") or "핵심 논리" in line:
+                    current_section = "key_logic"
+                    # [FIX] 같은 라인에 내용이 있는 경우 처리
                     if ":" in line:
-                         trading_scenario = line.split(":", 1)[-1].strip()
-                elif "상세 분석" in line or line.startswith("4."):
+                        parts = line.split(":", 1)
+                        if len(parts) > 1:
+                            content = parts[1].strip()
+                            if content:
+                                logic_buffer.append(content)
+                    
+                elif line.startswith("3.") or "매매 시나리오" in line:
+                    current_section = "trading_scenario"
+                    # [FIX] 같은 라인에 내용이 있는 경우 처리
+                    if ":" in line:
+                        parts = line.split(":", 1)
+                        if len(parts) > 1:
+                            content = parts[1].strip()
+                            if content:
+                                scenario_buffer.append(content)
+                                # 가격 전략 파싱 시도
+                                if ":" in content:
+                                    try:
+                                        key_part, value_part = content.split(":", 1)
+                                        key_clean = key_part.replace("-", "").strip()
+                                        value_clean = value_part.strip()
+                                        
+                                        if "진입" in key_clean:
+                                            parsed_data["price_strategy"]["entry"] = value_clean
+                                        elif "목표" in key_clean:
+                                            parsed_data["price_strategy"]["target"] = value_clean
+                                        elif "손절" in key_clean:
+                                            parsed_data["price_strategy"]["stop_loss"] = value_clean
+                                    except:
+                                        pass
+                    
+                elif line.startswith("4.") or "상세 분석" in line:
                     current_section = "detailed_analysis"
+                    # [FIX] 같은 라인에 내용이 있는 경우 처리
                     if ":" in line:
-                        detailed_analysis = line.split(":", 1)[-1].strip()
-                
-                # 섹션별 내용 수집
-                elif current_section == "scenario" and line:
-                    trading_scenario += "\n" + line
-                elif current_section == "detailed_analysis" and line:
-                    detailed_analysis += "\n" + line
-            
-            # 매매 시나리오에서 가격 정보 추출 (간단한 파싱)
-            price_strategy = {'entry': '', 'target': '', 'stop_loss': ''}
-            try:
-                scenario_lines = trading_scenario.split('\n')
-                for s_line in scenario_lines:
-                    if "진입" in s_line:
-                        price_strategy['entry'] = s_line.split(":", 1)[-1].strip()
-                    elif "목표" in s_line:
-                        price_strategy['target'] = s_line.split(":", 1)[-1].strip()
-                    elif "손절" in s_line:
-                        price_strategy['stop_loss'] = s_line.split(":", 1)[-1].strip()
-            except:
-                pass
+                        parts = line.split(":", 1)
+                        if len(parts) > 1:
+                            content = parts[1].strip()
+                            if content:
+                                analysis_buffer.append(content)
+
+                # ====================================================
+                # [섹션별 내용 수집]
+                # ====================================================
+                else:
+                    if current_section == "key_logic":
+                        # 불릿 포인트 등 내용 수집
+                        logic_buffer.append(line)
+                        
+                    elif current_section == "trading_scenario":
+                        scenario_buffer.append(line)
+                        
+                        # 가격 전략 정밀 파싱 (- 진입: 10000원 (근거...))
+                        # 콜론(:) 기준으로 값을 분리
+                        if ":" in line:
+                            key_part, value_part = line.split(":", 1)
+                            key_clean = key_part.replace("-", "").strip()
+                            value_clean = value_part.strip()
+                            
+                            if "진입" in key_clean:
+                                parsed_data["price_strategy"]["entry"] = value_clean
+                            elif "목표" in key_clean:
+                                parsed_data["price_strategy"]["target"] = value_clean
+                            elif "손절" in key_clean:
+                                parsed_data["price_strategy"]["stop_loss"] = value_clean
+
+                    elif current_section == "detailed_analysis":
+                        analysis_buffer.append(line)
+
+            # 버퍼 내용을 parsed_data에 할당
+            parsed_data["key_logic"] = "\n".join(logic_buffer)
+            parsed_data["trading_scenario_raw"] = "\n".join(scenario_buffer)
+            parsed_data["detailed_analysis"] = "\n".join(analysis_buffer)
 
             result = {
-                'recommendation': recommendation,
-                'confidence': confidence,
-                'trading_scenario': trading_scenario.strip(),
-                'price_strategy': price_strategy,
-                'reasoning': detailed_analysis.strip() if detailed_analysis.strip() else result_text,
+                'recommendation': parsed_data['recommendation'],  # 투자의견 (매수/중립/매도)
+                'confidence': parsed_data['confidence'],          # 신뢰도 (0~100)
+                
+                # [NEW] 프롬프트의 '2. 핵심 논리 (3줄 요약)' 부분
+                'key_logic': parsed_data['key_logic'],
+                
+                # [NEW] 진입가/목표가/손절가가 분리된 딕셔너리 {'entry':.., 'target':.., 'stop_loss':..}
+                'price_strategy': parsed_data['price_strategy'],
+                
+                # '3. 매매 시나리오' 섹션의 원문 텍스트 (줄글 형태가 필요할 때 사용)
+                'trading_scenario': parsed_data['trading_scenario_raw'],
+                
+                # '4. 상세 분석' 섹션 (기존 reasoning 대응)
+                # 내용이 없으면(파싱 실패 시) 원문 전체를 넣는 안전장치 포함
+                'detailed_analysis': parsed_data['detailed_analysis'] if parsed_data['detailed_analysis'] else result_text,
                 'raw_response': result_text,
                 '_cache_info': {'cached': False, 'reason': 'new_data', 'age_seconds': 0}
             }

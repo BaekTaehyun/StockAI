@@ -211,12 +211,19 @@ function renderRibbon(code, data) {
 
     if (ribbon) {
         const recommendation = data.ai_recommendation || data.recommendation || '중립';
-        let ribbonClass = 'neutral';
+        let ribbonClass = 'neutral';  // 기본값
 
-        if (recommendation === '매수') {
-            ribbonClass = 'buy';
+        // 5단계 투자의견 매핑
+        if (recommendation === '강력매수') {
+            ribbonClass = 'strong-buy';  // 🔥 진한 빨강/주황
+        } else if (recommendation === '매수') {
+            ribbonClass = 'buy';  // ✅ 빨강
+        } else if (recommendation === '분할매수') {
+            ribbonClass = 'split-buy';  // ⚠️ 노랑/주황
+        } else if (recommendation === '관망') {
+            ribbonClass = 'hold';  // ⏸️ 회색
         } else if (recommendation === '매도') {
-            ribbonClass = 'sell';
+            ribbonClass = 'sell';  // ❄️ 파랑
         }
 
         ribbon.className = `ai-ribbon ${ribbonClass}`;

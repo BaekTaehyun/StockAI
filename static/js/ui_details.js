@@ -178,11 +178,23 @@ Object.assign(window.UI, {
                             <span class="recommendation">${safeOutlook.recommendation}</span>
                             <span class="confidence">신뢰도 ${safeOutlook.confidence}%</span>
                         </div>
+                        
+                        <!-- [NEW] 핵심 논리 (3줄 요약) -->
+                        <div class="key-logic" style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                             <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">핵심 논리</h4>
+                             <div style="font-family: inherit; color: var(--text-secondary); line-height: 1.6; white-space: pre-line;">${formatAIText(safeOutlook.key_logic || '논리 정보 없음')}</div>
+                        </div>
+
                         <div class="trading-scenario" style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
                              <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">매매 시나리오</h4>
-                             <div style="font-family: inherit; color: var(--text-secondary); line-height: 1.6;">${formatAIText(safeOutlook.trading_scenario || '시나리오 정보 없음')}</div>
+                             <div style="font-family: inherit; color: var(--text-secondary); line-height: 1.6; white-space: pre-line;">${formatAIText(safeOutlook.trading_scenario || '시나리오 정보 없음')}</div>
                         </div>
-                        <div class="reasoning" style="margin-top: 1rem; line-height: 1.6; color: var(--text-secondary);">${formatAIText(safeOutlook.reasoning)}</div>
+                        
+                        <!-- [NEW] 상세 분석 (Reasoning 대체) -->
+                        <div class="detailed-analysis" style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                             <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">상세 분석</h4>
+                             <div style="font-family: inherit; color: var(--text-secondary); line-height: 1.6; white-space: pre-line;">${formatAIText(safeOutlook.detailed_analysis || safeOutlook.reasoning || '분석 내용 없음')}</div>
+                        </div>
                     </div>
                 </div>
 
@@ -728,11 +740,23 @@ Object.assign(window.UI, {
                     <span class="recommendation">${outlook.recommendation}</span>
                     <span class="confidence">신뢰도 ${outlook.confidence}%</span>
                 </div>
+                
+                <!-- [NEW] 핵심 논리 -->
+                <div class="key-logic" style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">핵심 논리</h4>
+                    <div style="font-family: inherit; color: var(--text-secondary); line-height: 1.6; white-space: pre-line;">${formatAIText(outlook.key_logic || '논리 정보 없음')}</div>
+                </div>
+
                 <div class="trading-scenario" style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
                     <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">매매 시나리오</h4>
-                    <div style="font-family: inherit; color: var(--text-secondary); line-height: 1.6;">${formatAIText(outlook.trading_scenario || '시나리오 정보 없음')}</div>
+                    <div style="font-family: inherit; color: var(--text-secondary); line-height: 1.6; white-space: pre-line;">${formatAIText(outlook.trading_scenario || '시나리오 정보 없음')}</div>
                 </div>
-                <div class="reasoning" style="margin-top: 1rem; line-height: 1.6; color: var(--text-secondary);">${formatAIText(outlook.reasoning)}</div>
+                
+                <!-- [NEW] 상세 분석 -->
+                <div class="detailed-analysis" style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">상세 분석</h4>
+                    <div style="font-family: inherit; color: var(--text-secondary); line-height: 1.6; white-space: pre-line;">${formatAIText(outlook.detailed_analysis || outlook.reasoning || '분석 내용 없음')}</div>
+                </div>
             </div>
         `;
         // AI 투자 의견 섹션만 선택적으로 업데이트 (ID 사용)
