@@ -41,6 +41,10 @@ market_fetcher = FinvizMarketFetcher()
 from gemini_service import GeminiService
 gemini_service = GeminiService()
 
+# 환율 정보 페처 생성
+from exchange_rate_fetcher import ExchangeRateFetcher
+exchange_rate_fetcher = ExchangeRateFetcher()
+
 global_market_cache = {
     'data': None,
     'last_updated': None
@@ -496,17 +500,32 @@ def get_news_analysis(code):
 
 @app.route('/api/market/indices')
 def get_market_indices():
-    """코스피, 코스닥 지수 조회"""
+    """코스피, 코스닥 지수 및 원/달러 환율 조회"""
     try:
         # 코스피 (001), 코스닥 (101)
         kospi = kiwoom.get_market_index("001")
         kosdaq = kiwoom.get_market_index("101")
         
+        # 원/달러 환율
+        exchange_rate_data = exchange_rate_fetcher.get_usd_krw_rate()
+        
+        # 환율 데이터를 지수와 동일한 형식으로 변환
+        usdkrw = {
+            'price': f"{exchange_rate_data['rate']:,.2f}",
+            'change': f"{exchange_rate_data['change']:+.2f}",
+            'rate': f"{exchange_rate_data['change_pct']:+.2f}"
+        } if exchange_rate_data['success'] else {
+            'price': '-',
+            'change': '-',
+            'rate': '-'
+        }
+        
         return jsonify({
             'success': True,
             'data': {
                 'kospi': kospi,
-                'kosdaq': kosdaq
+                'kosdaq': kosdaq,
+                'usdkrw': usdkrw
             }
         })
     except Exception as e:
