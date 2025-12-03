@@ -314,4 +314,39 @@ window.updateSentimentFromAnalysis = (code, analysisData) => {
 
     // 리본 렌더링
     renderRibbon(code, sentimentData);
+
+    // 수급 정보 카드 업데이트 (추가된 로직)
+    const supplyElem = document.getElementById(`supply-${code}`);
+    if (supplyElem && analysisData.supply_demand) {
+        const foreigner = analysisData.supply_demand.foreign_net || 0;
+        const institution = analysisData.supply_demand.institution_net || 0;
+
+        let badge = '';
+        if (foreigner > 0 && institution > 0) {
+            badge = '<span class="badge-supply buy">쌍끌이 매수 🚀</span>';
+        } else if (foreigner < 0 && institution < 0) {
+            badge = '<span class="badge-supply sell">양매도 📉</span>';
+        } else if (foreigner > 0 && institution < 0) {
+            badge = `<div style="display: flex; flex-direction: column; gap: 4px;">
+                <span class="badge-supply buy" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">외인 매수</span>
+                <span class="badge-supply sell" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">기관 매도</span>
+            </div>`;
+        } else if (foreigner < 0 && institution > 0) {
+            badge = `<div style="display: flex; flex-direction: column; gap: 4px;">
+                <span class="badge-supply sell" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">외인 매도</span>
+                <span class="badge-supply buy" style="font-size: 0.85em; padding: 2px 8px; width: fit-content;">기관 매수</span>
+            </div>`;
+        } else if (foreigner > 0) {
+            badge = '<span class="badge-supply buy">외인 매수중 📈</span>';
+        } else if (foreigner < 0) {
+            badge = '<span class="badge-supply sell">외인 매도중 📉</span>';
+        } else if (institution > 0) {
+            badge = '<span class="badge-supply buy">기관 매수중 🏢</span>';
+        } else if (institution < 0) {
+            badge = '<span class="badge-supply sell">기관 매도중 📉</span>';
+        } else {
+            badge = '<span class="badge-supply neutral">수급 보합</span>';
+        }
+        supplyElem.innerHTML = badge;
+    }
 };
