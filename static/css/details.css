@@ -372,13 +372,18 @@
     }
 
     /* 본문 영역: 스크롤 핵심 Fix */
-    #modalBody {
+    #modalBody,
+    #marketModalBody {
         flex: 1 1 auto !important;
         min-height: 0 !important;
         /* Crucial for nested flex scrolling */
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain;
+        /* Prevent body scroll chaining */
+        transform: translateZ(0);
+        /* Force hardware acceleration to fix rendering freeze */
         padding: 1rem !important;
         padding-bottom: 3rem !important;
         /* Extra padding for bottom scroll */

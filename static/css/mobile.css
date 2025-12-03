@@ -42,7 +42,8 @@
     }
 }
 
-/* 모달 레이아웃 - 5/5/90 비율 */
+/* 모달 레이아웃 - details.css에서 통합 관리됨 (중복 제거) */
+/*
 @media (max-width: 768px) {
     .modal {
         padding: 0 !important;
@@ -52,17 +53,13 @@
         width: 100% !important;
         height: 100vh !important;
         height: 100dvh !important;
-        /* iOS dynamic viewport height */
         max-width: 100% !important;
         max-height: 100vh !important;
         max-height: 100dvh !important;
-        /* iOS dynamic viewport height */
         margin: 0 !important;
         border-radius: 0 !important;
         display: flex !important;
         flex-direction: column !important;
-
-        /* Safe area handling for notched phones */
         padding-top: env(safe-area-inset-top) !important;
         padding-bottom: env(safe-area-inset-bottom) !important;
     }
@@ -121,6 +118,7 @@
         font-size: 0.9rem !important;
     }
 }
+*/
 
 /* ================================================================
    정보 섹션 (시장 지수, 계좌 요약) 가독성 개선
