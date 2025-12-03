@@ -3,6 +3,24 @@
 let minuteChart = null;
 
 const Charts = {
+    isBollingerVisible: true,
+
+    toggleBollinger() {
+        this.isBollingerVisible = !this.isBollingerVisible;
+        const container = document.getElementById('bollingerSection');
+        const btn = document.getElementById('bollingerToggle');
+
+        if (container) {
+            container.style.display = this.isBollingerVisible ? 'block' : 'none';
+        }
+
+        if (btn) {
+            btn.textContent = this.isBollingerVisible ? '숨기기' : '보기';
+            btn.style.background = this.isBollingerVisible ? 'var(--accent-1)' : 'transparent';
+            btn.style.color = this.isBollingerVisible ? 'white' : 'var(--accent-1)';
+        }
+    },
+
     // 분봉 차트 렌더링
     renderMinuteChart(data) {
         const canvas = document.getElementById('minuteChart');
@@ -42,8 +60,8 @@ const Charts = {
     },
 
     // 기술적 분석 탭 렌더링
-    renderTechnical(data, stockInfo, fundamentalData = {}) {
-        console.log('📊 [Technical] Rendering technical analysis:', data, stockInfo, fundamentalData);
+    renderTechnical(data, stockInfo, fundamentalData = {}, bollingerData = null) {
+        console.log('📊 [Technical] Rendering technical analysis:', data, stockInfo, fundamentalData, bollingerData);
 
         // 현재가 가져오기
         const currentPriceStr = stockInfo ? stockInfo.current_price : '0';
@@ -78,6 +96,34 @@ const Charts = {
         const macdIcon = data.macd >= 0 ? '📈' : '📉';
 
         const html = `
+            <!-- 일봉 차트 (볼린저 밴드) -->
+            <div class="analysis-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3>일봉 차트 (볼린저 밴드)</h3>
+                    <button id="bollingerToggle" onclick="Charts.toggleBollinger()" style="padding: 0.25rem 0.75rem; border-radius: 15px; border: 1px solid var(--accent-1); background: ${this.isBollingerVisible ? 'var(--accent-1)' : 'transparent'}; color: ${this.isBollingerVisible ? 'white' : 'var(--accent-1)'}; cursor: pointer; font-size: 0.8rem; transition: all 0.2s ease;">
+                        ${this.isBollingerVisible ? '숨기기' : '보기'}
+                    </button>
+                </div>
+                <div id="bollingerSection" style="display: ${this.isBollingerVisible ? 'block' : 'none'};">
+                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                    ${bollingerData && bollingerData.summary ? `
+                    <div style="margin-top: 1rem; display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+                        <div class="badge ${bollingerData.summary.is_squeeze ? 'sell' : 'neutral'}" style="font-size: 0.9rem;">
+                            ${bollingerData.summary.is_squeeze ? '🔥 스퀴즈 발생 (변동성 축소)' : '변동성 일반'}
+                        </div>
+                        <div class="badge neutral" style="font-size: 0.9rem;">
+                            밴드폭: ${(bollingerData.summary.bandwidth * 100).toFixed(2)}%
+                        </div>
+                        <div class="badge neutral" style="font-size: 0.9rem;">
+                            %B: ${bollingerData.summary.percent_b}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+
             <div class="analysis-section">
                 <h3>RSI (상대강도지수)</h3>
                 <div class="indicator">
@@ -225,10 +271,118 @@ const Charts = {
                     </div>
                 </div>
             </div>
-
         `;
 
         document.getElementById('technicalContent').innerHTML = html;
+
+        // 차트 렌더링 (HTML 삽입 후 실행)
+        if (bollingerData && bollingerData.history) {
+            let chartData = bollingerData.history;
+
+            // 데이터가 배열인 경우 (List of Objects) -> Chart.js용 객체 (Object of Arrays)로 변환
+            if (Array.isArray(bollingerData.history)) {
+                chartData = {
+                    dates: bollingerData.history.map(item => item.date),
+                    prices: bollingerData.history.map(item => item.close),
+                    upper: bollingerData.history.map(item => item.upper),
+                    middle: bollingerData.history.map(item => item.middle),
+                    lower: bollingerData.history.map(item => item.lower),
+                    is_squeeze: bollingerData.history.map(item => item.is_squeeze)
+                };
+            }
+
+            this.renderDailyChart(chartData);
+        }
+    },
+
+    // 일봉 차트 (볼린저 밴드) 렌더링
+    renderDailyChart(data) {
+        const canvas = document.getElementById('dailyChart');
+        if (!canvas) {
+            console.warn('Daily chart canvas not found');
+            return;
+        }
+        const ctx = canvas.getContext('2d');
+
+        // Prepare Squeeze Highlights (Color points red if squeeze)
+        // Safety check: ensure is_squeeze exists and is an array
+        const isSqueeze = Array.isArray(data.is_squeeze) ? data.is_squeeze : [];
+        const pointColors = isSqueeze.map(isSq => isSq ? 'red' : 'rgba(0,0,0,0)');
+        const pointRadii = isSqueeze.map(isSq => isSq ? 3 : 0);
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.dates,
+                datasets: [
+                    {
+                        label: 'Price',
+                        data: data.prices,
+                        borderColor: '#ffffff',
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        tension: 0.1,
+                        order: 1
+                    },
+                    {
+                        label: 'Upper Band',
+                        data: data.upper,
+                        borderColor: 'rgba(0, 255, 255, 0.5)', // Cyan
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        fill: false, // Don't fill to bottom
+                        tension: 0.1,
+                        order: 2
+                    },
+                    {
+                        label: 'Lower Band',
+                        data: data.lower,
+                        borderColor: 'rgba(0, 255, 255, 0.5)', // Cyan
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        fill: '-1', // Fill to previous dataset (Upper Band)
+                        backgroundColor: 'rgba(0, 255, 255, 0.1)', // The "Cloud"
+                        tension: 0.1,
+                        order: 3
+                    },
+                    {
+                        label: 'Middle Band (SMA 20)',
+                        data: data.middle,
+                        borderColor: '#ff9800', // Orange
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0.1,
+                        order: 0
+                    },
+                    {
+                        label: 'Squeeze Indicator',
+                        data: data.middle, // Plot on middle line
+                        pointBackgroundColor: pointColors,
+                        pointBorderColor: pointColors,
+                        pointRadius: pointRadii,
+                        showLine: false, // Only points
+                        order: -1 // Top layer
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { labels: { color: '#e0e0e0' } },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    x: { ticks: { color: '#aaaaaa' }, grid: { color: '#444' } },
+                    y: { ticks: { color: '#aaaaaa' }, grid: { color: '#444' } }
+                }
+            }
+        });
     }
 };
 

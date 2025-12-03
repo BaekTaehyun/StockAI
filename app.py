@@ -358,9 +358,10 @@ def stream_full_analysis(code):
                 chart_data.sort(key=lambda x: x['date'])
                 
             technical = TechnicalIndicators.calculate_indicators(chart_data)
+            bollinger = TechnicalIndicators.calculate_bollinger_bands(chart_data)
             fundamental_data = kiwoom.get_stock_fundamental_info(normalized_code)
             
-            yield f"data: {json.dumps({'type': 'technical', 'data': {'indicators': technical, 'fundamental': fundamental_data}})}\n\n"
+            yield f"data: {json.dumps({'type': 'technical', 'data': {'indicators': technical, 'bollinger': bollinger, 'fundamental': fundamental_data}})}\n\n"
             
             # 3-4단계: 전체 분석 (뉴스 + AI 전망)
             # global_market은 이미 위에서 가져옴

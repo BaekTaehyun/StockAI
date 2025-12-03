@@ -465,7 +465,7 @@ Object.assign(window.UI, {
 
         // 기술적 분석 탭
         if (data.technical && typeof Charts !== 'undefined' && Charts.renderTechnical) {
-            Charts.renderTechnical(data.technical, data.stock_info, data.fundamental_data);
+            Charts.renderTechnical(data.technical, data.stock_info, data.fundamental_data, data.bollinger);
         }
 
         // 리본 캐시 동기화
@@ -571,6 +571,7 @@ Object.assign(window.UI, {
 
                         allData.technical = indicators;
                         allData.fundamental_data = fundamental;
+                        allData.bollinger = data.bollinger;
 
                         if (typeof Charts !== 'undefined' && Charts.renderTechnical) {
                             // stockInfo 구성 (allData.price는 {name, code, price, change, rate} 형태)
@@ -580,7 +581,7 @@ Object.assign(window.UI, {
                                 change_rate: allData.price ? allData.price.rate : 0
                             };
 
-                            Charts.renderTechnical(indicators, stockInfo, fundamental);
+                            Charts.renderTechnical(indicators, stockInfo, fundamental, data.bollinger);
                         }
                     }
                 },
@@ -621,7 +622,8 @@ Object.assign(window.UI, {
                         outlook: allData.outlook,
                         technical: allData.technical,
                         market_impact: allData.market_impact, // 캐시에도 저장
-                        fundamental_data: allData.fundamental_data // 펀더멘털 데이터 저장
+                        fundamental_data: allData.fundamental_data, // 펀더멘털 데이터 저장
+                        bollinger: allData.bollinger
                     };
 
                     if (allData.outlook && allData.news_analysis) {

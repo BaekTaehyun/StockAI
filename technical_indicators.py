@@ -138,9 +138,6 @@ class TechnicalIndicators:
             print(f"[TechnicalIndicators] 계산 오류: {e}")
             return TechnicalIndicators._get_default_indicators()
     
-    @staticmethod
-    def _get_default_indicators():
-        """기본 지표 값 반환"""
         return {
             'rsi': 50,
             'rsi_signal': "데이터부족",
@@ -151,3 +148,93 @@ class TechnicalIndicators:
             'ma60': 0,
             'ma_signal': "데이터부족"
         }
+
+    @staticmethod
+    def calculate_bollinger_bands(price_data, window=20, num_std=2):
+        """
+        볼린저 밴드 및 스퀴즈 지표 계산
+        
+        Args:
+            price_data: List of dicts or DataFrame
+            window: 이동평균 기간 (기본 20)
+            num_std: 표준편차 승수 (기본 2)
+            
+        Returns:
+            dict: {
+                'summary': { 'upper': ..., 'middle': ..., 'lower': ..., 'bandwidth': ..., 'percent_b': ..., 'is_squeeze': ... },
+                'history': [ ... last 120 days ... ]
+            }
+        """
+        try:
+            if not price_data or len(price_data) < window:
+                return None
+                
+            df = pd.DataFrame(price_data)
+            
+            # 컬럼명 통일
+            df.columns = df.columns.str.lower()
+            
+            # 숫자 변환
+            cols = ['close', 'open', 'high', 'low', 'volume']
+            for col in cols:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+            # 날짜 오름차순 정렬 (과거 -> 현재)
+            df = df.sort_values('date', ascending=True)
+            
+            # 볼린저 밴드 계산
+            df['sma'] = df['close'].rolling(window=window).mean()
+            df['std'] = df['close'].rolling(window=window).std()
+            df['upper_band'] = df['sma'] + (df['std'] * num_std)
+            df['lower_band'] = df['sma'] - (df['std'] * num_std)
+            
+            # %B (Percent B)
+            # (Price - Lower Band) / (Upper Band - Lower Band)
+            df['percent_b'] = (df['close'] - df['lower_band']) / (df['upper_band'] - df['lower_band'])
+            
+            # Bandwidth
+            # (Upper Band - Lower Band) / Middle Band
+            df['bandwidth'] = (df['upper_band'] - df['lower_band']) / df['sma']
+            
+            # Squeeze Detection (120일 기준 최저 Bandwidth 대비 5% 이내 근접 시)
+            # 데이터가 120개 미만이면 전체 기간 사용
+            min_window = min(120, len(df))
+            df['min_bandwidth_120'] = df['bandwidth'].rolling(window=min_window).min()
+            df['is_squeeze'] = df['bandwidth'] <= (df['min_bandwidth_120'] * 1.05)
+            
+            # 최신 값
+            last = df.iloc[-1]
+            
+            summary = {
+                'upper': round(float(last['upper_band']), 0),
+                'middle': round(float(last['sma']), 0),
+                'lower': round(float(last['lower_band']), 0),
+                'bandwidth': round(float(last['bandwidth']), 4),
+                'percent_b': round(float(last['percent_b']), 4),
+                'is_squeeze': bool(last['is_squeeze'])
+            }
+            
+            # 히스토리 (최근 120일) - 차트 및 AI 분석용
+            # 필요한 컬럼만 추출
+            history_df = df.tail(120).copy()
+            history = []
+            for _, row in history_df.iterrows():
+                history.append({
+                    'date': row['date'],
+                    'close': int(row['close']),
+                    'upper': round(float(row['upper_band']), 0) if not pd.isna(row['upper_band']) else None,
+                    'middle': round(float(row['sma']), 0) if not pd.isna(row['sma']) else None,
+                    'lower': round(float(row['lower_band']), 0) if not pd.isna(row['lower_band']) else None,
+                    'bandwidth': round(float(row['bandwidth']), 4) if not pd.isna(row['bandwidth']) else None,
+                    'is_squeeze': bool(row['is_squeeze']) if not pd.isna(row['is_squeeze']) else False
+                })
+                
+            return {
+                'summary': summary,
+                'history': history
+            }
+            
+        except Exception as e:
+            print(f"[TechnicalIndicators] 볼린저 밴드 계산 오류: {e}")
+            return None

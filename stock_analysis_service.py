@@ -108,6 +108,7 @@ class StockAnalysisService:
                 price_data.sort(key=lambda x: x['date'])
                 
             technical = TechnicalIndicators.calculate_indicators(price_data)
+            bollinger = TechnicalIndicators.calculate_bollinger_bands(price_data)
             
             # 4-5. 뉴스 분석과 시장 데이터 수집을 병렬로 처리 (성능 개선)
             news_analysis = {
@@ -264,6 +265,7 @@ class StockAnalysisService:
                         news_analysis=news_analysis,
                         market_data=market_data,
                         fundamental_data=fundamental_data,
+                        bollinger_data=bollinger,
                         force_refresh=force_refresh
                     )
                 except Exception as e:
@@ -282,6 +284,7 @@ class StockAnalysisService:
                     },
                     'supply_demand': supply_demand,
                     'technical': technical,
+                    'bollinger': bollinger,
                     'news_analysis': {
                         'summary': news_analysis.get('news_summary', ''),
                         'reason': news_analysis.get('reason', ''),

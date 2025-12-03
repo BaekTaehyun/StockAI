@@ -470,7 +470,7 @@ class GeminiService:
             print(f"[Gemini] 핵심 테마 선정 실패: {e}")
             return []
 
-    def generate_outlook(self, stock_name, stock_info, supply_demand, technical_indicators, news_analysis, market_data=None, fundamental_data=None, theme_service=None, force_refresh=False):
+    def generate_outlook(self, stock_name, stock_info, supply_demand, technical_indicators, news_analysis, market_data=None, fundamental_data=None, theme_service=None, bollinger_data=None, force_refresh=False):
         """
         종합 정보를 바탕으로 AI 전망 생성 (캐싱 적용)
         Core + Active 테마 전략 적용
@@ -583,7 +583,11 @@ class GeminiService:
                 per=fundamental_data.get('per', 'N/A'),
                 pbr=fundamental_data.get('pbr', 'N/A'),
                 roe=fundamental_data.get('roe', 'N/A'),
-                operating_profit=self._format_large_number(fundamental_data.get('operating_profit_raw', '0'))
+                operating_profit=self._format_large_number(fundamental_data.get('operating_profit_raw', '0')),
+                
+                # 볼린저 밴드 데이터 추가
+                bollinger_summary=self._format_bollinger_summary(bollinger_data),
+                is_squeeze="발생 (변동성 축소)" if bollinger_data and bollinger_data.get('summary', {}).get('is_squeeze') else "미발생"
             )
             
             result_text = self._call_gemini_api(prompt)
@@ -771,3 +775,11 @@ class GeminiService:
             return result.strip() + "원"
         except:
             return str(value_str)
+
+    def _format_bollinger_summary(self, bollinger_data):
+        """볼린저 밴드 요약 정보를 문자열로 변환"""
+        if not bollinger_data or 'summary' not in bollinger_data:
+            return "정보 없음"
+        
+        s = bollinger_data['summary']
+        return f"상단 {s['upper']}, 중단 {s['middle']}, 하단 {s['lower']}, 대역폭 {s['bandwidth']}, %B {s['percent_b']}"
