@@ -83,7 +83,8 @@
 }
 
 /* Modal Body - Scrollable area */
-#modalBody {
+#modalBody,
+#marketModalBody {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
@@ -276,7 +277,7 @@
 }
 
 /* ================================================================
-   모바일 반응형 스타일 (768px 이하)
+   모바??반응???��???(768px ?�하)
    ================================================================ */
 
 @media (max-width: 768px) {
@@ -302,7 +303,7 @@
         padding-bottom: env(safe-area-inset-bottom) !important;
     }
 
-    /* 헤더: 높이 자동, flex-shrink 0 */
+    /* ?�더: ?�이 ?�동, flex-shrink 0 */
     .modal-content h2 {
         flex: 0 0 auto !important;
         height: auto !important;
@@ -333,7 +334,7 @@
         justify-content: center;
     }
 
-    /* 탭 영역: 가로 스크롤 */
+    /* ???�역: 가�??�크�?*/
     .analysis-tabs {
         flex: 0 0 auto !important;
         height: auto !important;
@@ -371,7 +372,7 @@
         border-color: var(--accent-1);
     }
 
-    /* 본문 영역: 스크롤 핵심 Fix */
+    /* 본문 ?�역: ?�크�??�심 Fix */
     #modalBody,
     #marketModalBody {
         flex: 1 1 auto !important;
@@ -393,7 +394,7 @@
         padding: 0 !important;
     }
 
-    /* 폰트 및 간격 조정 */
+    /* ?�트 �?간격 조정 */
     .analysis-section {
         padding: 1rem !important;
         margin-bottom: 1rem !important;
@@ -411,7 +412,7 @@
     }
 }
 
-/* 초소형 화면 (480px 이하) - 추가 조정 */
+/* 초소???�면 (480px ?�하) - 추�? 조정 */
 @media (max-width: 480px) {
     .modal-content h2 {
         padding: 0.4rem 0.75rem !important;
