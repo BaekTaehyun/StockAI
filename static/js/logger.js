@@ -16,8 +16,13 @@ const Logger = {
         const stored = localStorage.getItem('DEBUG_MODE');
         // 처음 사용 시 기본값 true
         if (stored === null) {
-            localStorage.setItem('DEBUG_MODE', 'true');
-            return true;
+            // 서버 설정값 우선 사용, 없으면 true
+            const defaultMode = (typeof window.SERVER_DEBUG_MODE !== 'undefined')
+                ? window.SERVER_DEBUG_MODE
+                : true;
+
+            localStorage.setItem('DEBUG_MODE', defaultMode.toString());
+            return defaultMode;
         }
         return stored === 'true';
     },

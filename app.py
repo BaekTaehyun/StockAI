@@ -151,7 +151,8 @@ def logout():
 def index():
     """메인 대시보드 페이지"""
     market_data = get_global_market_data()
-    return render_template('index.html', market_data=market_data)
+    debug_mode = getattr(config, 'DEBUG_MODE', True)
+    return render_template('index.html', market_data=market_data, debug_mode=debug_mode)
 
 @app.route('/api/auth', methods=['POST'])
 def authenticate():

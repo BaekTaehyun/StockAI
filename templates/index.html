@@ -13,6 +13,10 @@
     <link rel="stylesheet" href="/static/css/details.css?v=20251203_2">
     <link rel="stylesheet" href="/static/css/mobile.css?v=20251203_2">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // 서버 설정값 주입
+        window.SERVER_DEBUG_MODE = {{ 'true' if debug_mode else 'false' }};
+    </script>
 </head>
 
 <body>
