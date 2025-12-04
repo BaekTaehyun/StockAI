@@ -101,6 +101,10 @@ const API = {
     activeRequests: 0,
     MAX_CONCURRENT_REQUESTS: 2, // 동시 요청 최대 2개로 제한
 
+    // 스트리밍 요청 관리
+    activeStreamingRequests: new Map(), // code -> { controller, timestamp }
+    streamingQueue: [],
+
     // 캐시 직접 확인 함수 (API 호출 없이, 큐 대기 없이 즉시 반환)
     getCachedAnalysis(code, lightweight = false) {
         const now = Date.now();
@@ -418,10 +422,34 @@ const API = {
         }
     },
     // 스트리밍 분석 (Server-Sent Events)  ← 여기부터 새로 추가
-    async fetchFullAnalysisStreaming(code, onProgress, onComplete, onError) {
+    async fetchFullAnalysisStreaming(code, onProgress, onComplete, onError, highPriority = false) {
         try {
-            const response = await fetch(`${API_BASE}/api/analysis/stream/${code}`);
+            // 우선순위 처리: 기존 요청 중단
+            if (highPriority) {
+                console.log(`🔥 우선순위 스트리밍 요청: ${code}, 기존 요청 취소`);
+                // 다른 모든 스트리밍 요청 중단
+                for (const [existingCode, info] of this.activeStreamingRequests.entries()) {
+                    if (existingCode !== code) {
+                        console.log(`  ⏹️ 중단: ${existingCode}`);
+                        info.controller.abort();
+                        this.activeStreamingRequests.delete(existingCode);
+                    }
+                }
+            }
+
+            // AbortController 생성 및 등록
+            const controller = new AbortController();
+            this.activeStreamingRequests.set(code, {
+                controller,
+                timestamp: Date.now()
+            });
+
+            const response = await fetch(`${API_BASE}/api/analysis/stream/${code}`, {
+                signal: controller.signal
+            });
+
             if (!response.ok) {
+                this.activeStreamingRequests.delete(code);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const reader = response.body.getReader();
@@ -466,7 +494,16 @@ const API = {
                     }
                 }
             }
+
+            // 완료 시 등록 해제
+            this.activeStreamingRequests.delete(code);
         } catch (error) {
+            // 중단된 요청은 에러로 처리하지 않음
+            if (error.name === 'AbortError') {
+                console.log(`⏹️ 스트리밍 요청 취소됨: ${code}`);
+                return;
+            }
+            this.activeStreamingRequests.delete(code);
             onError(error.message);
         }
     },

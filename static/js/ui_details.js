@@ -643,7 +643,9 @@ Object.assign(window.UI, {
                 (error) => {
                     console.error('❌ 스트리밍 분석 오류:', error);
                     this.showErrorInModal(error, code);
-                }
+                },
+                // highPriority: 클릭한 카드는 우선 처리
+                true
             );
 
         } catch (error) {
