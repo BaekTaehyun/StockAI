@@ -166,65 +166,10 @@ class StockAnalysisService:
             else:
                 market_themes = '정보 없음'  # 경량 모드
             
-            # 시장 데이터 구성
-            try:
-                # 5-1. 시장 지수 (KOSPI/KOSDAQ) - 캐싱 적용
-                market_index_key = "market_index"
-                market_index_str = None
-                if not force_refresh:
-                    market_index_str = self._get_cached_data(market_index_key)
-                
-                if not market_index_str:
-                    market_index_str = self._get_market_indices_string()
-                    self._set_cached_data(market_index_key, market_index_str, ttl=60)
-                
-                market_data['market_index'] = market_index_str
-                
-                # 글로벌 시장 데이터 병합 (US Indices, Themes)
-                # 데이터가 있고 유효한 경우
-                if global_market_data and global_market_data.get('indices') and global_market_data.get('themes'):
-                    market_data['us_indices'] = global_market_data.get('indices', '정보 없음')
-                    market_data['us_themes'] = global_market_data.get('themes', '정보 없음')
-                else:
-                    # 데이터가 없거나 누락된 경우 직접 수집 시도 (Fallback)
-                    Logger.warning("Analysis", "글로벌 시장 데이터 누락됨, 직접 수집 시도...")
-                    try:
-                        from finviz_market_crawler import FinvizMarketFetcher
-                        fetcher = FinvizMarketFetcher()
-                        # 타임아웃 등 안전장치는 fetcher 내부 또는 여기서 고려 가능
-                        market_data['us_indices'] = fetcher.get_market_indices()
-                        market_data['us_themes'] = fetcher.get_strong_themes()
-                        Logger.info("Analysis", f"직접 수집 성공: {market_data['us_indices']}")
-                    except Exception as e:
-                        Logger.error("Analysis", f"직접 수집 실패: {e}")
-                        import traceback
-                        traceback.print_exc()
-                        market_data['us_indices'] = f'정보 없음 (오류: {str(e)})'
-                        market_data['us_themes'] = f'정보 없음 (오류: {str(e)})'
-                
-                # 5-2. 주도 테마 (병렬로 가져온 데이터 사용)
-                market_data['themes'] = market_themes
-                
-                # 5-3. 종목 테마 (Theme Service - REST API 캐시 사용)
-                themes_found = self.theme_service.find_themes_by_stock(stock_name)
-                if themes_found:
-                    # 찾은 테마들을 등락률과 함께 문자열로 결합
-                    theme_info_list = []
-                    for t in themes_found[:3]:  # 최대 3개
-                        theme_name = t['theme_name']
-                        theme_flu = t['theme_fluctuation']
-                        theme_info_list.append(f"{theme_name}({theme_flu})")
-                    
-                    market_data['sector'] = ', '.join(theme_info_list)
-                    Logger.info("Analysis", f"종목 '{stock_name}' 테마: {market_data['sector']}")
-                else:
-                    market_data['sector'] = '테마 정보 없음'
-                    Logger.info("Analysis", f"종목 '{stock_name}' 테마를 찾을 수 없습니다")
-                
-            except Exception as e:
-                Logger.error("Analysis", f"시장 데이터 수집 실패: {e}")
-
-            # 6. 펀더멘털 데이터 수집 (Fundamental, 정규화된 코드 사용) - 캐싱 적용
+            # 5. 시장 데이터 구성
+            market_data = self.get_market_context(stock_name, global_market_data, force_refresh, market_themes)
+            
+            # 6. 펀더멘털 데이터 수집 - 캐싱 적용
             fundamental_key = f"fundamental_{normalized_code}"
             fundamental_data = None
             
@@ -314,6 +259,63 @@ class StockAnalysisService:
                 'message': f'분석 중 오류 발생: {str(e)}'
             }
     
+    def get_market_context(self, stock_name, global_market_data=None, force_refresh=False, market_themes="정보 없음"):
+        """
+        시장 상황 데이터 구성 (AI 분석용)
+        """
+        market_data = {}
+        try:
+            # 1. 시장 지수 (KOSPI/KOSDAQ) - 캐싱 적용
+            market_index_key = "market_index"
+            market_index_str = None
+            if not force_refresh:
+                market_index_str = self._get_cached_data(market_index_key)
+            
+            if not market_index_str:
+                market_index_str = self._get_market_indices_string()
+                self._set_cached_data(market_index_key, market_index_str, ttl=60)
+            
+            market_data['market_index'] = market_index_str
+            
+            # 2. 글로벌 시장 데이터 병합 (US Indices, Themes)
+            if global_market_data and global_market_data.get('indices') and global_market_data.get('themes'):
+                market_data['us_indices'] = global_market_data.get('indices', '정보 없음')
+                market_data['us_themes'] = global_market_data.get('themes', '정보 없음')
+            else:
+                # 데이터가 없거나 누락된 경우 직접 수집 시도 (Fallback)
+                Logger.warning("Analysis", "글로벌 시장 데이터 누락됨, 직접 수집 시도...")
+                try:
+                    from finviz_market_crawler import FinvizMarketFetcher
+                    fetcher = FinvizMarketFetcher()
+                    market_data['us_indices'] = fetcher.get_market_indices()
+                    market_data['us_themes'] = fetcher.get_strong_themes()
+                    Logger.info("Analysis", f"직접 수집 성공: {market_data['us_indices']}")
+                except Exception as e:
+                    Logger.error("Analysis", f"직접 수집 실패: {e}")
+                    market_data['us_indices'] = f'정보 없음 (오류: {str(e)})'
+                    market_data['us_themes'] = f'정보 없음 (오류: {str(e)})'
+            
+            # 3. 주도 테마
+            market_data['themes'] = market_themes
+            
+            # 4. 종목 테마 (Theme Service)
+            themes_found = self.theme_service.find_themes_by_stock(stock_name)
+            if themes_found:
+                theme_info_list = []
+                for t in themes_found[:3]:
+                    theme_name = t['theme_name']
+                    theme_flu = t['theme_fluctuation']
+                    theme_info_list.append(f"{theme_name}({theme_flu})")
+                
+                market_data['sector'] = ', '.join(theme_info_list)
+            else:
+                market_data['sector'] = '테마 정보 없음'
+                
+        except Exception as e:
+            Logger.error("Analysis", f"시장 데이터 수집 실패: {e}")
+            
+        return market_data
+
     def _get_market_indices_string(self):
         """
         코스피/코스닥 지수 조회 및 문자열 포맷팅

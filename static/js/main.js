@@ -74,13 +74,13 @@ document.addEventListener('DOMContentLoaded', () => {
     loadWatchlist();
     loadMarketSession(); // 시장 세션 정보 로드
 
-    // 3초마다 자동 새로고침 (실시간성 향상)
+    // 10초마다 자동 새로고침 (API 요청 제한 고려)
     setInterval(() => {
         loadAccountSummary();
         loadHoldings();
         loadMarketIndices();
         loadWatchlist();
-    }, 3000);
+    }, 10000);
 
     // 1분마다 시장 세션 정보 갱신
     setInterval(loadMarketSession, 60000);

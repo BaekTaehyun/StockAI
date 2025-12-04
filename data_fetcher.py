@@ -12,6 +12,7 @@ stocks.json 파일에서 관심종목 리스트를 읽어와서
 """
 import json
 import os
+import time
 from kis_api import KiwoomApi
 from logger import Logger
 
@@ -127,6 +128,9 @@ class DataFetcher:
                     Logger.warning("DataFetcher", f"{code} 시세 조회 실패")
             except Exception as e:
                 Logger.error("DataFetcher", f"{code} 조회 중 오류: {e}")
+            
+            # API 요청 간 딜레이 (429 방지)
+            time.sleep(0.1)
         
         return results
 

@@ -365,26 +365,89 @@ def stream_full_analysis(code):
             
             yield f"data: {json.dumps({'type': 'technical', 'data': {'indicators': technical, 'bollinger': bollinger, 'fundamental': fundamental_data}})}\n\n"
             
-            # 3-4단계: 전체 분석 (뉴스 + AI 전망)
-            # global_market은 이미 위에서 가져옴
-            result = analysis_service.get_full_analysis(
-                normalized_code,
-                force_refresh=False,
-                global_market_data=global_market,
-                lightweight=False
-            )
+            # 3단계: 뉴스 분석 (별도 실행 및 스트리밍)
+            stock_name = price_info.get('name', '알 수 없음')
+            news_analysis = {
+                'news_summary': '뉴스 분석을 사용할 수 없습니다',
+                'reason': 'Gemini API가 설정되지 않았습니다',
+                'sentiment': '중립',
+                'raw_response': ''
+            }
             
-            if result.get('success'):
-                # 3단계: 뉴스 분석
-                yield f"data: {json.dumps({'type': 'news', 'data': result['data']['news_analysis']})}\n\n"
+            try:
+                # 뉴스 분석 수행
+                news_analysis = analysis_service.gemini.search_and_analyze_news(
+                    stock_name=stock_name,
+                    stock_code=normalized_code,
+                    current_price=price_info.get('price'),
+                    change_rate=price_info.get('rate'),
+                    force_refresh=False
+                )
                 
-                # 4단계: AI 전망
-                yield f"data: {json.dumps({'type': 'outlook', 'data': result['data']['outlook']})}\n\n"
+                # 뉴스 결과 즉시 전송
+                # 프론트엔드 호환성을 위해 news_summary를 summary로 매핑
+                news_data = news_analysis.copy()
+                if 'news_summary' in news_data:
+                    news_data['summary'] = news_data['news_summary']
                 
-                # 완료
-                yield f"data: {json.dumps({'type': 'complete'})}\n\n"
-            else:
-                yield f"data: {json.dumps({'type': 'error', 'message': result.get('message', '분석 실패')})}\n\n"
+                yield f"data: {json.dumps({'type': 'news', 'data': news_data})}\n\n"
+                
+            except Exception as e:
+                Logger.error("Stream", f"뉴스 분석 실패: {e}")
+                # 실패해도 진행
+            
+            # 4단계: AI 전망 (별도 실행 및 스트리밍)
+            try:
+                # 시장 데이터 구성 (Outlook 생성용)
+                # 테마 정보는 ThemeService에서 직접 조회 (빠름)
+                market_themes = "정보 없음"
+                try:
+                    all_themes = analysis_service.theme_service.get_themes().get('themes', [])
+                    sorted_themes = sorted(all_themes, key=lambda x: float(x.get('flu_rt', 0) or 0), reverse=True)
+                    top_themes = []
+                    for t in sorted_themes[:3]:
+                        name = t.get('thema_nm')
+                        rate = t.get('flu_rt')
+                        top_themes.append(f"{name}({rate}%)")
+                    market_themes = ", ".join(top_themes) if top_themes else "정보 없음"
+                except Exception as e:
+                    Logger.error("Stream", f"테마 조회 실패: {e}")
+
+                market_data = analysis_service.get_market_context(
+                    stock_name, 
+                    global_market_data=global_market, 
+                    force_refresh=False,
+                    market_themes=market_themes
+                )
+                
+                # AI 전망 생성
+                stock_info_for_outlook = {
+                    'code': normalized_code,
+                    'price': price_info.get('price'),
+                    'rate': price_info.get('rate')
+                }
+                
+                outlook = analysis_service.gemini.generate_outlook(
+                    stock_name=stock_name,
+                    stock_info=stock_info_for_outlook,
+                    supply_demand=supply_demand,
+                    technical_indicators=technical,
+                    news_analysis=news_analysis,
+                    market_data=market_data,
+                    fundamental_data=fundamental_data,
+                    bollinger_data=bollinger,
+                    force_refresh=False
+                )
+                
+                # 전망 결과 전송
+                yield f"data: {json.dumps({'type': 'outlook', 'data': outlook})}\n\n"
+                
+            except Exception as e:
+                Logger.error("Stream", f"AI 전망 생성 실패: {e}")
+                yield f"data: {json.dumps({'type': 'error', 'message': f'AI 전망 생성 실패: {str(e)}'})}\n\n"
+
+            # 완료
+            yield f"data: {json.dumps({'type': 'complete'})}\n\n"
                 
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"

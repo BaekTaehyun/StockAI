@@ -18,11 +18,17 @@ import requests
 import json
 import datetime
 import time
+import threading
 import config
 from logger import Logger
 
 class KiwoomApi:
     """키움 REST API 클라이언트 클래스"""
+    
+    # 클래스 레벨 rate limiter (모든 인스턴스에서 공유)
+    _rate_lock = threading.Lock()
+    _last_request_time = 0
+    _min_request_interval = 0.15  # 150ms 간격 (초당 약 6회)
     
     def __init__(self):
         """API 클라이언트 초기화 - config.py에서 설정 값 로드"""
@@ -73,7 +79,17 @@ class KiwoomApi:
     def _send_request(self, url, headers, body=None, method='POST'):
         """
         API 요청을 보내고 토큰 만료(8005) 시 자동 갱신 및 재시도하는 헬퍼 메소드
+        Rate limiting 적용: 초당 약 6회로 제한
         """
+        # Rate limiting: 이전 요청과의 간격 확보
+        with KiwoomApi._rate_lock:
+            current_time = time.time()
+            elapsed = current_time - KiwoomApi._last_request_time
+            if elapsed < KiwoomApi._min_request_interval:
+                sleep_time = KiwoomApi._min_request_interval - elapsed
+                time.sleep(sleep_time)
+            KiwoomApi._last_request_time = time.time()
+        
         # 1. 토큰이 없으면 발급 시도
         if not self.access_token:
             Logger.info("API", "No token found. Requesting new token...")
