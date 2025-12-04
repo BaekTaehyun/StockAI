@@ -88,6 +88,17 @@ const API = {
         }
     },
 
+    // 시장 세션 정보 로드
+    async fetchMarketSession() {
+        try {
+            const response = await fetch(`${API_BASE}/api/market/session`);
+            return await response.json();
+        } catch (error) {
+            Logger.error('API', '시장 세션 로드 실패:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
     // L1 캐시 (메모리) - 10분
     memoryCache: {},
     MEMORY_TTL: 10 * 60 * 1000,
@@ -214,6 +225,17 @@ const API = {
 
     // 실제 분석 요청 실행 (내부 함수)
     async _executeAnalysisRequest(request) {
+        // 수급 정보 요청인 경우 별도 처리
+        if (request.type === 'supply') {
+            try {
+                const response = await fetch(`${API_BASE}/api/analysis/supply-demand/${request.code}`);
+                return await response.json();
+            } catch (error) {
+                Logger.error('API', '수급 정보 로드 실패:', error);
+                return { success: false, message: error.message };
+            }
+        }
+
         const { code, forceRefresh, lightweight } = request;
         const startTime = performance.now();
         const now = Date.now();
@@ -371,14 +393,19 @@ const API = {
     },
 
     // 수급 정보 (단일 종목)
+    // 수급 정보 (단일 종목) - 큐 시스템 적용
     async fetchSupplyDemand(code) {
-        try {
-            const response = await fetch(`${API_BASE}/api/analysis/supply-demand/${code}`);
-            return await response.json();
-        } catch (error) {
-            Logger.error('API', '수급 정보 로드 실패:', error);
-            return { success: false, message: error.message };
-        }
+        return new Promise((resolve, reject) => {
+            const request = {
+                code,
+                type: 'supply',
+                resolve,
+                reject,
+                timestamp: Date.now()
+            };
+            this.requestQueue.push(request);
+            this.processQueue();
+        });
     },
 
     // 관심종목 가격 로드

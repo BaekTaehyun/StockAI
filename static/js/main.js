@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHoldings();
     loadMarketIndices();
     loadWatchlist();
+    loadMarketSession(); // 시장 세션 정보 로드
 
     // 3초마다 자동 새로고침 (실시간성 향상)
     setInterval(() => {
@@ -80,6 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
         loadMarketIndices();
         loadWatchlist();
     }, 3000);
+
+    // 1분마다 시장 세션 정보 갱신
+    setInterval(loadMarketSession, 60000);
 });
 
 // 데이터 로드 함수들 (UI와 API 연결)
@@ -129,6 +133,58 @@ async function loadHoldings() {
         }
     } else {
         Logger.error('보유종목', 'API 실패: ' + result.message);
+    }
+}
+
+
+
+async function loadMarketSession() {
+    const result = await API.fetchMarketSession();
+    if (result.success) {
+        const session = result.data;
+        updateSessionUI(session);
+    }
+}
+
+function updateSessionUI(session) {
+    const headerTitle = document.querySelector('.header .logo');
+    if (!headerTitle) return;
+
+    // 기존 배지 제거
+    const existingBadge = headerTitle.querySelector('.session-badge');
+    if (existingBadge) existingBadge.remove();
+
+    // 새 배지 생성
+    if (session.badge_style) {
+        const badge = document.createElement('span');
+        badge.className = `session-badge ${session.badge_style}`;
+        badge.innerHTML = `${session.emoji} ${session.display_name}`;
+        badge.title = session.message;
+
+        // 스타일 직접 적용 (CSS 파일 수정 없이 즉시 적용 위해)
+        badge.style.fontSize = '0.8rem';
+        badge.style.marginLeft = '10px';
+        badge.style.padding = '2px 8px';
+        badge.style.borderRadius = '12px';
+        badge.style.verticalAlign = 'middle';
+        badge.style.fontWeight = 'normal';
+        badge.style.display = 'inline-block';
+
+        if (session.badge_style === 'session-pre-open' || session.badge_style === 'session-post-auction') {
+            badge.style.backgroundColor = '#f59e0b'; // Amber
+            badge.style.color = '#fff';
+        } else if (session.badge_style === 'session-regular') {
+            badge.style.backgroundColor = '#10b981'; // Green
+            badge.style.color = '#fff';
+        } else if (session.badge_style === 'session-closed') {
+            badge.style.backgroundColor = '#6b7280'; // Gray
+            badge.style.color = '#fff';
+        } else {
+            badge.style.backgroundColor = '#8b5cf6'; // Purple (Extended hours)
+            badge.style.color = '#fff';
+        }
+
+        headerTitle.appendChild(badge);
     }
 }
 

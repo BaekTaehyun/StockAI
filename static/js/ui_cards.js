@@ -188,6 +188,12 @@ Object.assign(window.UI, {
             infoValues[3].textContent = formatCurrency(currentPrice);
             infoValues[3].style.color = textColor;
         }
+
+        // 업데이트 효과 (반짝임)
+        card.classList.remove('card-updated');
+        void card.offsetWidth; // Trigger reflow
+        card.classList.add('card-updated');
+        setTimeout(() => card.classList.remove('card-updated'), 1000);
     },
 
     // 관심종목 카드 표시
@@ -219,6 +225,7 @@ Object.assign(window.UI, {
                     // 기존 카드 업데이트 시에도 수급 정보 갱신 시도
                     const card = grid.querySelector(`[data-code="${item.code}"]`);
                     if (card) {
+                        this.updateWatchlistCardData(card, item.data);
                         this.updateSupplyInfo(card, item.code);
                     }
                 }
@@ -309,6 +316,47 @@ Object.assign(window.UI, {
         setTimeout(() => this.loadSupplyInfoOnce(card, code), 100);
 
         return card;
+    },
+
+    // 관심종목 카드 데이터 업데이트
+    updateWatchlistCardData(card, stockData) {
+        const price = parseInt(stockData.price || 0);
+        const change = parseInt(stockData.change || 0);
+        const rate = parseFloat(stockData.rate || 0);
+
+        const isUp = rate >= 0;
+        const textColor = isUp ? '#e53e3e' : '#3b82f6';
+        const sign = isUp ? '+' : '';
+        const borderColor = isUp ? '#e53e3e' : '#3b82f6';
+        const bgColor = isUp ? 'rgba(255, 100, 100, 0.05)' : 'rgba(100, 100, 255, 0.05)';
+
+        // 스타일 업데이트
+        card.style.background = bgColor;
+        card.style.borderLeft = `4px solid ${borderColor}`;
+
+        // 데이터 업데이트
+        const rateElem = card.querySelector('.watchlist-rate');
+        if (rateElem) {
+            rateElem.textContent = `${sign}${rate.toFixed(2)}%`;
+            rateElem.style.color = textColor;
+        }
+
+        const priceElem = card.querySelector('.watchlist-price');
+        if (priceElem) {
+            priceElem.textContent = formatCurrency(price);
+        }
+
+        const changeElem = card.querySelector('.watchlist-change');
+        if (changeElem) {
+            changeElem.textContent = `${sign}${formatCurrency(change)}`;
+            changeElem.style.color = textColor;
+        }
+
+        // 업데이트 효과 (반짝임)
+        card.classList.remove('card-updated');
+        void card.offsetWidth; // Trigger reflow
+        card.classList.add('card-updated');
+        setTimeout(() => card.classList.remove('card-updated'), 1000);
     },
 
     // 수급 정보 로드 (관심종목용)
@@ -478,7 +526,7 @@ Object.assign(window.UI, {
         }
     },
 
-    // 수급 정보 업데이트 (스로틀링 적용)
+    // 수급 정보 업데이트 (스로틀링 + 지터 적용)
     async updateSupplyInfo(cardElement, code) {
         const now = Date.now();
         const lastUpdate = parseInt(cardElement.getAttribute('data-last-supply-update') || '0');
@@ -487,6 +535,10 @@ Object.assign(window.UI, {
         if (now - lastUpdate < throttleTime) {
             return; // 스로틀링
         }
+
+        // 지터(Jitter) 추가: 0~2000ms 랜덤 지연으로 동시 요청 분산
+        const jitter = Math.random() * 2000;
+        await new Promise(resolve => setTimeout(resolve, jitter));
 
         const supplyElem = document.getElementById(`supply-${code}`);
         if (!supplyElem) return;

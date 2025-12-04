@@ -798,6 +798,23 @@ scheduler.add_job(
     replace_existing=True
 )
 
+# ================================================================
+# 시장 세션 API
+# ================================================================
+from market_session import get_market_session_info
+
+@app.route('/api/market/session')
+def get_market_session():
+    """현재 시장 세션 정보 조회"""
+    try:
+        session_info = get_market_session_info()
+        return jsonify({
+            'success': True,
+            'data': session_info
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 if __name__ == '__main__':
     Logger.info("App", "=== 서버 시작 중 ===")
     

@@ -57,6 +57,7 @@ if __name__ == "__main__":
     Logger.info("Server", "============================================")
     
     try:
-        serve(app, host='0.0.0.0', port=port)
+        # threads=8: 동시 요청 처리 능력 향상 (기본값 4)
+        serve(app, host='0.0.0.0', port=port, threads=8)
     finally:
         scheduler.shutdown()
