@@ -49,8 +49,8 @@ Object.assign(window.UI, {
                 // 기존 카드 데이터만 업데이트 (수급/전략 섹션은 건드리지 않음)
                 this.updateHoldingCardData(existingCard, stock);
 
-                // 수급 정보 업데이트 비활성화 (API 요청 과다 방지)
-                // this.updateSupplyInfo(existingCard, stockCode);
+                // 수급 정보 업데이트 (경량 모드로 활성화)
+                this.updateSupplyInfo(existingCard, stockCode);
             } else {
                 const card = this.createHoldingCard(stock);
                 grid.appendChild(card);

@@ -544,6 +544,9 @@ Object.assign(window.UI, {
                         // 1단계: 기본 정보 (주가 + 수급) - 즉시 표시
                         allData.price = data.price;
                         allData.supply = data.supply;
+
+                        // 즉시 종합 탭에 기본 정보 렌더링
+                        this.renderBasicInfoOnly(data.price, data.supply);
                         // market_impact는 별도 이벤트로 수신됨
                     }
                     else if (type === 'market_impact') {
