@@ -204,10 +204,15 @@ class KiwoomApi:
             if data: print(f"[Error] API Error: {data.get('return_msg')}")
             return None
 
-    def get_account_balance(self):
+    def get_account_balance(self, update_realtime_price=True):
         """
         Fetches account stock holdings (Kiwoom kt00018).
-        Returns list of stock holdings.
+        
+        Args:
+            update_realtime_price: True이면 각 종목의 실시간 가격을 별도 조회하여 업데이트
+        
+        Returns:
+            dict: 계좌 잔고 정보 (실시간 가격 포함)
         """
         url = f"{self.base_url}/api/dostk/acnt"
         
@@ -225,6 +230,34 @@ class KiwoomApi:
         
         if data and data.get('return_code') == 0:
             holdings = data.get('acnt_evlt_remn_indv_tot', [])
+            
+            # 실시간 가격 업데이트 (병렬 처리)
+            if update_realtime_price and holdings:
+                import concurrent.futures
+                
+                print(f"[Balance] Updating realtime prices for {len(holdings)} holdings...")
+                
+                def update_holding_price(holding):
+                    """각 종목의 가격을 업데이트하는 헬퍼 함수"""
+                    code = holding.get('stk_cd')
+                    if code:
+                        try:
+                            price_data = self.get_current_price(code)
+                            if price_data:
+                                # 현재가 업데이트
+                                holding['cur_prc'] = price_data['price']
+                                holding['pred_pre'] = price_data.get('change', holding.get('pred_pre'))
+                                holding['flu_rt'] = price_data.get('rate', holding.get('flu_rt'))
+                                print(f"  ✓ {code}: {price_data['price']}")
+                                return True
+                        except Exception as e:
+                            print(f"  ✗ {code}: Price update failed - {e}")
+                    return False
+                
+                # 병렬 처리 (최대 5개 동시)
+                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                    list(executor.map(update_holding_price, holdings))
+            
             return {
                 "total_purchase_amount": data.get('tot_pur_amt', '0'),
                 "total_eval_amount": data.get('tot_evlt_amt', '0'),
