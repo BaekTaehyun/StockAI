@@ -73,13 +73,13 @@ document.addEventListener('DOMContentLoaded', () => {
     loadMarketIndices();
     loadWatchlist();
 
-    // 10초마다 자동 새로고침 (리소스 절약)
+    // 3초마다 자동 새로고침 (실시간성 향상)
     setInterval(() => {
         loadAccountSummary();
         loadHoldings();
         loadMarketIndices();
         loadWatchlist();
-    }, 10000);
+    }, 3000);
 });
 
 // 데이터 로드 함수들 (UI와 API 연결)
