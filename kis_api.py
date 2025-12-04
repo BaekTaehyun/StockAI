@@ -19,6 +19,7 @@ import json
 import datetime
 import time
 import config
+from logger import Logger
 
 class KiwoomApi:
     """키움 REST API 클라이언트 클래스"""
@@ -42,7 +43,7 @@ class KiwoomApi:
             "secretkey": self.app_secret
         }
 
-        print(f"[Auth] Requesting token from {url}...")
+        Logger.info("Auth", f"Requesting token from {url}...")
         try:
             res = requests.post(url, headers=headers, data=json.dumps(body), timeout=10)
             
@@ -52,21 +53,21 @@ class KiwoomApi:
                 if 'token' in data or 'access_token' in data:
                     self.access_token = data.get('token') or data.get('access_token')
                     self.token_expired = data.get('expires_dt') or data.get('expires_in')
-                    print(f"[Auth] Token issued successfully. Expires: {self.token_expired}")
+                    Logger.info("Auth", f"Token issued successfully. Expires: {self.token_expired}")
                     return True
                 elif data.get('return_code') == 0: # 기존 로직 유지
                     self.access_token = data.get('token')
                     self.token_expired = data.get('expires_dt')
-                    print(f"[Auth] Token issued successfully. Expires: {self.token_expired}")
+                    Logger.info("Auth", f"Token issued successfully. Expires: {self.token_expired}")
                     return True
                 else:
-                    print(f"[Auth] Failed: {data.get('return_msg')}")
+                    Logger.error("Auth", f"Failed: {data.get('return_msg')}")
                     return False
             else:
-                print(f"[Auth] HTTP Error {res.status_code}: {res.text}")
+                Logger.error("Auth", f"HTTP Error {res.status_code}: {res.text}")
                 return False
         except Exception as e:
-            print(f"[Auth] Connection Error: {e}")
+            Logger.error("Auth", f"Connection Error: {e}")
             return False
 
     def _send_request(self, url, headers, body=None, method='POST'):
@@ -75,7 +76,7 @@ class KiwoomApi:
         """
         # 1. 토큰이 없으면 발급 시도
         if not self.access_token:
-            print("[API] No token found. Requesting new token...")
+            Logger.info("API", "No token found. Requesting new token...")
             if not self.get_access_token():
                 return None
 
@@ -105,7 +106,7 @@ class KiwoomApi:
                         # return data <-- Should also not return here if we want to check errors? 
                         # Actually, let's just let it fall through.
                     except:
-                        print("[API] JSON Decode Error with both UTF-8 and EUC-KR")
+                        Logger.error("API", "JSON Decode Error with both UTF-8 and EUC-KR")
                         return None
                 
                 # Check for token expiration or errors in response body
@@ -121,12 +122,12 @@ class KiwoomApi:
                         is_token_error = True
 
                 if is_token_error:
-                    print(f"[API] Token invalid (Code: {code}, Msg: {msg}). Refreshing token and retrying...")
+                    Logger.warning("API", f"Token invalid (Code: {code}, Msg: {msg}). Refreshing token and retrying...")
                     
                     if self.get_access_token():
                         # 헤더 업데이트 및 재시도
                         headers["authorization"] = f"Bearer {self.access_token}"
-                        print(f"[API] Retrying request to {url} with new token...")
+                        Logger.info("API", f"Retrying request to {url} with new token...")
                         
                         if method == 'POST':
                             res = requests.post(url, headers=headers, data=json.dumps(body) if body else None, timeout=10)
@@ -141,16 +142,16 @@ class KiwoomApi:
                                 res.encoding = 'utf-8'
                                 return res.json()
                         else:
-                            print(f"[API] Retry failed with status {res.status_code}: {res.text}")
+                            Logger.error("API", f"Retry failed with status {res.status_code}: {res.text}")
                     else:
-                        print("[API] Failed to refresh token.")
+                        Logger.error("API", "Failed to refresh token.")
                         return None
                 
                 return data
             
             # 401 Unauthorized 처리
             elif res.status_code == 401:
-                print(f"[API] HTTP 401 Unauthorized. Refreshing token...")
+                Logger.warning("API", f"HTTP 401 Unauthorized. Refreshing token...")
                 if self.get_access_token():
                     headers["authorization"] = f"Bearer {self.access_token}"
                     if method == 'POST':
@@ -162,11 +163,11 @@ class KiwoomApi:
                         return res.json()
 
             else:
-                print(f"[API] HTTP Error {res.status_code}: {res.text}")
+                Logger.error("API", f"HTTP Error {res.status_code}: {res.text}")
                 return None
 
         except Exception as e:
-            print(f"[API] Request Error: {e}")
+            Logger.error("API", f"Request Error: {e}")
             return None
 
     def _clean_code(self, code):
@@ -201,7 +202,7 @@ class KiwoomApi:
                 "rate": data.get('flu_rt', 'N/A')
             }
         else:
-            if data: print(f"[Error] API Error: {data.get('return_msg')}")
+            if data: Logger.error("API", f"API Error: {data.get('return_msg')}")
             return None
 
     def get_account_balance(self, update_realtime_price=True):
@@ -235,7 +236,7 @@ class KiwoomApi:
             if update_realtime_price and holdings:
                 import concurrent.futures
                 
-                print(f"[Balance] Updating realtime prices for {len(holdings)} holdings...")
+                Logger.debug("Balance", f"Updating realtime prices for {len(holdings)} holdings...")
                 
                 def update_holding_price(holding):
                     """각 종목의 가격을 업데이트하는 헬퍼 함수"""
@@ -248,10 +249,10 @@ class KiwoomApi:
                                 holding['cur_prc'] = price_data['price']
                                 holding['pred_pre'] = price_data.get('change', holding.get('pred_pre'))
                                 holding['flu_rt'] = price_data.get('rate', holding.get('flu_rt'))
-                                print(f"  ✓ {code}: {price_data['price']}")
+                                Logger.debug("Balance", f"  ✓ {code}: {price_data['price']}")
                                 return True
                         except Exception as e:
-                            print(f"  ✗ {code}: Price update failed - {e}")
+                            Logger.warning("Balance", f"  ✗ {code}: Price update failed - {e}")
                     return False
                 
                 # 병렬 처리 (최대 5개 동시)
@@ -266,7 +267,7 @@ class KiwoomApi:
                 "holdings": holdings
             }
         else:
-            if data: print(f"[Error] API Error: {data.get('return_msg')}")
+            if data: Logger.error("API", f"API Error: {data.get('return_msg')}")
             return None
 
     def get_stock_fundamental_info(self, code):
@@ -335,13 +336,13 @@ class KiwoomApi:
             "upd_stkpc_tp": "1"
         }
 
-        print(f"[Chart] Requesting data for {code} (base_dt: {try_date})...")
+        Logger.debug("Chart", f"Requesting data for {code} (base_dt: {try_date})...")
         data = self._send_request(url, headers, body)
         
         if data and data.get('return_code') == 0:
             output = data.get('stk_dt_pole_chart_qry', data.get('output', []))
             if output:
-                print(f"[Chart] [OK] Got {len(output)} records")
+                Logger.debug("Chart", f"[OK] Got {len(output)} records")
                 
                 # 키 매핑 (Raw API -> Standard)
                 mapped_output = []
@@ -365,10 +366,10 @@ class KiwoomApi:
                         
                 return mapped_output
             else:
-                print(f"[Chart] [FAIL] No data available for {code}")
+                Logger.warning("Chart", f"[FAIL] No data available for {code}")
                 return None
         else:
-            if data: print(f"[Chart Error] API Error: {data.get('return_msg')}")
+            if data: Logger.error("Chart", f"API Error: {data.get('return_msg')}")
             return None
 
     def get_investor_trading(self, code, date=None):
@@ -502,7 +503,7 @@ class KiwoomApi:
                 'rate': data.get('flu_rt', '0')
             }
         else:
-            if data: print(f"[Error] API Error: {data.get('return_msg')}")
+            if data: Logger.error("API", f"API Error: {data.get('return_msg')}")
             return None
 
     def get_minute_chart_data(self, code):
@@ -515,7 +516,7 @@ class KiwoomApi:
         # 여기서는 일봉과 유사한 패턴으로 가정하거나, 기존에 구현되어 있었다면 복구해야 함.
         # 만약 이전 파일에 없었다면 app.py가 에러를 냈을 것임.
         # 안전을 위해 빈 리스트 반환 또는 에러 로그 출력
-        print(f"[Warning] get_minute_chart_data not fully implemented for {code}")
+        Logger.warning("Chart", f"get_minute_chart_data not fully implemented for {code}")
         return []
 
     def get_theme_group_list(self, search_type="0", date_type="1", fluctuation_type="3"):
@@ -544,13 +545,13 @@ class KiwoomApi:
             "stex_tp": "3" # 1:KRX, 2:NXT, 3:통합
         }
 
-        print(f"[Theme] Requesting theme list (type={search_type})...")
+        Logger.debug("Theme", f"Requesting theme list (type={search_type})...")
         data = self._send_request(url, headers, body)
         
         if data and data.get('return_code') == 0:
             return data.get('thema_grp', [])
         else:
-            if data: print(f"[Theme] API Error: {data.get('return_msg')}")
+            if data: Logger.error("Theme", f"API Error: {data.get('return_msg')}")
             return None
 
     def get_theme_stocks(self, theme_code):
@@ -570,11 +571,11 @@ class KiwoomApi:
             "stex_tp": "3" # 1:KRX, 2:NXT, 3:통합
         }
 
-        print(f"[Theme] Requesting stocks for theme {theme_code}...")
+        Logger.debug("Theme", f"Requesting stocks for theme {theme_code}...")
         data = self._send_request(url, headers, body)
         
         if data and data.get('return_code') == 0:
             return data.get('thema_comp_stk', []) # Correct key: thema_comp_stk
         else:
-            if data: print(f"[Theme] API Error: {data.get('return_msg')}")
+            if data: Logger.error("Theme", f"API Error: {data.get('return_msg')}")
             return None

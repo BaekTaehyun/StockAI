@@ -390,7 +390,7 @@ Object.assign(window.UI, {
                 cardElement.setAttribute('data-supply-loaded', 'true');
             }
         } catch (error) {
-            console.error(`수급 정보 로드 실패 (${code}):`, error);
+            Logger.error('UI_Cards', `수급 정보 로드 실패 (${code}):`, error);
             supplyElem.innerHTML = '<span style="color: #888; font-size: 0.75rem;">-</span>';
             strategyElem.innerHTML = '<span style="color: #888;">-</span>';
         }
@@ -472,7 +472,7 @@ Object.assign(window.UI, {
                 }
             }
         } catch (error) {
-            console.error(`전략 정보 로드 실패 (${code}):`, error);
+            Logger.error('UI_Cards', `전략 정보 로드 실패 (${code}):`, error);
             if (supplyElem) supplyElem.innerHTML = '<span style="color: #888;">-</span>';
             strategyElem.innerHTML = '<span style="color: #888;">-</span>';
         }
@@ -530,7 +530,7 @@ Object.assign(window.UI, {
                 cardElement.setAttribute('data-last-supply-update', now.toString());
             }
         } catch (error) {
-            console.error(`수급 정보 업데이트 실패 (${code}):`, error);
+            Logger.error('UI_Cards', `수급 정보 업데이트 실패 (${code}):`, error);
         }
     }
 });

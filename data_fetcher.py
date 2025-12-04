@@ -13,6 +13,7 @@ stocks.json 파일에서 관심종목 리스트를 읽어와서
 import json
 import os
 from kis_api import KiwoomApi
+from logger import Logger
 
 class DataFetcher:
     """관심종목 데이터 조회 클래스"""
@@ -33,20 +34,20 @@ class DataFetcher:
             list: 종목 코드 리스트 (예: ['005930', '000660'])
         """
         if not os.path.exists(self.stocks_file):
-            print(f"[Warning] {self.stocks_file} 파일이 없습니다. 빈 리스트를 반환합니다.")
+            Logger.warning("DataFetcher", f"{self.stocks_file} 파일이 없습니다. 빈 리스트를 반환합니다.")
             return []
         
         try:
             with open(self.stocks_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 watchlist = data.get('watchlist', [])
-                print(f"[DataFetcher] {len(watchlist)}개 관심종목 로드: {watchlist}")
+                Logger.info("DataFetcher", f"{len(watchlist)}개 관심종목 로드: {watchlist}")
                 return watchlist
         except json.JSONDecodeError as e:
-            print(f"[Error] JSON 파싱 오류: {e}")
+            Logger.error("DataFetcher", f"JSON 파싱 오류: {e}")
             return []
         except Exception as e:
-            print(f"[Error] 파일 읽기 오류: {e}")
+            Logger.error("DataFetcher", f"파일 읽기 오류: {e}")
             return []
     
     def save_watchlist(self, watchlist):
@@ -62,9 +63,9 @@ class DataFetcher:
             }
             with open(self.stocks_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
-            print(f"[DataFetcher] 관심종목 저장 완료: {len(watchlist)}개")
+            Logger.info("DataFetcher", f"관심종목 저장 완료: {len(watchlist)}개")
         except Exception as e:
-            print(f"[Error] 파일 저장 오류: {e}")
+            Logger.error("DataFetcher", f"파일 저장 오류: {e}")
     
     def add_to_watchlist(self, code):
         """관심종목 추가
@@ -78,7 +79,7 @@ class DataFetcher:
         watchlist = self.load_watchlist()
         
         if code in watchlist:
-            print(f"[DataFetcher] {code}는 이미 관심종목에 있습니다.")
+            Logger.info("DataFetcher", f"{code}는 이미 관심종목에 있습니다.")
             return False
         
         watchlist.append(code)
@@ -97,7 +98,7 @@ class DataFetcher:
         watchlist = self.load_watchlist()
         
         if code not in watchlist:
-            print(f"[DataFetcher] {code}는 관심종목에 없습니다.")
+            Logger.info("DataFetcher", f"{code}는 관심종목에 없습니다.")
             return False
         
         watchlist.remove(code)
@@ -121,11 +122,11 @@ class DataFetcher:
                         'code': code,
                         'data': price_data
                     })
-                    print(f"[DataFetcher] {code} 시세 조회 성공")
+                    Logger.debug("DataFetcher", f"{code} 시세 조회 성공")
                 else:
-                    print(f"[DataFetcher] {code} 시세 조회 실패")
+                    Logger.warning("DataFetcher", f"{code} 시세 조회 실패")
             except Exception as e:
-                print(f"[Error] {code} 조회 중 오류: {e}")
+                Logger.error("DataFetcher", f"{code} 조회 중 오류: {e}")
         
         return results
 

@@ -66,7 +66,7 @@ window.filterHoldings = () => UI.filterHoldings();
 
 // 페이지 로드 시 실행
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 키움 주식 대시보드 시작');
+    Logger.info('Main', '키움 주식 대시보드 시작');
     checkAuth();
     loadAccountSummary();
     loadHoldings();
@@ -89,12 +89,12 @@ async function checkAuth() {
 }
 
 async function loadAccountSummary() {
-    console.log('🔄 [계좌요약] API 호출 중...');
+    Logger.debug('계좌요약', 'API 호출 중...');
     const result = await API.fetchAccountSummary();
-    console.log('📊 [계좌요약] API 응답:', result);
+    Logger.debug('계좌요약', 'API 응답:', result);
 
     if (result.success) {
-        console.log('✅ [계좌요약] 데이터 수신:', {
+        Logger.debug('계좌요약', '데이터 수신:', {
             매입금액: result.data.total_purchase,
             평가금액: result.data.total_eval,
             평가손익: result.data.total_pl,
@@ -102,17 +102,17 @@ async function loadAccountSummary() {
         });
         UI.updateAccountSummary(result.data);
     } else {
-        console.error('❌ [계좌요약] API 실패:', result.message);
+        Logger.error('계좌요약', 'API 실패: ' + result.message);
     }
 }
 
 async function loadHoldings() {
-    console.log('🔄 [보유종목] API 호출 중...');
+    Logger.debug('보유종목', 'API 호출 중...');
     const result = await API.fetchHoldings();
 
     if (result.success) {
         const holdings = result.data.holdings;
-        console.log(`✅ [보유종목] 데이터 수신: ${holdings.length}개 종목`);
+        Logger.debug('보유종목', `데이터 수신: ${holdings.length}개 종목`);
         UI.displayHoldings(holdings);
 
         // 감성 정보 복구 및 업데이트
@@ -123,12 +123,12 @@ async function loadHoldings() {
         const interval = window.SENTIMENT_REFRESH_INTERVAL || (2 * 60 * 60 * 1000); // 2시간
 
         if (isFirst || now - (window.lastSentimentUpdate || 0) > interval) {
-            console.log('🎗️ 리본 정보 업데이트 시작', isFirst ? '(첫 로드)' : '(주기적 갱신)');
+            Logger.info('Ribbon', '리본 정보 업데이트 시작 ' + (isFirst ? '(첫 로드)' : '(주기적 갱신)'));
             updateAllSentiments(holdings);
             window.lastSentimentUpdate = now;
         }
     } else {
-        console.error('❌ [보유종목] API 실패:', result.message);
+        Logger.error('보유종목', 'API 실패: ' + result.message);
     }
 }
 
@@ -143,14 +143,14 @@ async function loadMarketIndices() {
 }
 
 async function loadWatchlist() {
-    console.log('🔄 [관심종목] API 호출 중...');
+    Logger.debug('관심종목', 'API 호출 중...');
     const result = await API.fetchWatchlistPrices();
 
     if (result.success && result.data) {
-        console.log(`✅ [관심종목] 데이터 수신: ${result.data.length}개 종목`);
+        Logger.debug('관심종목', `데이터 수신: ${result.data.length}개 종목`);
         UI.displayWatchlist(result.data);
     } else {
-        console.error('❌ [관심종목] API 실패:', result.message || '응답 없음');
+        Logger.error('관심종목', 'API 실패: ' + (result.message || '응답 없음'));
     }
 }
 

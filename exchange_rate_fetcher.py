@@ -5,6 +5,7 @@
 import requests
 import json
 from datetime import datetime
+from logger import Logger
 
 
 class ExchangeRateFetcher:
@@ -78,7 +79,7 @@ class ExchangeRateFetcher:
             }
             
         except requests.exceptions.RequestException as e:
-            print(f"[ExchangeRate] 네트워크 오류: {e}")
+            Logger.error("ExchangeRate", f"네트워크 오류: {e}")
             return {
                 'success': False,
                 'error': f"네트워크 오류: {str(e)}",
@@ -88,7 +89,7 @@ class ExchangeRateFetcher:
                 'status': 'error'
             }
         except (KeyError, ValueError, json.JSONDecodeError) as e:
-            print(f"[ExchangeRate] 데이터 파싱 오류: {e}")
+            Logger.error("ExchangeRate", f"데이터 파싱 오류: {e}")
             return {
                 'success': False,
                 'error': f"데이터 파싱 오류: {str(e)}",
@@ -98,7 +99,7 @@ class ExchangeRateFetcher:
                 'status': 'error'
             }
         except Exception as e:
-            print(f"[ExchangeRate] 알 수 없는 오류: {e}")
+            Logger.error("ExchangeRate", f"알 수 없는 오류: {e}")
             return {
                 'success': False,
                 'error': f"알 수 없는 오류: {str(e)}",

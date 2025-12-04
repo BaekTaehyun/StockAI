@@ -1,6 +1,7 @@
 from waitress import serve
 from app import app, kiwoom, theme_service
 import socket
+from logger import Logger
 
 def get_ip_address():
     try:
@@ -13,24 +14,24 @@ def get_ip_address():
         return "127.0.0.1"
 
 if __name__ == "__main__":
-    print("=== Production Server Starting ===")
+    Logger.info("Server", "=== Production Server Starting ===")
     
     # 1. 토큰 사전 발급
     if kiwoom.get_access_token():
-        print("[OK] 인증 완료!")
+        Logger.info("Server", "인증 완료!")
     
     # 2. 테마 캐시 초기화 (서버 시작 전 필수)
-    print("\n[ThemeService] 테마 캐시 초기화 중...")
+    Logger.info("Theme", "테마 캐시 초기화 중...")
     if not theme_service.is_cache_valid():
-        print("[ThemeService] 캐시가 없거나 만료됨. 새로 생성합니다...")
+        Logger.info("Theme", "캐시가 없거나 만료됨. 새로 생성합니다...")
         if theme_service.update_cache():
             cache_info = theme_service.get_cache_info()
-            print(f"[ThemeService] ✓ 캐시 생성 완료: {cache_info.get('theme_count')}개 테마")
+            Logger.info("Theme", f"캐시 생성 완료: {cache_info.get('theme_count')}개 테마")
         else:
-            print("[ThemeService] ✗ 캐시 생성 실패 - 서비스 제한 모드로 시작")
+            Logger.error("Theme", "캐시 생성 실패 - 서비스 제한 모드로 시작")
     else:
         cache_info = theme_service.get_cache_info()
-        print(f"[ThemeService] ✓ 기존 캐시 사용: {cache_info.get('theme_count')}개 테마")
+        Logger.info("Theme", f"기존 캐시 사용: {cache_info.get('theme_count')}개 테마")
     
     # 3. 스케줄러 초기화 (매일 오전 9시 테마 캐시 갱신)
     from apscheduler.schedulers.background import BackgroundScheduler
@@ -45,15 +46,15 @@ if __name__ == "__main__":
         replace_existing=True
     )
     scheduler.start()
-    print("[Scheduler] ✓ 매일 오전 9시 자동 갱신 예약 완료\n")
+    Logger.info("Scheduler", "매일 오전 9시 자동 갱신 예약 완료")
     
     host_ip = get_ip_address()
     port = 5000
     
-    print(f"=== Production Server Started (Waitress) ===")
-    print(f"Local:   http://localhost:{port}")
-    print(f"Network: http://{host_ip}:{port}")
-    print(f"============================================")
+    Logger.info("Server", "=== Production Server Started (Waitress) ===")
+    Logger.info("Server", f"Local:   http://localhost:{port}")
+    Logger.info("Server", f"Network: http://{host_ip}:{port}")
+    Logger.info("Server", "============================================")
     
     try:
         serve(app, host='0.0.0.0', port=port)

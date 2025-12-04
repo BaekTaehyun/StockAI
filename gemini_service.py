@@ -8,6 +8,7 @@ import re
 import prompts
 from gemini_cache import GeminiCache
 from exchange_rate_fetcher import ExchangeRateFetcher
+from logger import Logger
 
 class GeminiService:
     """Google Gemini SDK를 사용한 AI 분석 서비스"""
@@ -35,35 +36,35 @@ class GeminiService:
             )
             
             # 디버깅: 응답 확인
-            print(f"[Gemini API] Response received")
-            print(f"[Gemini API] Response object type: {type(response)}")
+            Logger.debug("Gemini", "Response received")
+            Logger.debug("Gemini", f"Response object type: {type(response)}")
             
             # Safety ratings 확인 (응답이 차단되었는지 확인)
             if hasattr(response, 'prompt_feedback'):
-                print(f"[Gemini API] Prompt feedback: {response.prompt_feedback}")
+                Logger.debug("Gemini", f"Prompt feedback: {response.prompt_feedback}")
             
             # 응답 텍스트 확인
             if hasattr(response, 'text') and response.text:
-                print(f"[Gemini API] Response text length: {len(response.text)}")
+                Logger.debug("Gemini", f"Response text length: {len(response.text)}")
                 return response.text
             else:
-                print(f"[Gemini API] No text in response. Candidates: {response.candidates if hasattr(response, 'candidates') else 'N/A'}")
+                Logger.warning("Gemini", f"No text in response. Candidates: {response.candidates if hasattr(response, 'candidates') else 'N/A'}")
                 return None
                 
         except exceptions.DeadlineExceeded:
-            print(f"[Gemini API Error] Timeout (60s exceeded). The model took too long to respond.")
+            Logger.error("Gemini", "Timeout (60s exceeded). The model took too long to respond.")
             return None
         except exceptions.ResourceExhausted:
-            print(f"[Gemini API Error] Quota exceeded (429). Please try again later.")
+            Logger.error("Gemini", "Quota exceeded (429). Please try again later.")
             return None
         except exceptions.ServiceUnavailable:
-            print(f"[Gemini API Error] Service unavailable (503). Google servers might be overloaded.")
+            Logger.error("Gemini", "Service unavailable (503). Google servers might be overloaded.")
             return None
         except exceptions.GoogleAPICallError as e:
-            print(f"[Gemini API Error] API Call Error ({e.code}): {e.message}")
+            Logger.error("Gemini", f"API Call Error ({e.code}): {e.message}")
             return None
         except Exception as e:
-            print(f"[Gemini API Error] Unexpected error: {type(e).__name__}: {e}")
+            Logger.error("Gemini", f"Unexpected error: {type(e).__name__}: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -74,7 +75,7 @@ class GeminiService:
         - 현재는 NaverNewsCrawler로 대체되어 사용되지 않음 (2025-12-01)
         """
         if not config.GOOGLE_SEARCH_API_KEY:
-            print("[Search] API Key not configured.")
+            Logger.warning("Search", "API Key not configured.")
             return None
             
         import requests
@@ -92,13 +93,13 @@ class GeminiService:
             if response.status_code == 200:
                 return response.json().get('items', [])
             elif response.status_code == 429:
-                print(f"[Search] Daily quota exceeded. Skipping news search.")
+                Logger.warning("Search", "Daily quota exceeded. Skipping news search.")
                 return []
             else:
-                print(f"[Search Error] {response.status_code}")
+                Logger.error("Search", f"Error: {response.status_code}")
                 return None
         except Exception as e:
-            print(f"[Search Connection Error] {e}")
+            Logger.error("Search", f"Connection Error: {e}")
             return None
 
     def search_and_analyze_news(self, stock_name, stock_code, current_price=None, change_rate=None, force_refresh=False):
@@ -122,25 +123,25 @@ class GeminiService:
                 try:
                     from mk_scraper import MKScraper
                     scraper = MKScraper(headless=True)
-                    print(f"[Gemini] MK AI 검색 시도: {stock_name}")
+                    Logger.info("Gemini", f"MK AI 검색 시도: {stock_name}")
                     mk_result = scraper.get_ai_answer(stock_name)
                     scraper.close()
 
                     if mk_result:
-                        print(f"[Gemini] MK AI 검색 성공 (길이: {len(mk_result)})")
+                        Logger.info("Gemini", f"MK AI 검색 성공 (길이: {len(mk_result)})")
                         return f"[MK AI 분석 리포트]\n{mk_result}"
                     else:
-                        print("[Gemini] MK AI 검색 결과 없음")
+                        Logger.info("Gemini", "MK AI 검색 결과 없음")
                         return "MK AI 분석 정보를 가져올 수 없습니다."
                 except Exception as e:
-                    print(f"[Gemini] MK AI 검색 중 오류 발생: {e}")
+                    Logger.error("Gemini", f"MK AI 검색 중 오류 발생: {e}")
                     return "MK AI 분석 중 오류가 발생했습니다."
 
             def fetch_naver_news():
                 try:
                     from naver_news_crawler import NaverNewsCrawler
                     crawler = NaverNewsCrawler()
-                    print(f"[Gemini] 네이버 금융 뉴스 검색 시도: {stock_name} ({stock_code})")
+                    Logger.info("Gemini", f"네이버 금융 뉴스 검색 시도: {stock_name} ({stock_code})")
                     news_list = crawler.get_news(stock_code)
                     
                     if news_list:
@@ -152,7 +153,7 @@ class GeminiService:
                     else:
                         return "(최신 뉴스 검색 실패)"
                 except Exception as e:
-                    print(f"[Gemini] 네이버 뉴스 검색 실패: {e}")
+                    Logger.error("Gemini", f"네이버 뉴스 검색 실패: {e}")
                     return "(뉴스 검색 오류)"
 
             # ThreadPoolExecutor를 사용하여 병렬 실행
@@ -248,7 +249,7 @@ class GeminiService:
                     news_summary = result_text[:500] + "..."
 
             except Exception as e:
-                print(f"[Gemini] 파싱 오류: {e}")
+                Logger.error("Gemini", f"파싱 오류: {e}")
                 news_summary = result_text[:500] + "..."
 
             result = {
@@ -264,7 +265,7 @@ class GeminiService:
             return result
             
         except Exception as e:
-            print(f"[Gemini] 뉴스 분석 실패: {e}")
+            Logger.error("Gemini", f"뉴스 분석 실패: {e}")
             return {
                 'news_summary': "뉴스 정보를 가져올 수 없습니다",
                 'reason': f"오류 발생: {str(e)}",
@@ -307,7 +308,7 @@ class GeminiService:
                     # 전체가 JSON일 수 있음
                     result = json.loads(result_text)
             except Exception as e:
-                print(f"[Gemini] 시장 이벤트 파싱 실패: {e}")
+                Logger.error("Gemini", f"시장 이벤트 파싱 실패: {e}")
                 # 파싱 실패 시 텍스트라도 반환하도록 구조화
                 result = {'events': [], 'raw_text': result_text}
 
@@ -316,7 +317,7 @@ class GeminiService:
             return result
 
         except Exception as e:
-            print(f"[Gemini] 시장 이벤트 분석 실패: {e}")
+            Logger.error("Gemini", f"시장 이벤트 분석 실패: {e}")
             return {'events': []}
 
     def analyze_korea_market_impact(self, us_indices, us_themes, us_events, force_refresh=False):
@@ -366,7 +367,7 @@ class GeminiService:
                 else:
                     result = json.loads(result_text)
             except Exception as e:
-                print(f"[Gemini] 한국 증시 영향 파싱 실패: {e}")
+                Logger.error("Gemini", f"한국 증시 영향 파싱 실패: {e}")
                 result = {'raw_text': result_text}
 
             # 2. 결과 캐싱
@@ -374,7 +375,7 @@ class GeminiService:
             return result
 
         except Exception as e:
-            print(f"[Gemini] 한국 증시 영향 분석 실패: {e}")
+            Logger.error("Gemini", f"한국 증시 영향 분석 실패: {e}")
             return {}
 
     def fetch_stock_sector(self, stock_name, stock_code, force_refresh=False):
@@ -420,7 +421,7 @@ class GeminiService:
             return result
             
         except Exception as e:
-            print(f"[Gemini] 섹터 검색 실패: {e}")
+            Logger.error("Gemini", f"섹터 검색 실패: {e}")
             return "섹터 미상"
 
     def select_core_themes(self, stock_name, stock_code, all_themes, force_refresh=False):
@@ -459,7 +460,7 @@ class GeminiService:
                     core_themes = [t.strip() for t in result_text.split(',')]
             except:
                 # 파싱 실패 시 원본 텍스트를 적절히 처리하거나 기본값 사용
-                print(f"[Gemini] 핵심 테마 파싱 실패. Raw: {result_text}")
+                Logger.error("Gemini", f"핵심 테마 파싱 실패. Raw: {result_text}")
                 core_themes = theme_names[:3]
 
             # 2. 결과 캐싱
@@ -467,7 +468,7 @@ class GeminiService:
             return core_themes
             
         except Exception as e:
-            print(f"[Gemini] 핵심 테마 선정 실패: {e}")
+            Logger.error("Gemini", f"핵심 테마 선정 실패: {e}")
             return []
 
     def generate_outlook(self, stock_name, stock_info, supply_demand, technical_indicators, news_analysis, market_data=None, fundamental_data=None, theme_service=None, bollinger_data=None, force_refresh=False):
@@ -538,7 +539,7 @@ class GeminiService:
             - 미국 지수: {us_indices}
             - 미국 강세 테마: {us_themes}
             """
-            print(f"[Gemini] Market Context for Outlook: {market_context_str.strip()}")
+            Logger.debug("Gemini", f"Market Context for Outlook: {market_context_str.strip()}")
             
             current_hot_themes = market_data.get('themes', '정보 없음')
             # stock_sector는 위에서 계산함
@@ -746,7 +747,7 @@ class GeminiService:
             return result
             
         except Exception as e:
-            print(f"[Gemini] 전망 생성 실패: {e}")
+            Logger.error("Gemini", f"전망 생성 실패: {e}")
             return {
                 'recommendation': "중립",
                 'confidence': 0,

@@ -4,6 +4,7 @@ from technical_indicators import TechnicalIndicators
 from theme_service import ThemeService
 import config
 import time
+from logger import Logger
 
 class StockAnalysisService:
     """주식 종목 종합 분석 서비스"""
@@ -65,7 +66,7 @@ class StockAnalysisService:
         try:
             # 종목 코드 정규화 (A 접두사 제거)
             normalized_code = code.lstrip('A') if code and code.startswith('A') else code
-            # print(f"[Debug] Stock code normalization: {code} → {normalized_code}")
+            # Logger.debug("Analysis", f"Stock code normalization: {code} → {normalized_code}")
             
             # 1. 현재가 정보 조회 (실시간 데이터이므로 캐싱 안 함)
             price_info = self.kiwoom.get_current_price(normalized_code)
@@ -97,8 +98,8 @@ class StockAnalysisService:
             if daily_chart:
                 # 디버깅: 첫 번째 데이터 항목 출력하여 키 확인
                 if len(daily_chart) > 0:
-                    # print(f"[Debug] First chart item keys: {daily_chart[0].keys()}")
-                    # print(f"[Debug] First chart item sample: {daily_chart[0]}")
+                    # Logger.debug("Analysis", f"First chart item keys: {daily_chart[0].keys()}")
+                    # Logger.debug("Analysis", f"First chart item sample: {daily_chart[0]}")
                     pass
 
                 # kis_api.py에서 이미 표준화된 키(date, close, high, low, volume)로 변환되어 반환됨
@@ -133,7 +134,7 @@ class StockAnalysisService:
                             force_refresh=force_refresh
                         )
                     except Exception as e:
-                        print(f"[StockAnalysisService] 뉴스 분석 건너뜀: {e}")
+                        Logger.warning("Analysis", f"뉴스 분석 건너뜀: {e}")
                         return news_analysis  # 기본값 반환
                 
                 # ThreadPoolExecutor로 병렬 실행 (뉴스 분석만)
@@ -160,7 +161,7 @@ class StockAnalysisService:
                         
                     market_themes = ", ".join(top_themes) if top_themes else "정보 없음"
                 except Exception as e:
-                    print(f"[StockAnalysisService] 테마 조회 실패: {e}")
+                    Logger.error("Analysis", f"테마 조회 실패: {e}")
                     market_themes = "정보 없음"
             else:
                 market_themes = '정보 없음'  # 경량 모드
@@ -186,16 +187,16 @@ class StockAnalysisService:
                     market_data['us_themes'] = global_market_data.get('themes', '정보 없음')
                 else:
                     # 데이터가 없거나 누락된 경우 직접 수집 시도 (Fallback)
-                    print("[StockAnalysisService] 글로벌 시장 데이터 누락됨, 직접 수집 시도...")
+                    Logger.warning("Analysis", "글로벌 시장 데이터 누락됨, 직접 수집 시도...")
                     try:
                         from finviz_market_crawler import FinvizMarketFetcher
                         fetcher = FinvizMarketFetcher()
                         # 타임아웃 등 안전장치는 fetcher 내부 또는 여기서 고려 가능
                         market_data['us_indices'] = fetcher.get_market_indices()
                         market_data['us_themes'] = fetcher.get_strong_themes()
-                        print(f"[StockAnalysisService] 직접 수집 성공: {market_data['us_indices']}")
+                        Logger.info("Analysis", f"직접 수집 성공: {market_data['us_indices']}")
                     except Exception as e:
-                        print(f"[StockAnalysisService] 직접 수집 실패: {e}")
+                        Logger.error("Analysis", f"직접 수집 실패: {e}")
                         import traceback
                         traceback.print_exc()
                         market_data['us_indices'] = f'정보 없음 (오류: {str(e)})'
@@ -215,13 +216,13 @@ class StockAnalysisService:
                         theme_info_list.append(f"{theme_name}({theme_flu})")
                     
                     market_data['sector'] = ', '.join(theme_info_list)
-                    print(f"[Analysis] 종목 '{stock_name}' 테마: {market_data['sector']}")
+                    Logger.info("Analysis", f"종목 '{stock_name}' 테마: {market_data['sector']}")
                 else:
                     market_data['sector'] = '테마 정보 없음'
-                    print(f"[Analysis] 종목 '{stock_name}' 테마를 찾을 수 없습니다")
+                    Logger.info("Analysis", f"종목 '{stock_name}' 테마를 찾을 수 없습니다")
                 
             except Exception as e:
-                print(f"[StockAnalysisService] 시장 데이터 수집 실패: {e}")
+                Logger.error("Analysis", f"시장 데이터 수집 실패: {e}")
 
             # 6. 펀더멘털 데이터 수집 (Fundamental, 정규화된 코드 사용) - 캐싱 적용
             fundamental_key = f"fundamental_{normalized_code}"
@@ -238,7 +239,7 @@ class StockAnalysisService:
                     else:
                         self._set_cached_data(fundamental_key, fundamental_data, ttl=300) # 5분 캐시
                 except Exception as e:
-                    print(f"[StockAnalysisService] 펀더멘털 데이터 수집 실패: {e}")
+                    Logger.error("Analysis", f"펀더멘털 데이터 수집 실패: {e}")
                     fundamental_data = {}
 
             # 7. AI 전망 생성 (Gemini) - Optional, 경량 모드 시 스킵
@@ -250,7 +251,7 @@ class StockAnalysisService:
             }
             if not lightweight:
                 try:
-                    # print(f"[Debug] AI 전망 생성 요청 - 펀더멘털 데이터: {fundamental_data}")
+                    # Logger.debug("Analysis", f"AI 전망 생성 요청 - 펀더멘털 데이터: {fundamental_data}")
                     # stock_info에 정규화된 코드 전달
                     stock_info_for_outlook = {
                         'code': normalized_code,  # 정규화된 코드 사용!
@@ -269,7 +270,7 @@ class StockAnalysisService:
                         force_refresh=force_refresh
                     )
                 except Exception as e:
-                    print(f"[StockAnalysisService] AI 전망 건너뜀: {e}")
+                    Logger.error("Analysis", f"AI 전망 건너뜀: {e}")
             
             # 종합 결과 반환 (정규화된 코드 사용)
             return {
@@ -307,7 +308,7 @@ class StockAnalysisService:
 
             
         except Exception as e:
-            print(f"[StockAnalysisService] 종합 분석 실패: {e}")
+            Logger.error("Analysis", f"종합 분석 실패: {e}")
             return {
                 'success': False,
                 'message': f'분석 중 오류 발생: {str(e)}'
@@ -332,7 +333,7 @@ class StockAnalysisService:
                 
             return " / ".join(result) if result else "지수 정보 없음"
         except Exception as e:
-            print(f"[StockAnalysisService] 지수 조회 실패: {e}")
+            Logger.error("Analysis", f"지수 조회 실패: {e}")
             return "지수 정보 없음"
 
     def get_supply_demand_data(self, code):
@@ -379,7 +380,7 @@ class StockAnalysisService:
                 return self._get_default_supply_demand()
                 
         except Exception as e:
-            print(f"[StockAnalysisService] 수급 데이터 조회 실패: {e}")
+            Logger.error("Analysis", f"수급 데이터 조회 실패: {e}")
             return self._get_default_supply_demand()
     
     def _get_default_supply_demand(self):

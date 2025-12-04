@@ -111,7 +111,7 @@ Object.assign(window.UI, {
         if (this.currentAnalysisController) {
             this.currentAnalysisController.abort();
             this.currentAnalysisController = null;
-            console.log('⏹️ 모달 닫기 - 분석 요청 취소');
+            Logger.debug('UI_Core', '모달 닫기 - 분석 요청 취소');
         }
 
         document.getElementById('stockModal').style.display = 'none';
@@ -156,10 +156,10 @@ Object.assign(window.UI, {
                 }
             },
             () => {
-                console.log('✅ 글로벌 마켓 분석 완료');
+                Logger.info('UI_Core', '글로벌 마켓 분석 완료');
             },
             (errorMessage) => {
-                console.error('Market Modal Error:', errorMessage);
+                Logger.error('UI_Core', 'Market Modal Error:', errorMessage);
                 const loadingContainer = modalBody.querySelector('.market-loading-container');
                 if (loadingContainer) {
                     loadingContainer.innerHTML = `<div class="error-message">오류 발생: ${errorMessage}</div>`;
@@ -292,7 +292,7 @@ Object.assign(window.UI, {
 
     // 데이터 새로고침 (버튼)
     refreshData() {
-        console.log('🔄 데이터 새로고침 (강제 리로드)...');
+        Logger.info('UI_Core', '데이터 새로고침 (강제 리로드)...');
         const btn = document.querySelector('.btn-refresh');
         if (btn) {
             btn.style.transform = 'rotate(360deg)';

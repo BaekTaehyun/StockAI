@@ -18,6 +18,7 @@ from finviz_market_crawler import FinvizMarketFetcher
 from datetime import timedelta, datetime
 import config
 import json
+from logger import Logger
 
 app = Flask(__name__)
 CORS(app)  # CORS 활성화 (프론트엔드 연동)
@@ -55,7 +56,7 @@ def update_global_market_data():
     global global_market_cache
     now = datetime.now()
     
-    print(f"[Market] Updating global market data at {now}...")
+    Logger.info("Market", f"Updating global market data at {now}...")
     try:
         # 1. 지수 및 테마
         indices = market_fetcher.get_market_indices()
@@ -83,10 +84,10 @@ def update_global_market_data():
         
         global_market_cache['data'] = data
         global_market_cache['last_updated'] = now
-        print(f"[Market] Update complete.")
+        Logger.info("Market", "Update complete.")
         return True
     except Exception as e:
-        print(f"[Market] Update failed: {e}")
+        Logger.error("Market", f"Update failed: {e}")
         return False
 
 def get_global_market_data():
@@ -567,7 +568,7 @@ def stream_global_market():
                     use_cache = True
                     
             if use_cache:
-                print("[Market] Streaming from cache...")
+                Logger.debug("Market", "Streaming from cache...")
                 # 1. 기본 데이터
                 basic_data = {
                     'indices': cached_data.get('indices'),
@@ -587,7 +588,7 @@ def stream_global_market():
                 return
 
             # 캐시가 없거나 만료된 경우: 새로 가져오기
-            print("[Market] Fetching fresh data...")
+            Logger.info("Market", "Fetching fresh data...")
             
             # 1. 기본 데이터 (지수, 테마, 뉴스 헤드라인) - 빠름
             indices = market_fetcher.get_market_indices()
@@ -629,7 +630,7 @@ def stream_global_market():
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
             
         except Exception as e:
-            print(f"[Market Error] {e}")
+            Logger.error("Market", f"Error: {e}")
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return Response(
@@ -754,24 +755,24 @@ def refresh_themes():
 
 
 if __name__ == '__main__':
-    print("=== 서버 시작 중 ===")
+    Logger.info("App", "=== 서버 시작 중 ===")
     
     # 1. 토큰 사전 발급
     if kiwoom.get_access_token():
-        print("[OK] 인증 완료!")
+        Logger.info("App", "인증 완료!")
     
     # 2. 테마 캐시 초기화 (서버 시작 전 필수)
-    print("\n[ThemeService] 테마 캐시 초기화 중...")
+    Logger.info("Theme", "테마 캐시 초기화 중...")
     if not theme_service.is_cache_valid():
-        print("[ThemeService] 캐시가 없거나 만료됨. 새로 생성합니다...")
+        Logger.info("Theme", "캐시가 없거나 만료됨. 새로 생성합니다...")
         if theme_service.update_cache():
             cache_info = theme_service.get_cache_info()
-            print(f"[ThemeService] ✓ 캐시 생성 완료: {cache_info.get('theme_count')}개 테마")
+            Logger.info("Theme", f"캐시 생성 완료: {cache_info.get('theme_count')}개 테마")
         else:
-            print("[ThemeService] ✗ 캐시 생성 실패 - 서비스 제한 모드로 시작")
+            Logger.error("Theme", "캐시 생성 실패 - 서비스 제한 모드로 시작")
     else:
         cache_info = theme_service.get_cache_info()
-        print(f"[ThemeService] ✓ 기존 캐시 사용: {cache_info.get('theme_count')}개 테마")
+        Logger.info("Theme", f"기존 캐시 사용: {cache_info.get('theme_count')}개 테마")
     
 # 3. 스케줄러 초기화 (매일 오전 9시 테마 캐시 갱신)
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -797,7 +798,7 @@ scheduler.add_job(
 )
 
 if __name__ == '__main__':
-    print("=== 서버 시작 중 ===")
+    Logger.info("App", "=== 서버 시작 중 ===")
     
     # 1. 토큰 사전 발급
     if kiwoom.get_access_token():

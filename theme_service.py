@@ -18,6 +18,7 @@ import re
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from kis_api import KiwoomApi
+from logger import Logger
 
 class NaverThemeScraper:
     """
@@ -36,7 +37,7 @@ class NaverThemeScraper:
         Returns:
             list: 테마 목록 (각 테마는 'name', 'link', 'stocks' 포함)
         """
-        print("[NaverThemeScraper] Starting FULL scrape of all themes (Pages 1-7)...")
+        Logger.info("ThemeScraper", "Starting FULL scrape of all themes (Pages 1-7)...")
         all_themes = []
         
         try:
@@ -44,7 +45,7 @@ class NaverThemeScraper:
             theme_links = []
             for page in range(1, 8):
                 url = f"{NaverThemeScraper.BASE_URL}?&page={page}"
-                print(f"[NaverThemeScraper] Scanning list page {page}/7...")
+                Logger.debug("ThemeScraper", f"Scanning list page {page}/7...")
                 
                 res = requests.get(url, headers=NaverThemeScraper.HEADERS)
                 res.encoding = 'cp949'
@@ -79,7 +80,7 @@ class NaverThemeScraper:
                 import time
                 time.sleep(0.1)
             
-            print(f"[NaverThemeScraper] Found {len(theme_links)} themes total. Starting detail scrape...")
+            Logger.info("ThemeScraper", f"Found {len(theme_links)} themes total. Starting detail scrape...")
             
             # 2. 각 테마별 상세 페이지 방문
             for idx, theme in enumerate(theme_links, 1):
@@ -87,7 +88,7 @@ class NaverThemeScraper:
                 theme_link = theme['link']
                 
                 if idx % 10 == 0:
-                    print(f"[NaverThemeScraper] Processing theme {idx}/{len(theme_links)}: {theme_name}")
+                    Logger.info("ThemeScraper", f"Processing theme {idx}/{len(theme_links)}: {theme_name}")
                 
                 detail_url = "https://finance.naver.com" + theme_link
                 
@@ -123,14 +124,14 @@ class NaverThemeScraper:
                     time.sleep(0.1)
                     
                 except Exception as e:
-                    print(f"[NaverThemeScraper] Error scraping detail for {theme_name}: {e}")
+                    Logger.error("ThemeScraper", f"Error scraping detail for {theme_name}: {e}")
                     continue
             
-            print(f"[NaverThemeScraper] Full scrape completed. {len(all_themes)} themes processed.")
+            Logger.info("ThemeScraper", f"Full scrape completed. {len(all_themes)} themes processed.")
             return all_themes
             
         except Exception as e:
-            print(f"[NaverThemeScraper] Error during full scrape: {e}")
+            Logger.error("ThemeScraper", f"Error during full scrape: {e}")
             return []
 
     @staticmethod
@@ -145,7 +146,7 @@ class NaverThemeScraper:
         Returns:
             list: 종목 리스트 ([{'code': '005930', 'name': '삼성전자'}, ...])
         """
-        print(f"[NaverThemeScraper] Searching for theme keyword: '{target_theme_keyword}'")
+        Logger.info("ThemeScraper", f"Searching for theme keyword: '{target_theme_keyword}'")
         
         try:
             theme_link = None
@@ -167,14 +168,14 @@ class NaverThemeScraper:
                     if target_theme_keyword in a_tag.text:
                         theme_link = a_tag['href']
                         theme_full_name = a_tag.text.strip()
-                        print(f"[NaverThemeScraper] ✅ 테마 발견: {theme_full_name} (Link: {theme_link}) at Page {page}")
+                        Logger.info("ThemeScraper", f"✅ 테마 발견: {theme_full_name} (Link: {theme_link}) at Page {page}")
                         break
                 
                 if theme_link:
                     break
             
             if not theme_link:
-                print(f"[NaverThemeScraper] ❌ '{target_theme_keyword}' 관련 테마를 1~7페이지에서 찾을 수 없습니다.")
+                Logger.warning("ThemeScraper", f"❌ '{target_theme_keyword}' 관련 테마를 1~7페이지에서 찾을 수 없습니다.")
                 return []
 
             # 3. 상세 테마 페이지 접속 (종목 리스트 확보)
@@ -204,11 +205,11 @@ class NaverThemeScraper:
                         "name": stock_name
                     })
 
-            print(f"[NaverThemeScraper] Found {len(stock_list)} stocks for theme '{theme_full_name}'")
+            Logger.info("ThemeScraper", f"Found {len(stock_list)} stocks for theme '{theme_full_name}'")
             return stock_list
 
         except Exception as e:
-            print(f"[NaverThemeScraper] Error scraping theme: {e}")
+            Logger.error("ThemeScraper", f"Error scraping theme: {e}")
             return []
 
 class ThemeService:
@@ -236,7 +237,7 @@ class ThemeService:
         30일이 지났으면 update_naver_cache()를 호출하여 갱신을 시도합니다.
         """
         if not os.path.exists(self.naver_cache_file):
-            print("[ThemeService] Naver theme cache not found. Please run 'update_naver_cache.py' to generate it.")
+            Logger.warning("ThemeService", "Naver theme cache not found. Please run 'update_naver_cache.py' to generate it.")
             return []
             
         try:
@@ -250,7 +251,7 @@ class ThemeService:
                 
                 # 30일 경과 체크
                 if age > timedelta(days=30):
-                    print(f"[ThemeService] Naver cache expired (Age: {age.days} days). Triggering auto-update...")
+                    Logger.info("ThemeService", f"Naver cache expired (Age: {age.days} days). Triggering auto-update...")
                     # 백그라운드에서 실행하거나 여기서 바로 실행 (시간이 오래 걸리므로 주의)
                     # 여기서는 사용자가 '자동 갱신'을 원했으므로 바로 실행하지만, 
                     # 실제 서비스에서는 별도 스레드나 프로세스로 돌리는 것이 좋음.
@@ -261,11 +262,11 @@ class ThemeService:
                             data = json.load(f)
             
             themes = data.get('themes', [])
-            print(f"[ThemeService] Loaded {len(themes)} Naver themes from cache.")
+            Logger.info("ThemeService", f"Loaded {len(themes)} Naver themes from cache.")
             return themes
             
         except Exception as e:
-            print(f"[ThemeService] Error loading Naver cache: {e}")
+            Logger.error("ThemeService", f"Error loading Naver cache: {e}")
             return []
 
     def update_naver_cache(self):
@@ -274,11 +275,11 @@ class ThemeService:
         (수동 실행 또는 30일 만료 시 자동 실행)
         """
         try:
-            print("[ThemeService] Updating Naver theme cache... This may take a few minutes.")
+            Logger.info("ThemeService", "Updating Naver theme cache... This may take a few minutes.")
             themes = NaverThemeScraper.scrape_all_themes()
             
             if not themes:
-                print("[ThemeService] Failed to scrape Naver themes.")
+                Logger.error("ThemeService", "Failed to scrape Naver themes.")
                 return False
                 
             cache_data = {
@@ -290,11 +291,11 @@ class ThemeService:
             with open(self.naver_cache_file, 'w', encoding='utf-8') as f:
                 json.dump(cache_data, f, ensure_ascii=False, indent=2)
                 
-            print(f"[ThemeService] [OK] Naver theme cache updated: {len(themes)} themes.")
+            Logger.info("ThemeService", f"[OK] Naver theme cache updated: {len(themes)} themes.")
             return True
             
         except Exception as e:
-            print(f"[ThemeService] Error updating Naver cache: {e}")
+            Logger.error("ThemeService", f"Error updating Naver cache: {e}")
             return False
 
     def update_cache(self):
@@ -306,21 +307,21 @@ class ThemeService:
             bool: 성공 여부
         """
         try:
-            print("[ThemeService] Updating theme cache from REST API...")
+            Logger.info("ThemeService", "Updating theme cache from REST API...")
             
             # 인증 토큰 발급
             if not self.api.get_access_token():
-                print("[ThemeService] Failed to get access token")
+                Logger.error("ThemeService", "Failed to get access token")
                 return False
             
             # 1단계: 테마 목록 조회
             themes = self.api.get_theme_group_list()
             
             if not themes:
-                print("[ThemeService] No themes retrieved")
+                Logger.warning("ThemeService", "No themes retrieved")
                 return False
             
-            print(f"[ThemeService] Retrieved {len(themes)} themes. Fetching stocks for each theme...")
+            Logger.info("ThemeService", f"Retrieved {len(themes)} themes. Fetching stocks for each theme...")
             
             # 2단계: 각 테마의 종목 정보 조회
             for idx, theme in enumerate(themes, 1):
@@ -329,7 +330,7 @@ class ThemeService:
                 
                 # 진행 상황 표시 (매 10개마다)
                 if idx % 10 == 0:
-                    print(f"[ThemeService] Progress: {idx}/{len(themes)} themes processed...")
+                    Logger.info("ThemeService", f"Progress: {idx}/{len(themes)} themes processed...")
                 
                 # 테마의 종목 목록 조회
                 stocks = self.api.get_theme_stocks(theme_code)
@@ -350,11 +351,11 @@ class ThemeService:
             with open(self.cache_file, 'w', encoding='utf-8') as f:
                 json.dump(cache_data, f, ensure_ascii=False, indent=2)
             
-            print(f"[ThemeService] [OK] Cache updated successfully: {len(themes)} themes with stock info")
+            Logger.info("ThemeService", f"[OK] Cache updated successfully: {len(themes)} themes with stock info")
             return True
             
         except Exception as e:
-            print(f"[ThemeService] Error updating cache: {e}")
+            Logger.error("ThemeService", f"Error updating cache: {e}")
             return False
     
     def get_themes(self, force_refresh=False):
@@ -369,12 +370,12 @@ class ThemeService:
         """
         # 강제 갱신 또는 캐시 파일이 없는 경우
         if force_refresh or not os.path.exists(self.cache_file):
-            print("[ThemeService] Cache not found or force refresh requested")
+            Logger.info("ThemeService", "Cache not found or force refresh requested")
             self.update_cache()
         
         # 캐시 유효성 확인 (1일 경과 시 갱신)
         elif not self.is_cache_valid():
-            print("[ThemeService] Cache expired, refreshing...")
+            Logger.info("ThemeService", "Cache expired, refreshing...")
             self.update_cache()
         
         # 캐시 데이터 로드
@@ -382,7 +383,7 @@ class ThemeService:
             with open(self.cache_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
-            print(f"[ThemeService] Error reading cache: {e}")
+            Logger.error("ThemeService", f"Error reading cache: {e}")
             return {"updated_at": None, "theme_count": 0, "themes": []}
     
     def search_theme(self, keyword):
@@ -432,7 +433,7 @@ class ThemeService:
             return age < timedelta(hours=max_age_hours)
             
         except Exception as e:
-            print(f"[ThemeService] Error checking cache validity: {e}")
+            Logger.error("ThemeService", f"Error checking cache validity: {e}")
             return False
     
     def get_cache_info(self):
@@ -461,7 +462,7 @@ class ThemeService:
                 "is_valid": self.is_cache_valid()
             }
         except Exception as e:
-            print(f"[ThemeService] Error getting cache info: {e}")
+            Logger.error("ThemeService", f"Error getting cache info: {e}")
             return {
                 "exists": True,
                 "updated_at": None,
@@ -481,7 +482,7 @@ class ThemeService:
         Returns:
             list: 해당 주식이 속한 테마 목록과 종목 정보
         """
-        print(f"\n[ThemeSearch] Searching themes for stock: '{stock_name_or_code}'")
+        Logger.debug("ThemeSearch", f"Searching themes for stock: '{stock_name_or_code}'")
         matched_themes = []
         search_keyword = stock_name_or_code.lower()
         
@@ -489,7 +490,7 @@ class ThemeService:
         themes_data = self.get_themes()
         kiwoom_themes = themes_data.get('themes', [])
         
-        print(f"[ThemeSearch] Searching in {len(kiwoom_themes)} Kiwoom themes...")
+        Logger.debug("ThemeSearch", f"Searching in {len(kiwoom_themes)} Kiwoom themes...")
         for theme in kiwoom_themes:
             theme_code = theme.get('thema_grp_cd')
             theme_name = theme.get('thema_nm', 'Unknown')
@@ -500,7 +501,7 @@ class ThemeService:
                 stock_code = stock.get('stk_cd', '').lower()
                 
                 if search_keyword in stock_name or search_keyword in stock_code:
-                    print(f"  [Kiwoom MATCH]: '{stock.get('stk_nm')}' found in '{theme_name}'")
+                    Logger.debug("ThemeSearch", f"  [Kiwoom MATCH]: '{stock.get('stk_nm')}' found in '{theme_name}'")
                     matched_themes.append({
                         'source': 'Kiwoom',
                         'theme_code': theme_code,
@@ -514,7 +515,7 @@ class ThemeService:
                     break
 
         # 2. 네이버 테마 검색
-        print(f"[ThemeSearch] Searching in {len(self.naver_themes)} Naver themes...")
+        Logger.debug("ThemeSearch", f"Searching in {len(self.naver_themes)} Naver themes...")
         for theme in self.naver_themes:
             theme_name = theme.get('name', 'Unknown')
             theme_link = theme.get('link')
@@ -525,7 +526,7 @@ class ThemeService:
                 stock_code = stock.get('code', '').lower()
                 
                 if search_keyword in stock_name or search_keyword in stock_code:
-                    print(f"  [Naver MATCH]: '{stock.get('name')}' found in '{theme_name}'")
+                    Logger.debug("ThemeSearch", f"  [Naver MATCH]: '{stock.get('name')}' found in '{theme_name}'")
                     matched_themes.append({
                         'source': 'Naver',
                         'theme_code': None, # 네이버는 코드가 없음 (링크로 대체 가능)
@@ -543,10 +544,9 @@ class ThemeService:
         # 최종 결과 요약 로그
         if matched_themes:
             theme_names = [f"{t['theme_name']}({t['source']})" for t in matched_themes]
-            print(f"\n[ThemeSearch] [RESULT] 주식 '{stock_name_or_code}' 매칭 결과:")
-            print(f"[ThemeSearch]   -> 속한 테마: {', '.join(theme_names)}")
-            print(f"[ThemeSearch]   -> 총 {len(matched_themes)}개 테마 발견 (검색 시간: 즉시)\n")
+            Logger.info("ThemeSearch", f"[RESULT] 주식 '{stock_name_or_code}' 매칭 결과: {', '.join(theme_names)}")
+            Logger.debug("ThemeSearch", f"  -> 총 {len(matched_themes)}개 테마 발견 (검색 시간: 즉시)")
         else:
-            print(f"\n[ThemeSearch] [X] 주식 '{stock_name_or_code}'와 매칭되는 테마를 찾지 못했습니다.\n")
+            Logger.info("ThemeSearch", f"[X] 주식 '{stock_name_or_code}'와 매칭되는 테마를 찾지 못했습니다.")
         
         return matched_themes

@@ -33,13 +33,13 @@ const API = {
 
                     // 갱신 주기 계산 (밀리초)
                     window.SENTIMENT_REFRESH_INTERVAL = window.SENTIMENT_REFRESH_MINUTES * 60 * 1000;
-                    console.log(`⚙️ 설정 로드 완료: 감성 갱신 주기 ${window.SENTIMENT_REFRESH_MINUTES}분, 카드 갱신 간격 ${window.SENTIMENT_UPDATE_DELAY_SECONDS}초`);
+                    Logger.info('API', `설정 로드 완료: 감성 갱신 주기 ${window.SENTIMENT_REFRESH_MINUTES}분, 카드 갱신 간격 ${window.SENTIMENT_UPDATE_DELAY_SECONDS}초`);
                 }
                 return result;
             }
             return { success: false, message: '설정 로드 실패' };
         } catch (error) {
-            console.error('설정 로드 실패:', error);
+            Logger.error('API', '설정 로드 실패:', error);
             return { success: false, message: error.message };
         }
     },
@@ -50,7 +50,7 @@ const API = {
             const response = await fetch(`${API_BASE}/api/account/summary`);
             return await response.json();
         } catch (error) {
-            console.error('계좌 요약 로드 실패:', error);
+            Logger.error('API', '계좌 요약 로드 실패:', error);
             return { success: false, message: error.message };
         }
     },
@@ -61,7 +61,7 @@ const API = {
             const response = await fetch(`${API_BASE}/api/account/balance`);
             return await response.json();
         } catch (error) {
-            console.error('보유 종목 로드 실패:', error);
+            Logger.error('API', '보유 종목 로드 실패:', error);
             return { success: false, message: error.message };
         }
     },
@@ -72,7 +72,7 @@ const API = {
             const response = await fetch(`${API_BASE}/api/market/global`);
             return await response.json();
         } catch (error) {
-            console.error('글로벌 마켓 데이터 로드 실패:', error);
+            Logger.error('API', '글로벌 마켓 데이터 로드 실패:', error);
             return { success: false, message: error.message };
         }
     },
@@ -83,7 +83,7 @@ const API = {
             const response = await fetch(`${API_BASE}/api/market/indices`);
             return await response.json();
         } catch (error) {
-            console.error('시장 지수 로드 실패:', error);
+            Logger.error('API', '시장 지수 로드 실패:', error);
             return { success: false, message: error.message };
         }
     },
@@ -114,7 +114,7 @@ const API = {
         if (this.memoryCache[cacheKey]) {
             const cached = this.memoryCache[cacheKey];
             if (now - cached.timestamp < this.MEMORY_TTL) {
-                console.log(`💾 L1 캐시 히트 (메모리): ${code}`);
+                Logger.debug('API', `L1 캐시 히트 (메모리): ${code}`);
                 return {
                     success: true,
                     data: cached.data,
@@ -130,7 +130,7 @@ const API = {
             if (stored) {
                 const parsed = JSON.parse(stored);
                 if (now - parsed.timestamp < this.STORAGE_TTL) {
-                    console.log(`💿 L2 캐시 히트 (스토리지): ${code}`);
+                    Logger.debug('API', `L2 캐시 히트 (스토리지): ${code}`);
                     // L1 캐시 복구
                     this.memoryCache[cacheKey] = { data: parsed.data, timestamp: parsed.timestamp };
                     return {
@@ -141,7 +141,7 @@ const API = {
                 }
             }
         } catch (e) {
-            console.warn('LocalStorage 읽기 실패:', e);
+            Logger.warn('API', 'LocalStorage 읽기 실패:', e);
         }
 
         // 캐시 미스
@@ -186,7 +186,7 @@ const API = {
             if (highPriority) {
                 // 우선순위 높은 요청은 큐 앞에 추가
                 this.requestQueue.unshift(request);
-                console.log(`🔥 우선 요청 추가: ${code}`);
+                Logger.debug('API', `우선 요청 추가: ${code}`);
             } else {
                 // 일반 요청은 큐 뒤에 추가
                 this.requestQueue.push(request);
@@ -206,9 +206,9 @@ const API = {
         try {
             const storageKey = `${this.STORAGE_KEY_PREFIX}${code}`;
             localStorage.setItem(storageKey, JSON.stringify({ data, timestamp: now }));
-            console.log(`💾 수동 캐시 저장 완료: ${code}`);
+            Logger.debug('API', `수동 캐시 저장 완료: ${code}`);
         } catch (e) {
-            console.warn('L2 Save Error:', e);
+            Logger.warn('API', 'L2 Save Error:', e);
         }
     },
 
@@ -227,7 +227,7 @@ const API = {
             if (this.memoryCache[cacheKey]) {
                 const { data, timestamp } = this.memoryCache[cacheKey];
                 if (now - timestamp < this.MEMORY_TTL) {
-                    console.log(`🚀 L1 Cache Hit (Memory): ${code} [${lightweight ? 'light' : 'full'}]`);
+                    Logger.debug('API', `L1 Cache Hit (Memory): ${code} [${lightweight ? 'light' : 'full'}]`);
                     return data;
                 } else {
                     delete this.memoryCache[cacheKey]; // 만료됨
@@ -241,7 +241,7 @@ const API = {
                 if (stored) {
                     const { data, timestamp } = JSON.parse(stored);
                     if (now - timestamp < this.STORAGE_TTL) {
-                        console.log(`💾 L2 Cache Hit (Storage): ${code} [${lightweight ? 'light' : 'full'}]`);
+                        Logger.debug('API', `L2 Cache Hit (Storage): ${code} [${lightweight ? 'light' : 'full'}]`);
                         // L1으로 승격
                         this.memoryCache[cacheKey] = { data, timestamp: now };
                         return data;
@@ -250,7 +250,7 @@ const API = {
                     }
                 }
             } catch (e) {
-                console.warn('L2 Cache Error:', e);
+                Logger.warn('API', 'L2 Cache Error:', e);
             }
         }
 
@@ -268,10 +268,10 @@ const API = {
             }
 
             if (forceRefresh) {
-                console.log(`🔄 강제 갱신 요청: ${code}`);
+                Logger.info('API', `강제 갱신 요청: ${code}`);
             }
             if (lightweight) {
-                console.log(`⚡ 경량 모드 요청: ${code}`);
+                Logger.debug('API', `경량 모드 요청: ${code}`);
             }
 
             // AbortController 처리 (외부에서 전달된 것 우선 사용)
@@ -287,7 +287,7 @@ const API = {
                 }
 
                 if (!response.ok) {
-                    console.error(`HTTP Error: ${response.status}`);
+                    Logger.error('API', `HTTP Error: ${response.status}`);
                     return {
                         success: false,
                         message: `서버 오류 (${response.status}). 잠시 후 다시 시도해주세요.`
@@ -300,7 +300,7 @@ const API = {
 
                 // AbortError는 정상적인 취소이므로 에러로 처리하지 않음
                 if (error.name === 'AbortError') {
-                    console.log(`⏹️ 요청 취소됨: ${code}`);
+                    Logger.debug('API', `요청 취소됨: ${code}`);
                     return { success: false, message: '요청이 취소되었습니다' };
                 }
 
@@ -318,12 +318,12 @@ const API = {
 
                 if (newsCache) {
                     const cacheStatus = newsCache.cached ? `✅ Server Cache HIT (${newsCache.age_seconds.toFixed(1)}s old)` : `❌ Server Cache MISS (${newsCache.reason})`;
-                    console.log(`📰 뉴스 분석: ${cacheStatus}`);
+                    Logger.debug('API', `뉴스 분석: ${cacheStatus}`);
                 }
 
                 if (outlookCache) {
                     const cacheStatus = outlookCache.cached ? `✅ Server Cache HIT (${outlookCache.age_seconds.toFixed(1)}s old)` : `❌ Server Cache MISS (${outlookCache.reason})`;
-                    console.log(`🔮 AI 전망: ${cacheStatus}`);
+                    Logger.debug('API', `AI 전망: ${cacheStatus}`);
                 }
 
                 // 클라이언트 캐시에 저장 (lightweight 여부 구분)
@@ -335,15 +335,15 @@ const API = {
                     const storageKey = `${this.STORAGE_KEY_PREFIX}${cacheKey}`;
                     localStorage.setItem(storageKey, JSON.stringify({ data, timestamp: now }));
                 } catch (e) {
-                    console.warn('L2 Save Error:', e);
+                    Logger.warn('API', 'L2 Save Error:', e);
                 }
             }
 
-            console.log(`📊 분석 로드 완료: ${code} (${elapsed}ms)`);
+            Logger.info('API', `분석 로드 완료: ${code} (${elapsed}ms)`);
 
             return data;
         } catch (error) {
-            console.error('분석 로드 중 오류:', error);
+            Logger.error('API', '분석 로드 중 오류:', error);
             return { success: false, message: error.message };
         }
     },
@@ -354,7 +354,7 @@ const API = {
             const response = await fetch(`${API_BASE}/api/chart/minute/${code}`);
             return await response.json();
         } catch (error) {
-            console.error('차트 로드 중 오류:', error);
+            Logger.error('API', '차트 로드 중 오류:', error);
             return { success: false, message: error.message };
         }
     },
@@ -365,7 +365,7 @@ const API = {
             const response = await fetch(`${API_BASE}/api/analysis/sentiment/${code}`);
             return await response.json();
         } catch (error) {
-            console.error('감성 분석 로드 실패:', error);
+            Logger.error('API', '감성 분석 로드 실패:', error);
             return { success: false, message: error.message };
         }
     },
@@ -376,7 +376,7 @@ const API = {
             const response = await fetch(`${API_BASE}/api/analysis/supply-demand/${code}`);
             return await response.json();
         } catch (error) {
-            console.error('수급 정보 로드 실패:', error);
+            Logger.error('API', '수급 정보 로드 실패:', error);
             return { success: false, message: error.message };
         }
     },
@@ -387,7 +387,7 @@ const API = {
             const response = await fetch(`${API_BASE}/api/watchlist/prices`);
             return await response.json();
         } catch (error) {
-            console.error('관심종목 로드 실패:', error);
+            Logger.error('API', '관심종목 로드 실패:', error);
             return { success: false, message: error.message };
         }
     },
@@ -402,7 +402,7 @@ const API = {
             });
             return await response.json();
         } catch (error) {
-            console.error('추가 오류:', error);
+            Logger.error('API', '추가 오류:', error);
             return { success: false, message: error.message };
         }
     },
@@ -417,7 +417,7 @@ const API = {
             });
             return await response.json();
         } catch (error) {
-            console.error('삭제 오류:', error);
+            Logger.error('API', '삭제 오류:', error);
             return { success: false, message: error.message };
         }
     },
@@ -426,11 +426,11 @@ const API = {
         try {
             // 우선순위 처리: 기존 요청 중단
             if (highPriority) {
-                console.log(`🔥 우선순위 스트리밍 요청: ${code}, 기존 요청 취소`);
+                Logger.debug('API', `우선순위 스트리밍 요청: ${code}, 기존 요청 취소`);
                 // 다른 모든 스트리밍 요청 중단
                 for (const [existingCode, info] of this.activeStreamingRequests.entries()) {
                     if (existingCode !== code) {
-                        console.log(`  ⏹️ 중단: ${existingCode}`);
+                        Logger.debug('API', `  중단: ${existingCode}`);
                         info.controller.abort();
                         this.activeStreamingRequests.delete(existingCode);
                     }
@@ -500,7 +500,7 @@ const API = {
         } catch (error) {
             // 중단된 요청은 에러로 처리하지 않음
             if (error.name === 'AbortError') {
-                console.log(`⏹️ 스트리밍 요청 취소됨: ${code}`);
+                Logger.debug('API', `스트리밍 요청 취소됨: ${code}`);
                 return;
             }
             this.activeStreamingRequests.delete(code);
@@ -544,7 +544,7 @@ const API = {
                                 onProgress(data.type, data.data);
                             }
                         } catch (e) {
-                            console.error('JSON Parse Error:', e);
+                            Logger.error('API', 'JSON Parse Error:', e);
                         }
                     }
                 }

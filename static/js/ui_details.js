@@ -27,24 +27,24 @@ Object.assign(window.UI, {
     // 계좌 요약 업데이트
     updateAccountSummary(data) {
         if (!data) {
-            console.warn('⚠️ [계좌요약 UI] 데이터가 없습니다');
+            Logger.warn('UI_Details', '계좌요약 데이터 없음');
             return;
         }
 
-        console.log('🎨 [계좌요약 UI] DOM 업데이트 시작:', data);
+        Logger.debug('UI_Details', '계좌요약 업데이트 시작', data);
 
         // 총 매입금액
         const totalPurchaseEl = document.getElementById('totalPurchase');
         if (totalPurchaseEl) {
             totalPurchaseEl.textContent = formatCurrency(data.total_purchase);
-            console.log('  ✓ 총 매입금액:', totalPurchaseEl.textContent);
+            Logger.debug('UI_Details', '총 매입금액 업데이트', totalPurchaseEl.textContent);
         }
 
         // 총 평가금액
         const totalEvalEl = document.getElementById('totalEval');
         if (totalEvalEl) {
             totalEvalEl.textContent = formatCurrency(data.total_eval);
-            console.log('  ✓ 총 평가금액:', totalEvalEl.textContent);
+            Logger.debug('UI_Details', '총 평가금액 업데이트', totalEvalEl.textContent);
         }
 
         // 총 평가손익
@@ -55,7 +55,7 @@ Object.assign(window.UI, {
         if (plElement && rateElement) {
             plElement.textContent = formatCurrency(data.total_pl);
             rateElement.textContent = formatPercent(data.profit_rate);
-            console.log('  ✓ 총 평가손익:', plElement.textContent, rateElement.textContent);
+            Logger.debug('UI_Details', '총 평가손익 업데이트', plElement.textContent, rateElement.textContent);
 
             // 수익/손실에 따라 클래스 및 역동적인 스타일 적용
             if (plCard) {
@@ -86,28 +86,28 @@ Object.assign(window.UI, {
         const holdingsCountEl = document.getElementById('holdingsCount');
         if (holdingsCountEl) {
             holdingsCountEl.textContent = `${data.holdings_count}개`;
-            console.log('  ✓ 보유 종목:', holdingsCountEl.textContent);
+            Logger.debug('UI_Details', '보유 종목 수 업데이트', holdingsCountEl.textContent);
         }
 
-        console.log('✅ [계좌요약 UI] DOM 업데이트 완료');
+        Logger.debug('UI_Details', '계좌요약 DOM 업데이트 완료');
     },
 
     // 종합 탭 렌더링
     renderOverview(data) {
-        console.log('renderOverview called with:', data);
+        Logger.debug('UI_Details', 'renderOverview 호출됨', data);
 
         if (!data) {
-            console.error('Data is null or undefined');
+            Logger.error('UI_Details', '데이터가 null 또는 undefined입니다');
             return;
         }
 
         const { stock_info, supply_demand, news_analysis, outlook } = data;
 
         // 데이터 유효성 검사
-        if (!stock_info) console.warn('stock_info is missing');
-        if (!supply_demand) console.warn('supply_demand is missing');
-        if (!news_analysis) console.warn('news_analysis is missing');
-        if (!outlook) console.warn('outlook is missing');
+        if (!stock_info) Logger.warn('UI_Details', 'stock_info 누락');
+        if (!supply_demand) Logger.warn('UI_Details', 'supply_demand 누락');
+        if (!news_analysis) Logger.warn('UI_Details', 'news_analysis 누락');
+        if (!outlook) Logger.warn('UI_Details', 'outlook 누락');
 
         const safeOutlook = outlook || { recommendation: '중립', confidence: 0, trading_scenario: '', reasoning: '' };
         const safeStockInfo = stock_info || { current_price: 0, change: 0, change_rate: 0 };
@@ -227,12 +227,12 @@ Object.assign(window.UI, {
             const contentEl = document.getElementById('overviewContent');
             if (contentEl) {
                 contentEl.innerHTML = html;
-                console.log('overviewContent updated successfully');
+                Logger.debug('UI_Details', 'overviewContent 업데이트 성공');
             } else {
-                console.error('overviewContent element not found');
+                Logger.error('UI_Details', 'overviewContent 요소를 찾을 수 없음');
             }
         } catch (e) {
-            console.error('Error in renderOverview HTML generation:', e);
+            Logger.error('UI_Details', 'renderOverview HTML 생성 중 오류:', e);
         }
     },
 
@@ -359,7 +359,7 @@ Object.assign(window.UI, {
         // 캐시 확인
         const cached = API.getCachedAnalysis(stock.stk_cd);
         if (cached && cached.success) {
-            console.log('💾 캐시 히트! 즉시 표시 (openStockModal):', stock.stk_cd);
+            Logger.debug('UI_Details', '캐시 히트! 즉시 표시 (openStockModal):', stock.stk_cd);
 
             // 전역 로딩 스피너 숨김
             if (loading) loading.style.display = 'none';
@@ -488,7 +488,7 @@ Object.assign(window.UI, {
             // 이전 요청 취소
             if (this.currentAnalysisController) {
                 this.currentAnalysisController.abort();
-                console.log('⏹️ 이전 분석 요청 취소');
+                Logger.debug('UI_Details', '이전 분석 요청 취소');
             }
 
             // 새 AbortController 생성
@@ -498,7 +498,7 @@ Object.assign(window.UI, {
             const cached = API.getCachedAnalysis(code);
 
             if (cached && cached.success) {
-                console.log('💾 캐시 히트! (loadStockAnalysis):', code);
+                Logger.debug('UI_Details', '캐시 히트! (loadStockAnalysis):', code);
                 // 캐시된 데이터로 전체 UI 한 번에 업데이트
                 this.renderFullAnalysis(cached.data);
 
@@ -512,12 +512,12 @@ Object.assign(window.UI, {
             }
 
             // 2. 캐시 미스 - 스트리밍 방식으로 데이터 수신
-            console.log('🌐 캐시 미스, 스트리밍 시작:', code);
+            Logger.debug('UI_Details', '캐시 미스, 스트리밍 시작:', code);
 
             // 2-1. 경량 캐시라도 있으면 먼저 표시 (사용자 경험 향상)
             const lightCache = API.getCachedAnalysis(code, true);
             if (lightCache && lightCache.success && lightCache.data && lightCache.data.stock_info) {
-                console.log('⚡ 경량 캐시 발견, 초기 데이터로 표시:', code);
+                Logger.debug('UI_Details', '경량 캐시 발견, 초기 데이터로 표시:', code);
                 this.renderBasicInfoOnly(
                     {
                         price: lightCache.data.stock_info.current_price,
@@ -528,7 +528,7 @@ Object.assign(window.UI, {
                 );
             } else {
                 if (lightCache && lightCache.success && !lightCache.data.stock_info) {
-                    console.warn('⚠️ 경량 캐시 데이터 불완전 (stock_info 누락):', lightCache);
+                    Logger.warn('UI_Details', '경량 캐시 데이터 불완전 (stock_info 누락):', lightCache);
                 }
             }
 
@@ -538,7 +538,7 @@ Object.assign(window.UI, {
                 code,
                 // onProgress: 단계별 데이터 수신 시 호출됨
                 (type, data) => {
-                    console.log(`📥 [${type}] 데이터 수신`, data);
+                    Logger.debug('UI_Details', `[${type}] 데이터 수신`, data);
 
                     if (type === 'basic') {
                         // 1단계: 기본 정보 (주가 + 수급) - 즉시 표시
@@ -590,7 +590,7 @@ Object.assign(window.UI, {
                 },
                 // onComplete: 모든 단계 완료
                 (completedData) => {
-                    console.log('✅ 스트리밍 분석 완료');
+                    Logger.debug('UI_Details', '스트리밍 분석 완료');
 
                     // 수급 탭 렌더링
                     if (allData.supply) {
@@ -641,7 +641,7 @@ Object.assign(window.UI, {
                 },
                 // onError: 오류 처리
                 (error) => {
-                    console.error('❌ 스트리밍 분석 오류:', error);
+                    Logger.error('UI_Details', '스트리밍 분석 오류:', error);
                     this.showErrorInModal(error, code);
                 },
                 // highPriority: 클릭한 카드는 우선 처리
@@ -649,7 +649,7 @@ Object.assign(window.UI, {
             );
 
         } catch (error) {
-            console.error('상세 분석 로드 실패:', error);
+            Logger.error('UI_Details', '상세 분석 로드 실패:', error);
             // 네트워크 오류 등의 경우
             const errorMsg = error.message === 'Failed to fetch'
                 ? '서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.'
